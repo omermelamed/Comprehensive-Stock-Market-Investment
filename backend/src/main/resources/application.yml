@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:investment_db}
+    username: ${DB_USER:investment_user}
+    password: ${DB_PASSWORD:changeme}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: ${BACKEND_PORT:8080}
+
+app:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:3000}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: claude-sonnet-4-6
+  market-data:
+    polygon-api-key: ${POLYGON_API_KEY:}
+    alpha-vantage-api-key: ${ALPHA_VANTAGE_API_KEY:}
+  scheduler:
+    snapshot-cron: "0 0 0 * * *"
+    alert-check-cron: "0 */5 * * * *"
