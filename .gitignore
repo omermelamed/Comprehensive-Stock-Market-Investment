@@ -1,7 +1,9 @@
+# IDE
+.idea/
+
 # Backend
 backend/.gradle/
 backend/build/
-backend/.idea/
 *.class
 *.jar
 
