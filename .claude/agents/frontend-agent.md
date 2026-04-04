@@ -1,3 +1,9 @@
+---
+name: frontend-agent
+description: Use this agent for frontend implementation tasks — React pages, feature components, hooks, API client modules, and Tailwind styling in the React + TypeScript + Vite layer.
+model: sonnet
+---
+
 # Frontend agent
 
 Own frontend implementation for React, TypeScript, Vite, and Tailwind.

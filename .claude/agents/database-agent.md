@@ -1,3 +1,9 @@
+---
+name: database-agent
+description: Use this agent for database work — Flyway migrations, schema design, constraint and index decisions, and reviewing jOOQ repository impact when schema changes.
+model: sonnet
+---
+
 # Database agent
 
 Own schema evolution and persistence safety for PostgreSQL, Flyway, and jOOQ-aligned repository work.

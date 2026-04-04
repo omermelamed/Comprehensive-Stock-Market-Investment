@@ -1,0 +1,80 @@
+package com.investment.infrastructure
+
+import com.investment.api.dto.TransactionRequest
+import com.investment.api.dto.TransactionResponse
+import org.jooq.DSLContext
+import org.jooq.Record
+import org.springframework.stereotype.Repository
+import java.math.BigDecimal
+import java.sql.Timestamp
+import java.util.UUID
+
+@Repository
+class TransactionRepository(
+    private val dsl: DSLContext
+) {
+
+    fun findAll(page: Int, size: Int): List<TransactionResponse> {
+        val offset = page * size
+        return dsl.fetch(
+            """
+            SELECT * FROM transactions
+            ORDER BY executed_at DESC
+            LIMIT ? OFFSET ?
+            """.trimIndent(),
+            size,
+            offset
+        ).map { it.toResponse() }
+    }
+
+    fun count(): Long {
+        return dsl.fetchOne("SELECT COUNT(*) FROM transactions")
+            ?.get(0, Long::class.java) ?: 0L
+    }
+
+    fun insert(request: TransactionRequest): TransactionResponse {
+        val id = UUID.randomUUID()
+        val record = dsl.fetchOne(
+            """
+            INSERT INTO transactions (id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at)
+            VALUES (?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW())
+            RETURNING *
+            """.trimIndent(),
+            id.toString(),
+            request.symbol.uppercase(),
+            request.type.uppercase(),
+            request.track.uppercase(),
+            request.quantity,
+            request.pricePerUnit,
+            request.notes,
+            Timestamp.from(request.executedAt)
+        ) ?: throw IllegalStateException("Insert into transactions returned no record")
+
+        return record.toResponse()
+    }
+
+    fun delete(id: UUID) {
+        val deleted = dsl.execute(
+            "DELETE FROM transactions WHERE id = ?::uuid",
+            id.toString()
+        )
+        if (deleted == 0) {
+            throw NoSuchElementException("No transaction found with id $id")
+        }
+    }
+
+    private fun Record.toResponse(): TransactionResponse {
+        return TransactionResponse(
+            id = UUID.fromString(get("id", String::class.java)),
+            symbol = get("symbol", String::class.java),
+            type = get("type", String::class.java),
+            track = get("track", String::class.java),
+            quantity = get("quantity", BigDecimal::class.java),
+            pricePerUnit = get("price_per_unit", BigDecimal::class.java),
+            totalValue = get("total_value", BigDecimal::class.java),
+            notes = get("notes", String::class.java),
+            executedAt = get("executed_at", Timestamp::class.java).toInstant(),
+            createdAt = get("created_at", Timestamp::class.java).toInstant()
+        )
+    }
+}

@@ -1,3 +1,9 @@
+---
+name: backend-agent
+description: Use this agent for backend implementation tasks — REST endpoints, services, domain calculators, jOOQ repositories, schedulers, and market-data integrations in the Kotlin + Spring Boot layer.
+model: sonnet
+---
+
 # Backend agent
 
 Own backend implementation for Spring Boot, Kotlin, jOOQ, schedulers, and market-data integrations.
