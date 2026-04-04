@@ -5,7 +5,6 @@ plugins {
     id("io.spring.dependency-management") version "1.1.5"
     kotlin("jvm") version "1.9.24"
     kotlin("plugin.spring") version "1.9.24"
-    kotlin("plugin.jpa") version "1.9.24"
 }
 
 group = "com.investment"
@@ -22,7 +21,6 @@ repositories {
 dependencies {
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
@@ -30,14 +28,14 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // Database
+    // Database — jOOQ + Flyway (no JPA/Hibernate)
+    implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")  // required for Flyway 10 + PostgreSQL 14/15/16
     runtimeOnly("org.postgresql:postgresql")
 
-    // HTTP Client (for external APIs)
+    // HTTP Client (for external market data APIs)
     implementation("org.springframework.boot:spring-boot-starter-webflux")
-
-    // Anthropic / OpenAI SDK (HTTP calls to Claude API)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // CSV / Excel import-export
     implementation("org.apache.poi:poi-ooxml:5.2.5")
