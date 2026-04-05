@@ -1,6 +1,5 @@
 package com.investment.application
 
-import com.investment.api.dto.AllocationEntry
 import com.investment.api.dto.MonthlyFlowConfirmRequest
 import com.investment.api.dto.MonthlyFlowConfirmResponse
 import com.investment.api.dto.MonthlyFlowPreviewRequest
@@ -29,15 +28,19 @@ class MonthlyInvestmentService(
 
         val holdings = holdingsRepository.findAll()
         val allocations = allocationRepository.findAll()
+        val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
         val symbols = (holdings.map { it.symbol } + allocations.map { it.symbol })
             .map { it.uppercase() }
             .distinct()
 
+        // Convert each stock's price from its native currency to the user's preferred currency.
         val missing = mutableListOf<String>()
         val prices = symbols.mapNotNull { symbol ->
             try {
-                symbol to marketDataService.getQuote(symbol).price
+                val quote = marketDataService.getQuote(symbol)
+                val rate = marketDataService.getExchangeRate(quote.currency, currency)
+                symbol to (quote.price * rate)
             } catch (e: Exception) {
                 missing.add(symbol)
                 null
@@ -45,27 +48,7 @@ class MonthlyInvestmentService(
         }.toMap()
 
         val result = MonthlyAllocationCalculator.compute(holdings, allocations, prices, request.budget)
-
-        val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
-        val fxRate = marketDataService.getExchangeRate(currency)
-
-        return if (fxRate.compareTo(BigDecimal.ONE) == 0) {
-            result.copy(missingPrices = missing)
-        } else {
-            val scale = 2
-            val rounding = RoundingMode.HALF_UP
-            result.copy(
-                missingPrices = missing,
-                portfolioTotal = (result.portfolioTotal * fxRate).setScale(scale, rounding),
-                positions = result.positions.map { pos ->
-                    pos.copy(
-                        currentValue = (pos.currentValue * fxRate).setScale(scale, rounding),
-                        gapValue = (pos.gapValue * fxRate).setScale(scale, rounding),
-                        suggestedAmount = (pos.suggestedAmount * fxRate).setScale(scale, rounding),
-                    )
-                }
-            )
-        }
+        return result.copy(missingPrices = missing)
     }
 
     @Transactional
@@ -79,24 +62,27 @@ class MonthlyInvestmentService(
 
         val total = request.allocations.fold(BigDecimal.ZERO) { acc, e -> acc.add(e.amount) }
         if (total > request.budget) {
-            throw IllegalArgumentException(
-                "Total allocated $total exceeds budget ${request.budget}"
-            )
+            throw IllegalArgumentException("Total allocated $total exceeds budget ${request.budget}")
         }
 
         val investable = request.allocations.filter { it.amount.compareTo(BigDecimal.ZERO) > 0 }
+        val userCurrency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
         var transactionsCreated = 0
         for (entry in investable) {
-            val price = marketDataService.getQuote(entry.symbol.uppercase()).price
-            val quantity = entry.amount.divide(price, 6, RoundingMode.HALF_UP)
+            val quote = marketDataService.getQuote(entry.symbol.uppercase())
+            // Convert the user-entered amount (in their currency) back to the stock's native currency
+            // to calculate how many shares were bought.
+            val rate = marketDataService.getExchangeRate(userCurrency, quote.currency)
+            val amountInStockCurrency = entry.amount * rate
+            val quantity = amountInStockCurrency.divide(quote.price, 6, RoundingMode.HALF_UP)
             transactionService.addTransaction(
                 TransactionRequest(
                     symbol = entry.symbol.uppercase(),
                     type = "BUY",
                     track = "LONG",
                     quantity = quantity,
-                    pricePerUnit = price,
+                    pricePerUnit = quote.price,
                     executedAt = Instant.now()
                 )
             )

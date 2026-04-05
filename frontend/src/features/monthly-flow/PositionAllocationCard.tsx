@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { PositionCard } from '@/types'
 import { useCurrency } from '@/contexts/currency-context'
-import { formatMoney } from '@/lib/currency'
+import { formatMoney, getCurrencySymbol } from '@/lib/currency'
 
 function fmtPct(value: number): string {
   return `${value.toFixed(2)}%`
@@ -29,6 +29,7 @@ interface Props {
 export function PositionAllocationCard({ position, amount, onAmountChange, isLoadingSummary }: Props) {
   const currency = useCurrency()
   const fmt = (v: number) => formatMoney(v, currency)
+  const sym = getCurrencySymbol(currency)
   const isEditable = position.status === 'UNDERWEIGHT'
 
   return (
@@ -88,7 +89,7 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
         {isEditable ? (
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-              $
+              {sym}
             </span>
             <input
               type="number"
@@ -100,7 +101,7 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
             />
           </div>
         ) : (
-          <p className="font-mono text-sm font-semibold text-muted-foreground">$0.00 — {STATUS_LABELS[position.status]}</p>
+          <p className="font-mono text-sm font-semibold text-muted-foreground">{fmt(0)} — {STATUS_LABELS[position.status]}</p>
         )}
         {isEditable && position.suggestedAmount > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">

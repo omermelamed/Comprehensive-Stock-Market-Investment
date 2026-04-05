@@ -57,9 +57,15 @@ class MarketDataService(
         throw MarketDataUnavailableException(upperSymbol)
     }
 
-    fun getExchangeRate(toCurrency: String): BigDecimal {
-        if (toCurrency.uppercase() == "USD") return BigDecimal.ONE
-        val fxSymbol = "USD${toCurrency.uppercase()}=X"
+    /**
+     * Returns the exchange rate to convert 1 unit of [fromCurrency] into [toCurrency].
+     * Uses Yahoo Finance FX pairs (e.g. USDILS=X).
+     */
+    fun getExchangeRate(fromCurrency: String, toCurrency: String): BigDecimal {
+        val from = fromCurrency.uppercase()
+        val to = toCurrency.uppercase()
+        if (from == to) return BigDecimal.ONE
+        val fxSymbol = "${from}${to}=X"
         return try {
             getQuote(fxSymbol).price
         } catch (e: Exception) {

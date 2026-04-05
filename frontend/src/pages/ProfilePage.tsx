@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { UserProfile } from '@/types'
 import { ASSET_TRACKS } from '@/data/onboarding'
+import { useCurrency } from '@/contexts/currency-context'
+import { getCurrencySymbol } from '@/lib/currency'
 
 const CURRENCIES = ['USD', 'ILS', 'EUR', 'GBP']
 const GOALS = ['GROWTH', 'INCOME', 'PRESERVATION', 'SPECULATION']
@@ -19,6 +21,7 @@ const inputClass =
 const labelClass = 'block text-sm font-medium text-muted-foreground mb-1.5'
 
 export default function ProfilePage() {
+  const sym = getCurrencySymbol(useCurrency())
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
@@ -174,7 +177,7 @@ export default function ProfilePage() {
                   <div>
                     <label className={labelClass}>Monthly Budget Min</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{sym}</span>
                       <input
                         type="number"
                         className={`${inputClass} pl-7`}
@@ -187,7 +190,7 @@ export default function ProfilePage() {
                   <div>
                     <label className={labelClass}>Monthly Budget Max</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{sym}</span>
                       <input
                         type="number"
                         className={`${inputClass} pl-7`}

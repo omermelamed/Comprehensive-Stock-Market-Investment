@@ -1,3 +1,6 @@
+import { useCurrency } from '@/contexts/currency-context'
+import { getCurrencySymbol } from '@/lib/currency'
+
 interface Props {
   budget: string
   onChange: (value: string) => void
@@ -6,6 +9,7 @@ interface Props {
 }
 
 export function MonthlyBudgetInput({ budget, onChange, onPreview, isLoading }: Props) {
+  const sym = getCurrencySymbol(useCurrency())
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') onPreview()
   }
@@ -14,7 +18,7 @@ export function MonthlyBudgetInput({ budget, onChange, onPreview, isLoading }: P
     <div className="flex items-center gap-3">
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          $
+          {sym}
         </span>
         <input
           type="number"
