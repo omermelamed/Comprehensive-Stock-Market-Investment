@@ -4,6 +4,11 @@ import { getRecommendations, refreshRecommendations } from '@/api/recommendation
 import { RecommendationCard } from '@/features/recommendations/RecommendationCard'
 import { useCurrency } from '@/contexts/currency-context'
 import { formatMoney } from '@/lib/currency'
+import { ASSET_TRACKS } from '@/data/onboarding'
+
+function translateTrack(value: string): string {
+  return ASSET_TRACKS.find(t => t.value === value)?.label ?? value
+}
 import type { RecommendationsResponse } from '@/types'
 
 function formatMinutesAgo(iso: string): string {
@@ -126,7 +131,7 @@ export default function RecommendationsPage() {
               <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5">
                 <span className="text-xs text-muted-foreground">Tracks</span>
                 <span className="text-xs font-semibold text-foreground">
-                  {ctx.tracksEnabled.join(', ')}
+                  {ctx.tracksEnabled.map(translateTrack).join(', ')}
                 </span>
               </div>
             )}
