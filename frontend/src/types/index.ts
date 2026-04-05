@@ -92,3 +92,28 @@ export interface WatchlistItem {
   lastAnalyzedAt: string | null
   addedAt: string
 }
+
+export interface RecommendationCard {
+  rank: number
+  symbol: string
+  action: string
+  source: 'ALLOCATION_GAP' | 'WATCHLIST' | 'AI_SUGGESTION'
+  reason: string
+  suggestedAmount: number | null
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+export interface PortfolioContextSummary {
+  totalValue: number
+  currency: string
+  monthlyBudget: number
+  riskLevel: string
+  tracksEnabled: string[]
+}
+
+export interface RecommendationsResponse {
+  recommendations: RecommendationCard[]
+  generatedAt: string
+  expiresAt: string
+  portfolioContext: PortfolioContextSummary
+}

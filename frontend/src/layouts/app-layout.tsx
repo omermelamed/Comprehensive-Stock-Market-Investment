@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/monthly-flow', label: 'Monthly Flow', icon: TrendingUp, end: false },
+  { to: '/recommendations', label: 'Recommendations', icon: Lightbulb, end: false },
   { to: '/transactions/new', label: 'Transactions', icon: ArrowLeftRight, end: false },
   { to: '/allocations', label: 'Allocations', icon: PieChart, end: false },
   { to: '/watchlist', label: 'Watchlist', icon: Star, end: false },
