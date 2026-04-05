@@ -11,5 +11,5 @@ data class UserProfileRequest(
     val monthlyInvestmentMax: BigDecimal,
     val investmentGoal: String,
     val timeHorizonYears: Int,
-    val theme: String = "DARK"
+    val theme: String = "LIGHT"
 )

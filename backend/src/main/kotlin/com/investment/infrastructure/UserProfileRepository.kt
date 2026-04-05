@@ -21,7 +21,7 @@ class UserProfileRepository(
         return record?.toResponse()
     }
 
-    fun insert(request: UserProfileRequest, riskLevel: String): UserProfileResponse {
+    fun upsert(request: UserProfileRequest, riskLevel: String): UserProfileResponse {
         val id = UUID.randomUUID()
         val tracksJson = objectMapper.writeValueAsString(request.tracksEnabled)
         val answersJson = objectMapper.writeValueAsString(request.questionnaireAnswers)
@@ -39,6 +39,18 @@ class UserProfileRepository(
                 ?, ?::jsonb, ?::jsonb, ?,
                 false, NOW(), NOW()
             )
+            ON CONFLICT ((TRUE)) DO UPDATE SET
+                display_name = EXCLUDED.display_name,
+                preferred_currency = EXCLUDED.preferred_currency,
+                risk_level = EXCLUDED.risk_level,
+                time_horizon_years = EXCLUDED.time_horizon_years,
+                monthly_investment_min = EXCLUDED.monthly_investment_min,
+                monthly_investment_max = EXCLUDED.monthly_investment_max,
+                investment_goal = EXCLUDED.investment_goal,
+                tracks_enabled = EXCLUDED.tracks_enabled,
+                questionnaire_answers = EXCLUDED.questionnaire_answers,
+                theme = EXCLUDED.theme,
+                last_updated = NOW()
             RETURNING *
             """.trimIndent(),
             id.toString(),
@@ -52,7 +64,7 @@ class UserProfileRepository(
             tracksJson,
             answersJson,
             request.theme
-        ) ?: throw IllegalStateException("Insert into user_profile returned no record")
+        ) ?: throw IllegalStateException("Upsert into user_profile returned no record")
 
         return record.toResponse()
     }

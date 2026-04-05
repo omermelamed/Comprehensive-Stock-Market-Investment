@@ -6,7 +6,9 @@ import org.jooq.DSLContext
 import org.jooq.Record
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
+import java.sql.Date
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.util.UUID
 
 @Repository
@@ -51,6 +53,12 @@ class TransactionRepository(
         ) ?: throw IllegalStateException("Insert into transactions returned no record")
 
         return record.toResponse()
+    }
+
+    fun findEarliestTransactionDate(): LocalDate? {
+        val record = dsl.fetchOne("SELECT MIN(executed_at::date) AS earliest_date FROM transactions")
+        val date = record?.get("earliest_date", Date::class.java)
+        return date?.toLocalDate()
     }
 
     fun delete(id: UUID) {

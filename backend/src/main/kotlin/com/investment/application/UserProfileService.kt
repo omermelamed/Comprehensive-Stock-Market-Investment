@@ -18,13 +18,13 @@ class UserProfileService(
 
     @Transactional
     fun createProfile(request: UserProfileRequest): UserProfileResponse {
-        val riskLevel = RiskLevelCalculator.calculate(request.questionnaireAnswers)
-        return userProfileRepository.insert(request, riskLevel)
+        val riskLevel = RiskLevelCalculator.calculate(request.questionnaireAnswers, request.timeHorizonYears)
+        return userProfileRepository.upsert(request, riskLevel)
     }
 
     @Transactional
     fun updateProfile(request: UserProfileRequest): UserProfileResponse {
-        val riskLevel = RiskLevelCalculator.calculate(request.questionnaireAnswers)
+        val riskLevel = RiskLevelCalculator.calculate(request.questionnaireAnswers, request.timeHorizonYears)
         return userProfileRepository.update(request, riskLevel)
     }
 

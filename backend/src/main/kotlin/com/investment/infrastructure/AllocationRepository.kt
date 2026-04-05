@@ -26,6 +26,12 @@ class AllocationRepository(
             """
             INSERT INTO target_allocations (id, symbol, asset_type, target_percentage, label, display_order, created_at, updated_at)
             VALUES (?::uuid, ?, ?::asset_type_enum, ?, ?, ?, NOW(), NOW())
+            ON CONFLICT (UPPER(symbol)) DO UPDATE SET
+                asset_type = EXCLUDED.asset_type,
+                target_percentage = EXCLUDED.target_percentage,
+                label = EXCLUDED.label,
+                display_order = EXCLUDED.display_order,
+                updated_at = NOW()
             RETURNING *
             """.trimIndent(),
             id.toString(),
@@ -34,7 +40,7 @@ class AllocationRepository(
             request.targetPercentage,
             request.label,
             request.displayOrder
-        ) ?: throw IllegalStateException("Insert into target_allocations returned no record")
+        ) ?: throw IllegalStateException("Upsert into target_allocations returned no record")
 
         return record.toResponse()
     }
