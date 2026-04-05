@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { getTransactions, deleteTransaction } from '../../api/transactions'
 import type { Transaction } from '../../types'
+import { Card } from '@/components/ui/card'
 
-const TYPE_COLORS: Record<string, string> = {
-  BUY: 'bg-green-700/40 text-green-300',
-  SELL: 'bg-red-700/40 text-red-300',
-  SHORT: 'bg-orange-700/40 text-orange-300',
-  COVER: 'bg-yellow-700/40 text-yellow-300',
-  DIVIDEND: 'bg-blue-700/40 text-blue-300',
-  DEPOSIT: 'bg-purple-700/40 text-purple-300',
-  WITHDRAWAL: 'bg-gray-600/40 text-gray-300',
+const TYPE_STYLES: Record<string, string> = {
+  BUY:        'bg-success/15 text-success',
+  SELL:       'bg-destructive/15 text-destructive',
+  SHORT:      'bg-warning/15 text-warning',
+  COVER:      'bg-warning/15 text-warning',
+  DIVIDEND:   'bg-primary/15 text-primary',
+  DEPOSIT:    'bg-primary/15 text-primary',
+  WITHDRAWAL: 'bg-muted text-muted-foreground',
+}
+
+function fmt(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export default function TransactionList() {
@@ -47,7 +52,7 @@ export default function TransactionList() {
     return (
       <div className="space-y-2 mt-6">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-10 bg-gray-700 rounded animate-pulse" />
+          <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
     )
@@ -55,49 +60,53 @@ export default function TransactionList() {
 
   if (transactions.length === 0) {
     return (
-      <p className="text-gray-500 text-sm text-center py-8 mt-6">
-        No transactions yet. Log your first transaction above.
+      <p className="mt-8 text-center text-sm text-muted-foreground py-8">
+        No transactions yet. Log your first one above.
       </p>
     )
   }
 
   return (
-    <div className="mt-8">
-      <h2 className="text-gray-300 font-semibold text-sm mb-3">
-        Recent Transactions {total > 20 && <span className="text-gray-500">({total} total)</span>}
-      </h2>
+    <Card className="mt-8">
+      <div className="flex items-center justify-between px-6 pt-5 pb-3">
+        <h2 className="text-base font-semibold text-foreground">
+          Recent Transactions
+        </h2>
+        {total > 20 && (
+          <span className="text-xs text-muted-foreground">{total} total</span>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-gray-400 text-xs border-b border-gray-700">
-              <th className="text-left py-2 pr-4">Date</th>
-              <th className="text-left py-2 pr-4">Symbol</th>
-              <th className="text-left py-2 pr-4">Type</th>
-              <th className="text-right py-2 pr-4">Qty</th>
-              <th className="text-right py-2 pr-4">Price</th>
-              <th className="text-right py-2 pr-4">Total</th>
-              <th className="py-2" />
+            <tr className="border-b border-border">
+              <th className="px-6 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Date</th>
+              <th className="px-3 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Symbol</th>
+              <th className="px-3 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</th>
+              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Qty</th>
+              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Price</th>
+              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</th>
+              <th className="px-6 pb-3" />
             </tr>
           </thead>
           <tbody>
             {transactions.map(tx => (
-              <tr key={tx.id} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                <td className="py-2 pr-4 text-gray-400 font-mono text-xs">{tx.transactionDate}</td>
-                <td className="py-2 pr-4 font-mono font-medium text-white">{tx.symbol}</td>
-                <td className="py-2 pr-4">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[tx.transactionType] ?? 'bg-gray-600 text-gray-300'}`}>
+              <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
+                <td className="px-6 py-3 font-mono text-xs text-muted-foreground">{tx.transactionDate}</td>
+                <td className="px-3 py-3 font-mono font-semibold text-foreground">{tx.symbol}</td>
+                <td className="px-3 py-3">
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_STYLES[tx.transactionType] ?? 'bg-muted text-muted-foreground'}`}>
                     {tx.transactionType}
                   </span>
                 </td>
-                <td className="py-2 pr-4 text-right font-mono text-gray-300">{tx.quantity}</td>
-                <td className="py-2 pr-4 text-right font-mono text-gray-300">{tx.pricePerUnit.toFixed(2)}</td>
-                <td className="py-2 pr-4 text-right font-mono text-white">{tx.totalAmount.toFixed(2)}</td>
-                <td className="py-2">
+                <td className="px-3 py-3 text-right font-mono text-xs text-foreground">{tx.quantity}</td>
+                <td className="px-3 py-3 text-right font-mono text-xs text-foreground">{fmt(tx.pricePerUnit)}</td>
+                <td className="px-3 py-3 text-right font-mono text-sm font-semibold text-foreground">{fmt(tx.totalAmount)}</td>
+                <td className="px-6 py-3 text-right">
                   <button
                     onClick={() => void handleDelete(tx.id)}
                     disabled={deleting === tx.id}
-                    className="text-gray-600 hover:text-red-400 text-xs disabled:opacity-40"
-                    title="Delete"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
                   >
                     {deleting === tx.id ? '…' : 'Delete'}
                   </button>
@@ -107,6 +116,6 @@ export default function TransactionList() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   )
 }

@@ -8,6 +8,7 @@ export interface UserProfile {
   monthlyInvestmentMax: number
   investmentGoal: string
   timeHorizonYears: number
+  questionnaireAnswers: Record<string, number>
   theme: string
   onboardingCompleted: boolean
 }
@@ -41,4 +42,28 @@ export interface Holding {
   netQuantity: number
   avgBuyPrice: number
   totalCostBasis: number
+}
+
+export interface PositionCard {
+  symbol: string
+  label: string | null
+  targetPercent: number
+  currentPercent: number
+  currentValue: number
+  gapPercent: number
+  gapValue: number
+  suggestedAmount: number
+  status: 'UNDERWEIGHT' | 'ON_TARGET' | 'OVERWEIGHT'
+}
+
+export interface MonthlyFlowPreview {
+  portfolioTotal: number
+  budget: number
+  positions: PositionCard[]
+  missingPrices: string[]
+}
+
+export interface MonthlyFlowConfirmResult {
+  totalInvested: number
+  transactionsCreated: number
 }

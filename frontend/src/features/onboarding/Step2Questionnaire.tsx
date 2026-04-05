@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Check } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { SectionHeader } from '@/components/shared/section-header'
+import { cn } from '@/lib/utils'
 import type { OnboardingData } from './useOnboarding'
 
 interface Question {
@@ -8,47 +14,20 @@ interface Question {
 }
 
 const QUESTIONS: Question[] = [
-  {
-    key: 'timeHorizon',
-    label: 'Investment time horizon?',
-    options: ['< 1 year', '1–3 years', '3–7 years', '7–15 years', '> 15 years'],
-  },
-  {
-    key: 'riskTolerance',
-    label: 'How would you react to a 20% portfolio drop?',
-    options: ['Panic and sell', 'Worried but hold', 'Neutral', 'See opportunity', 'Aggressively buy more'],
-  },
-  {
-    key: 'incomeStability',
-    label: 'How stable is your income?',
-    options: ['Very unstable', 'Somewhat unstable', 'Stable', 'Very stable', 'Multiple strong sources'],
-  },
-  {
-    key: 'investmentExperience',
-    label: 'Investment experience?',
-    options: ['No experience', '< 1 year', '1–3 years', '3–7 years', '> 7 years'],
-  },
-  {
-    key: 'liquidityNeed',
-    label: 'Likelihood of needing these funds within 2 years?',
-    options: ['Very likely', 'Likely', 'Possible', 'Unlikely', 'Very unlikely'],
-  },
-  {
-    key: 'portfolioObjective',
-    label: 'Portfolio primary objective?',
-    options: ['Capital preservation', 'Income generation', 'Balanced growth', 'Growth', 'Aggressive growth'],
-  },
-  {
-    key: 'shortSellingComfort',
-    label: 'Comfort with short selling or derivatives?',
-    options: ['No comfort', 'Little comfort', 'Moderate comfort', 'Comfortable', 'Very comfortable'],
-  },
+  { key: 'riskTolerance', label: 'Your portfolio drops 20% in a month. What do you do?', options: ['Panic and sell everything', 'Worried but hold', 'Stay the course', 'See it as opportunity', 'Aggressively buy more'] },
+  { key: 'incomeStability', label: 'How stable is your income?', options: ['Very unstable', 'Somewhat unstable', 'Stable', 'Very stable', 'Multiple strong sources'] },
+  { key: 'investmentExperience', label: 'How long have you been investing?', options: ['Never invested', '< 1 year', '1–3 years', '3–7 years', '> 7 years'] },
+  { key: 'liquidityNeed', label: 'How likely are you to need these funds within 2 years?', options: ['Very likely', 'Likely', 'Possible', 'Unlikely', 'Very unlikely'] },
+  { key: 'portfolioObjective', label: 'What is your primary investment objective?', options: ['Capital preservation', 'Income generation', 'Balanced growth', 'Growth', 'Aggressive growth'] },
+  { key: 'shortSellingComfort', label: 'How comfortable are you with short selling or derivatives?', options: ['Not at all', 'A little', 'Moderate', 'Comfortable', 'Very comfortable'] },
 ]
 
-function getRiskLevel(score: number): { label: string; color: string } {
-  if (score <= 16) return { label: 'CONSERVATIVE', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' }
-  if (score <= 26) return { label: 'MODERATE', color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' }
-  return { label: 'AGGRESSIVE', color: 'text-green-400 bg-green-400/10 border-green-400/30' }
+// 6 questions × 5 max = 30 max score. Time horizon adds up to 5 on the backend → effective max ~35.
+// Thresholds here are for display only; backend computes the authoritative risk level.
+function getRisk(score: number) {
+  if (score <= 14) return { label: 'Conservative', color: 'text-warning', bg: 'bg-warning/5', border: 'border-warning/20', barColor: 'bg-warning', width: 30 }
+  if (score <= 22) return { label: 'Moderate', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-500/20', barColor: 'bg-blue-500', width: 65 }
+  return { label: 'Aggressive', color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-500/20', barColor: 'bg-purple-500', width: 100 }
 }
 
 interface Props {
@@ -61,13 +40,10 @@ interface Props {
 export default function Step2Questionnaire({ data, onUpdate, onNext, onBack }: Props) {
   const [answers, setAnswers] = useState<Record<string, number>>(data.questionnaireAnswers ?? {})
 
-  function setAnswer(key: string, value: number) {
-    setAnswers(prev => ({ ...prev, [key]: value }))
-  }
-
-  const allAnswered = QUESTIONS.every(q => answers[q.key] !== undefined)
+  const answeredCount = Object.keys(answers).length
+  const allAnswered = answeredCount === QUESTIONS.length
   const totalScore = Object.values(answers).reduce((sum, v) => sum + v, 0)
-  const riskLevel = allAnswered ? getRiskLevel(totalScore) : null
+  const risk = allAnswered ? getRisk(totalScore) : null
 
   function handleNext() {
     onUpdate({ questionnaireAnswers: answers })
@@ -75,59 +51,92 @@ export default function Step2Questionnaire({ data, onUpdate, onNext, onBack }: P
   }
 
   return (
-    <div className="space-y-6">
-      {QUESTIONS.map(q => (
-        <div key={q.key}>
-          <p className="text-gray-300 text-sm font-medium mb-2">{q.label}</p>
-          <div className="flex flex-col gap-1">
-            {q.options.map((opt, idx) => {
-              const value = idx + 1
-              const selected = answers[q.key] === value
-              return (
-                <label
-                  key={opt}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
-                    selected
-                      ? 'bg-blue-600/20 border border-blue-500 text-white'
-                      : 'bg-gray-700/50 border border-gray-600 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={q.key}
-                    value={value}
-                    checked={selected}
-                    onChange={() => setAnswer(q.key, value)}
-                    className="accent-blue-500"
-                  />
-                  {opt}
-                </label>
-              )
-            })}
+    <div className="space-y-5">
+      <SectionHeader
+        title="Let's calibrate your risk profile"
+        description="Your answers determine how aggressive or conservative your strategy should be."
+      />
+
+      <div className="flex items-center gap-3">
+        <Progress value={(answeredCount / QUESTIONS.length) * 100} className="flex-1" />
+        <span className="text-xs font-medium tabular-nums text-muted-foreground">
+          {answeredCount} / {QUESTIONS.length}
+        </span>
+      </div>
+
+      <div
+        className="max-h-[380px] space-y-5 overflow-y-auto pr-1"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: '#CBD5E1 transparent' }}
+      >
+        {QUESTIONS.map((q, qIdx) => (
+          <div key={q.key}>
+            <p className="mb-2 text-sm font-medium">
+              <span className="text-muted-foreground">{qIdx + 1}.</span> {q.label}
+            </p>
+            <div className="space-y-1.5">
+              {q.options.map((opt, idx) => {
+                const value = idx + 1
+                const selected = answers[q.key] === value
+                return (
+                  <motion.button
+                    key={opt}
+                    type="button"
+                    onClick={() => setAnswers(prev => ({ ...prev, [q.key]: value }))}
+                    whileTap={{ scale: 0.99 }}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-left text-sm transition-all duration-200',
+                      selected
+                        ? 'border-primary bg-primary/5 font-semibold text-primary'
+                        : 'border-input bg-muted/30 text-muted-foreground',
+                    )}
+                  >
+                    <span>{opt}</span>
+                    <AnimatePresence>
+                      {selected && (
+                        <motion.div
+                          initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                          transition={{ type: 'spring', stiffness: 600, damping: 28 }}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/10"
+                        >
+                          <Check className="h-3 w-3 text-success" strokeWidth={3} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
-      {riskLevel && (
-        <div className={`border rounded-lg px-4 py-3 text-sm font-medium ${riskLevel.color}`}>
-          Risk Profile: {riskLevel.label} (score: {totalScore}/35)
-        </div>
-      )}
+      <AnimatePresence>
+        {risk && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className={cn('rounded-xl border p-4', risk.bg, risk.border)}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Risk profile</span>
+              <span className={cn('rounded-lg px-2.5 py-0.5 text-xs font-bold', risk.color, risk.bg)}>
+                {risk.label}
+              </span>
+            </div>
+            <Progress value={risk.width} indicatorClassName={risk.barColor} />
+            <p className="mt-2 text-[11px] tabular-nums text-muted-foreground">Score: {totalScore}/30</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="flex justify-between">
-        <button
-          className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium"
-          onClick={onBack}
-        >
-          Back
-        </button>
-        <button
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-          onClick={handleNext}
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={onBack}>← Back</Button>
+        <Button
+          onClick={allAnswered ? handleNext : undefined}
           disabled={!allAnswered}
+          className="flex-1"
         >
-          Next
-        </button>
+          Continue →
+        </Button>
       </div>
     </div>
   )

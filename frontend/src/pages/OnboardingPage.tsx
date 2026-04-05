@@ -1,78 +1,99 @@
 import { useNavigate } from 'react-router-dom'
-import { useOnboarding } from '../features/onboarding/useOnboarding'
-import Step1BasicInfo from '../features/onboarding/Step1BasicInfo'
-import Step2Questionnaire from '../features/onboarding/Step2Questionnaire'
-import Step3TargetAllocation from '../features/onboarding/Step3TargetAllocation'
-import Step4InitialHoldings from '../features/onboarding/Step4InitialHoldings'
-import Step5Confirmation from '../features/onboarding/Step5Confirmation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useOnboarding } from '@/features/onboarding/useOnboarding'
+import type { UserProfile } from '@/types'
+import { OnboardingLayout } from '@/layouts/onboarding-layout'
+import { StepDots } from '@/components/shared/step-dots'
+import { ProfileSetup } from '@/components/onboarding/profile-setup'
+import { StepReview } from '@/components/onboarding/step-review'
+import Step2Questionnaire from '@/features/onboarding/Step2Questionnaire'
+import Step3TargetAllocation from '@/features/onboarding/Step3TargetAllocation'
+import Step4InitialHoldings from '@/features/onboarding/Step4InitialHoldings'
+import { slideStep, stepTransition } from '@/lib/motion'
 
-const STEP_LABELS = ['Basic Info', 'Risk Profile', 'Allocations', 'Holdings', 'Confirm']
-const TOTAL_STEPS = 5
+// Step 1 (ProfileSetup) has its own inner dots (1–5).
+// Steps 2–5 are shown as 1–4 in the outer dots so the user doesn't see "2 of 5" after finishing setup.
+const OUTER_STEPS = 4
 
-function ProgressBar({ currentStep }: { currentStep: number }) {
-  return (
-    <div className="mb-8">
-      <div className="flex gap-1">
-        {STEP_LABELS.map((label, i) => {
-          const stepNum = i + 1
-          const filled = stepNum <= currentStep
-          return (
-            <div key={label} className="flex-1">
-              <div
-                className={`h-1.5 rounded-full transition-colors ${
-                  filled ? 'bg-blue-500' : 'bg-gray-600'
-                }`}
-              />
-              <p className={`text-xs mt-1 text-center ${filled ? 'text-blue-400' : 'text-gray-500'}`}>
-                {label}
-              </p>
-            </div>
-          )
-        })}
-      </div>
-      <p className="text-gray-500 text-xs text-right mt-1">
-        Step {currentStep} of {TOTAL_STEPS}
-      </p>
-    </div>
-  )
+interface Props {
+  onComplete: (profile: UserProfile) => void
 }
 
-export default function OnboardingPage() {
+export default function OnboardingPage({ onComplete }: Props) {
   const navigate = useNavigate()
-  const { step, data, submitting, error, updateData, next, back, submit } = useOnboarding(() => {
-    navigate('/')
-  })
+  const { step, data, submitting, saving, saveError, error, updateData, next, back, submit, direction } =
+    useOnboarding((profile) => { onComplete(profile); navigate('/') })
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-gray-800 rounded-xl p-8 shadow-lg">
-        <h1 className="text-2xl font-bold text-white mb-2">Investment Platform Setup</h1>
-        <p className="text-gray-400 text-sm mb-6">Let's get your portfolio configured.</p>
+    <OnboardingLayout>
+      {step > 1 && (
+        <StepDots
+          current={step - 1}
+          total={OUTER_STEPS}
+          section={
+            step === 2 ? 'Risk Profile' :
+            step === 3 ? 'Portfolio Setup' :
+            step === 4 ? 'Portfolio Setup' :
+            'Almost Done'
+          }
+          label={
+            step === 2 ? 'Questionnaire' :
+            step === 3 ? 'Target Allocation' :
+            step === 4 ? 'Initial Holdings' :
+            'Review'
+          }
+        />
+      )}
 
-        <ProgressBar currentStep={step} />
-
-        {step === 1 && (
-          <Step1BasicInfo data={data} onUpdate={updateData} onNext={next} />
-        )}
-        {step === 2 && (
-          <Step2Questionnaire data={data} onUpdate={updateData} onNext={next} onBack={back} />
-        )}
-        {step === 3 && (
-          <Step3TargetAllocation data={data} onUpdate={updateData} onNext={next} onBack={back} />
-        )}
-        {step === 4 && (
-          <Step4InitialHoldings data={data} onUpdate={updateData} onNext={next} onBack={back} />
-        )}
-        {step === 5 && (
-          <Step5Confirmation
-            data={data}
-            onBack={back}
-            onSubmit={submit}
-            submitting={submitting}
-            error={error}
-          />
-        )}
+      {/* Block all interactions while a step is being saved */}
+      <div className={saving ? 'pointer-events-none opacity-60 transition-opacity' : 'transition-opacity'}>
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={step}
+            custom={direction}
+            variants={slideStep}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={stepTransition}
+          >
+            {step === 1 && (
+              <ProfileSetup data={data} onUpdate={updateData} onNext={next} />
+            )}
+            {step === 2 && (
+              <Step2Questionnaire data={data} onUpdate={updateData} onNext={next} onBack={back} />
+            )}
+            {step === 3 && (
+              <Step3TargetAllocation data={data} onUpdate={updateData} onNext={next} onBack={back} />
+            )}
+            {step === 4 && (
+              <Step4InitialHoldings data={data} onUpdate={updateData} onNext={next} onBack={back} />
+            )}
+            {step === 5 && (
+              <StepReview data={data} onSubmit={submit} onBack={back} submitting={submitting} error={error} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {saving && (
+          <motion.p
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="mt-3 text-center text-xs text-muted-foreground"
+          >
+            Saving…
+          </motion.p>
+        )}
+        {saveError && (
+          <motion.p
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="mt-3 text-center text-xs text-destructive"
+          >
+            {saveError}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </OnboardingLayout>
   )
 }

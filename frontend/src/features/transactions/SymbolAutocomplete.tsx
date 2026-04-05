@@ -14,7 +14,7 @@ export default function SymbolAutocomplete({ value, onChange, allocations }: Pro
       <input
         type="text"
         list={DATALIST_ID}
-        className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 w-full text-white focus:outline-none focus:border-blue-500 uppercase"
+        className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm uppercase text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         value={value}
         onChange={e => onChange(e.target.value.toUpperCase())}
         placeholder="e.g. VOO"
