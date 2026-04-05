@@ -87,8 +87,14 @@ class WatchlistAnalysisService(
             return fallback()
         }
 
+        val cleaned = raw.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
         return try {
-            val parsed = objectMapper.readValue<Map<String, Any>>(raw)
+            val parsed = objectMapper.readValue<Map<String, Any>>(cleaned)
             val signal = (parsed["signal"] as? String)?.uppercase()
                 ?.takeIf { it in VALID_SIGNALS }
                 ?: "NOT_YET"

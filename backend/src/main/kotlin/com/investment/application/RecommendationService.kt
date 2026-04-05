@@ -219,10 +219,17 @@ class RecommendationService(
 
     private fun parseRecommendations(raw: String): List<RecommendationCard> {
         if (raw.isBlank()) return emptyList()
+        // Claude sometimes wraps JSON in markdown code blocks — strip them before parsing
+        val cleaned = raw.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
         return try {
-            objectMapper.readValue<List<RecommendationCard>>(raw)
+            objectMapper.readValue<List<RecommendationCard>>(cleaned)
         } catch (e: Exception) {
             log.warn("Failed to parse recommendation response from Claude: {}", e.message)
+            log.debug("Raw Claude response was: {}", raw)
             emptyList()
         }
     }
