@@ -23,6 +23,15 @@ export const HORIZON_STRATEGY: Record<number, { title: string; rec: string }> = 
   25: { title: 'Long-term investor',  rec: '(recommended strategy: accumulation)' },
 }
 
+/** Asset types matching the backend asset_type_enum — used in allocation and holdings dropdowns. */
+export const ASSET_TYPES = [
+  { value: 'ETF',    label: 'ETF' },
+  { value: 'STOCK',  label: 'Stocks' },
+  { value: 'CRYPTO', label: 'Crypto' },
+  { value: 'REIT',   label: 'REIT' },
+  { value: 'BOND',   label: 'Bonds' },
+] as const
+
 export const ASSET_TRACKS = [
   { value: 'LONG_EQUITY', label: 'ETF',     desc: 'Always on',               icon: 'TrendingUp',  color: '#22C55E', locked: true },
   { value: 'CRYPTO',      label: 'Crypto',  desc: 'Volatile digital assets', icon: 'Coins',       color: '#F59E0B', locked: false },

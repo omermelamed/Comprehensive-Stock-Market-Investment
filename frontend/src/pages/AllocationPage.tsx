@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getAllocations, bulkReplaceAllocations } from '@/api/allocations'
 import { Card, CardContent } from '@/components/ui/card'
-import { ASSET_TRACKS } from '@/data/onboarding'
+import { ASSET_TYPES } from '@/data/onboarding'
 import type { TargetAllocation } from '@/types'
 
 const inputClass =
@@ -55,7 +55,7 @@ export default function AllocationPage() {
       {
         id: `new-${draftCounter}`,
         symbol: '',
-        assetType: 'LONG_EQUITY',
+        assetType: 'ETF',
         label: '',
         targetPercentage: 0,
         displayOrder: prev.length,
@@ -184,7 +184,7 @@ export default function AllocationPage() {
                         value={row.assetType}
                         onChange={e => updateRow(row.id, { assetType: e.target.value })}
                       >
-                        {ASSET_TRACKS.map(t => (
+                        {ASSET_TYPES.map(t => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
