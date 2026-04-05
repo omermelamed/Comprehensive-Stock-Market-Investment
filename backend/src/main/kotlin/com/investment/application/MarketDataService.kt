@@ -5,6 +5,7 @@ import com.investment.domain.PriceQuote
 import com.investment.infrastructure.market.MarketDataProvider
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -54,5 +55,16 @@ class MarketDataService(
         }
 
         throw MarketDataUnavailableException(upperSymbol)
+    }
+
+    fun getExchangeRate(toCurrency: String): BigDecimal {
+        if (toCurrency.uppercase() == "USD") return BigDecimal.ONE
+        val fxSymbol = "USD${toCurrency.uppercase()}=X"
+        return try {
+            getQuote(fxSymbol).price
+        } catch (e: Exception) {
+            log.warn("Could not fetch FX rate for {}, defaulting to 1.0", fxSymbol)
+            BigDecimal.ONE
+        }
     }
 }

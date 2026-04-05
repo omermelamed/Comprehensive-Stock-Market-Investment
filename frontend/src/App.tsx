@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage'
 import AllocationPage from './pages/AllocationPage'
 import WatchlistPage from './pages/WatchlistPage'
 import { AppLayout } from './layouts/app-layout'
+import { CurrencyProvider } from './contexts/currency-context'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -70,6 +71,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <CurrencyProvider currency={profile?.preferredCurrency ?? 'USD'}>
       <BrowserRouter>
         <Routes>
           <Route path="/onboarding" element={needsOnboarding ? <OnboardingPage onComplete={setProfile} /> : <Navigate to="/" replace />} />
@@ -85,6 +87,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </CurrencyProvider>
     </ErrorBoundary>
   )
 }

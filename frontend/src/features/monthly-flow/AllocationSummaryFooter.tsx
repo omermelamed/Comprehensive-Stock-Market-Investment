@@ -1,13 +1,6 @@
 import { cn } from '@/lib/utils'
-
-function fmt(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency'
 
 interface Props {
   budget: number
@@ -24,6 +17,8 @@ export function AllocationSummaryFooter({
   onConfirm,
   isConfirming,
 }: Props) {
+  const currency = useCurrency()
+  const fmt = (v: number) => formatMoney(v, currency)
   const isOverBudget = remaining < 0
   const canConfirm = !isOverBudget && totalAllocated > 0 && !isConfirming
 

@@ -13,14 +13,8 @@ type SortKey = keyof Pick<
 
 type SortDir = 'asc' | 'desc'
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency'
 
 function formatPercent(value: number, withSign = false): string {
   const sign = withSign && value >= 0 ? '+' : ''
@@ -65,6 +59,8 @@ interface Props {
 export function HoldingsTable({ holdings }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('currentValue')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const currency = useCurrency()
+  const formatCurrency = (v: number) => formatMoney(v, currency)
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {

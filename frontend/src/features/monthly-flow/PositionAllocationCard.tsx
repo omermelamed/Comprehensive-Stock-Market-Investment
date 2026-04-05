@@ -1,14 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { PositionCard } from '@/types'
-
-function fmt(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency'
 
 function fmtPct(value: number): string {
   return `${value.toFixed(2)}%`
@@ -34,6 +27,8 @@ interface Props {
 }
 
 export function PositionAllocationCard({ position, amount, onAmountChange, isLoadingSummary }: Props) {
+  const currency = useCurrency()
+  const fmt = (v: number) => formatMoney(v, currency)
   const isEditable = position.status === 'UNDERWEIGHT'
 
   return (

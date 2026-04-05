@@ -5,18 +5,14 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { PortfolioSummary } from '@/api/portfolio'
+import { formatMoney } from '@/lib/currency'
 
 function formatCurrency(value: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return formatMoney(value, currency)
 }
 
 function formatPnl(value: number, currency = 'USD'): string {
-  const formatted = formatCurrency(Math.abs(value), currency)
+  const formatted = formatMoney(Math.abs(value), currency)
   return value >= 0 ? `+${formatted}` : `-${formatted}`
 }
 

@@ -1,13 +1,6 @@
 import type { MonthlyFlowConfirmResult } from '@/types'
-
-function fmt(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency'
 
 interface Props {
   allocations: { symbol: string; amount: number }[]
@@ -26,6 +19,8 @@ export function ConfirmInvestmentDialog({
   onClose,
   onDone,
 }: Props) {
+  const currency = useCurrency()
+  const fmt = (v: number) => formatMoney(v, currency)
   const investable = allocations.filter((a) => a.amount > 0)
 
   return (

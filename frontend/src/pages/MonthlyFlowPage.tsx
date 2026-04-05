@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useMonthlyFlow } from '@/features/monthly-flow/useMonthlyFlow'
+import { useCurrency } from '@/contexts/currency-context'
+import { formatMoney } from '@/lib/currency'
 import { MonthlyBudgetInput } from '@/features/monthly-flow/MonthlyBudgetInput'
 import { PositionAllocationCard } from '@/features/monthly-flow/PositionAllocationCard'
 import { AllocationSummaryFooter } from '@/features/monthly-flow/AllocationSummaryFooter'
@@ -7,6 +9,7 @@ import { ConfirmInvestmentDialog } from '@/features/monthly-flow/ConfirmInvestme
 
 export default function MonthlyFlowPage() {
   const [showDialog, setShowDialog] = useState(false)
+  const currency = useCurrency()
   const {
     budget,
     setBudget,
@@ -65,9 +68,7 @@ export default function MonthlyFlowPage() {
               <p className="text-sm text-muted-foreground">
                 Portfolio total:{' '}
                 <span className="font-mono font-semibold text-foreground">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                    preview.portfolioTotal
-                  )}
+                  {formatMoney(preview.portfolioTotal, currency)}
                 </span>
               </p>
             )}

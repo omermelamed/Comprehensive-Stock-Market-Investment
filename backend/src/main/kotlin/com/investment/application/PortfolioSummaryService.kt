@@ -9,12 +9,14 @@ import com.investment.infrastructure.HoldingsProjectionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Service
 class PortfolioSummaryService(
     private val holdingsRepository: HoldingsProjectionRepository,
     private val allocationRepository: AllocationRepository,
-    private val marketDataService: MarketDataService
+    private val marketDataService: MarketDataService,
+    private val userProfileService: UserProfileService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -26,6 +28,9 @@ class PortfolioSummaryService(
     fun getHoldingsDashboard(): List<HoldingDashboardResponse> {
         val holdings = holdingsRepository.findAll()
         if (holdings.isEmpty()) return emptyList()
+
+        val currency = userProfileService.getProfile()?.preferredCurrency ?: DEFAULT_CURRENCY
+        val fxRate = marketDataService.getExchangeRate(currency)
 
         val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
 
@@ -55,14 +60,18 @@ class PortfolioSummaryService(
                 targetPercent = allocation?.targetPercentage,
                 label = allocation?.label
             )
-            PortfolioCalculator.toDto(metrics)
+            PortfolioCalculator.toDto(metrics).convertCurrency(fxRate)
         }
     }
 
     fun getPortfolioSummary(): PortfolioSummaryResponse {
+        val currency = userProfileService.getProfile()?.preferredCurrency ?: DEFAULT_CURRENCY
+        val fxRate = marketDataService.getExchangeRate(currency)
+
         val holdings = holdingsRepository.findAll()
         if (holdings.isEmpty()) {
             return PortfolioCalculator.computePortfolioSummary(emptyList(), DEFAULT_CURRENCY)
+                .convertCurrency(fxRate, currency)
         }
 
         val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
@@ -96,5 +105,31 @@ class PortfolioSummaryService(
         }
 
         return PortfolioCalculator.computePortfolioSummary(holdingMetrics, DEFAULT_CURRENCY)
+            .convertCurrency(fxRate, currency)
+    }
+
+    private fun HoldingDashboardResponse.convertCurrency(rate: BigDecimal): HoldingDashboardResponse {
+        if (rate.compareTo(BigDecimal.ONE) == 0) return this
+        val scale = 2
+        val rounding = RoundingMode.HALF_UP
+        return copy(
+            avgBuyPrice = (avgBuyPrice * rate).setScale(scale, rounding),
+            currentPrice = (currentPrice * rate).setScale(scale, rounding),
+            currentValue = (currentValue * rate).setScale(scale, rounding),
+            costBasis = (costBasis * rate).setScale(scale, rounding),
+            pnlAbsolute = (pnlAbsolute * rate).setScale(scale, rounding),
+        )
+    }
+
+    private fun PortfolioSummaryResponse.convertCurrency(rate: BigDecimal, currency: String): PortfolioSummaryResponse {
+        if (rate.compareTo(BigDecimal.ONE) == 0) return copy(currency = currency)
+        val scale = 2
+        val rounding = RoundingMode.HALF_UP
+        return copy(
+            totalValue = (totalValue * rate).setScale(scale, rounding),
+            totalCostBasis = (totalCostBasis * rate).setScale(scale, rounding),
+            totalPnlAbsolute = (totalPnlAbsolute * rate).setScale(scale, rounding),
+            currency = currency,
+        )
     }
 }

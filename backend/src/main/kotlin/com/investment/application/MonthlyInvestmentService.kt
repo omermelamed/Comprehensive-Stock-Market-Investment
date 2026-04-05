@@ -20,7 +20,8 @@ class MonthlyInvestmentService(
     private val holdingsRepository: HoldingsProjectionRepository,
     private val allocationRepository: AllocationRepository,
     private val marketDataService: MarketDataService,
-    private val transactionService: TransactionService
+    private val transactionService: TransactionService,
+    private val userProfileService: UserProfileService
 ) {
 
     fun preview(request: MonthlyFlowPreviewRequest): MonthlyFlowPreviewResponse {
@@ -44,7 +45,27 @@ class MonthlyInvestmentService(
         }.toMap()
 
         val result = MonthlyAllocationCalculator.compute(holdings, allocations, prices, request.budget)
-        return result.copy(missingPrices = missing)
+
+        val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
+        val fxRate = marketDataService.getExchangeRate(currency)
+
+        return if (fxRate.compareTo(BigDecimal.ONE) == 0) {
+            result.copy(missingPrices = missing)
+        } else {
+            val scale = 2
+            val rounding = RoundingMode.HALF_UP
+            result.copy(
+                missingPrices = missing,
+                portfolioTotal = (result.portfolioTotal * fxRate).setScale(scale, rounding),
+                positions = result.positions.map { pos ->
+                    pos.copy(
+                        currentValue = (pos.currentValue * fxRate).setScale(scale, rounding),
+                        gapValue = (pos.gapValue * fxRate).setScale(scale, rounding),
+                        suggestedAmount = (pos.suggestedAmount * fxRate).setScale(scale, rounding),
+                    )
+                }
+            )
+        }
     }
 
     @Transactional
