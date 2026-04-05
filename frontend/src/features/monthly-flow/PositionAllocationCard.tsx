@@ -30,9 +30,10 @@ interface Props {
   position: PositionCard
   amount: string
   onAmountChange: (value: string) => void
+  isLoadingSummary?: boolean
 }
 
-export function PositionAllocationCard({ position, amount, onAmountChange }: Props) {
+export function PositionAllocationCard({ position, amount, onAmountChange, isLoadingSummary }: Props) {
   const isEditable = position.status === 'UNDERWEIGHT'
 
   return (
@@ -112,6 +113,20 @@ export function PositionAllocationCard({ position, amount, onAmountChange }: Pro
           </p>
         )}
       </div>
+
+      {/* AI summary */}
+      {(isLoadingSummary || position.aiSummary) && (
+        <div className="border-t border-border pt-3">
+          {isLoadingSummary && !position.aiSummary ? (
+            <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+          ) : (
+            <p className="text-xs text-purple-400 leading-relaxed">
+              <span className="mr-1 font-medium text-purple-500">AI</span>
+              {position.aiSummary}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

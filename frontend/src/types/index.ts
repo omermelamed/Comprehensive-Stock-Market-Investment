@@ -54,6 +54,7 @@ export interface PositionCard {
   gapValue: number
   suggestedAmount: number
   status: 'UNDERWEIGHT' | 'ON_TARGET' | 'OVERWEIGHT'
+  aiSummary?: string
 }
 
 export interface MonthlyFlowPreview {
@@ -66,4 +67,28 @@ export interface MonthlyFlowPreview {
 export interface MonthlyFlowConfirmResult {
   totalInvested: number
   transactionsCreated: number
+}
+
+export interface WatchlistAnalysisSections {
+  valuation: string
+  momentum: string
+  financialHealth: string
+  growth: string
+  sentiment: string
+}
+
+export interface WatchlistItem {
+  id: string
+  symbol: string
+  companyName: string | null
+  assetType: string
+  signal: 'GOOD_BUY_NOW' | 'NOT_YET' | 'WAIT_FOR_DIP' | 'PENDING'
+  signalSummary: string | null
+  fullAnalysis: {
+    signal: string
+    summary: string
+    sections: WatchlistAnalysisSections
+  } | null
+  lastAnalyzedAt: string | null
+  addedAt: string
 }

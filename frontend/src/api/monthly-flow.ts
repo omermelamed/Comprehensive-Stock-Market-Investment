@@ -1,8 +1,18 @@
 import client from './client'
 import type { MonthlyFlowConfirmResult, MonthlyFlowPreview } from '@/types'
 
+export interface PositionSummary {
+  symbol: string
+  summary: string
+}
+
 export async function previewMonthlyFlow(budget: number): Promise<MonthlyFlowPreview> {
   const res = await client.post<MonthlyFlowPreview>('/api/monthly-flow/preview', { budget })
+  return res.data
+}
+
+export async function fetchAiSummaries(budget: number): Promise<PositionSummary[]> {
+  const res = await client.post<PositionSummary[]>('/api/monthly-flow/summaries', { budget })
   return res.data
 }
 

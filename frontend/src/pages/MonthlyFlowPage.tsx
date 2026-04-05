@@ -13,6 +13,7 @@ export default function MonthlyFlowPage() {
     preview,
     overrides,
     isLoadingPreview,
+    isLoadingSummaries,
     isConfirming,
     confirmResult,
     error,
@@ -96,6 +97,7 @@ export default function MonthlyFlowPage() {
                   position={pos}
                   amount={overrides[pos.symbol] ?? pos.suggestedAmount.toFixed(2)}
                   onAmountChange={(v) => setOverride(pos.symbol, v)}
+                  isLoadingSummary={isLoadingSummaries && !pos.aiSummary}
                 />
               ))}
             </div>

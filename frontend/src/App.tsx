@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage'
 import MonthlyFlowPage from './pages/MonthlyFlowPage'
 import ProfilePage from './pages/ProfilePage'
 import AllocationPage from './pages/AllocationPage'
+import WatchlistPage from './pages/WatchlistPage'
 import { AppLayout } from './layouts/app-layout'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -79,6 +80,7 @@ function App() {
             <Route path="/monthly-flow" element={<MonthlyFlowPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/allocations" element={<AllocationPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
