@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 @Component
 class YahooFinanceAdapter(
@@ -14,26 +17,48 @@ class YahooFinanceAdapter(
 ) : MarketDataProvider {
 
     private val log = LoggerFactory.getLogger(javaClass)
+    private val marketTz = ZoneId.of("America/New_York")
 
     override val sourceName: String = "YAHOO"
 
     override fun fetchQuote(symbol: String): PriceQuote? {
         return try {
             val url = "https://query1.finance.yahoo.com/v8/finance/chart/$symbol?interval=1d&range=1d"
-            val body = restClient.get()
-                .uri(url)
-                .retrieve()
-                .body(Map::class.java) ?: return null
-
-            parseResponse(symbol, body)
+            val body = restClient.get().uri(url).retrieve().body(Map::class.java) ?: return null
+            parseQuote(symbol, body)
         } catch (e: Exception) {
             log.warn("YahooFinance quote fetch failed for {}: {}", symbol, e.message)
             null
         }
     }
 
+    /**
+     * Fetches adjusted daily closing prices for [symbol] covering [fromDate] to [toDate].
+     * Returns a map of trading date → adjusted close price. Returns empty map on any failure.
+     * Uses adjusted close to account for dividends and splits.
+     */
+    fun fetchHistoricalPrices(symbol: String, fromDate: LocalDate, toDate: LocalDate): Map<LocalDate, BigDecimal> {
+        val daySpan = toDate.toEpochDay() - fromDate.toEpochDay()
+        val range = when {
+            daySpan <= 35  -> "1mo"
+            daySpan <= 95  -> "3mo"
+            daySpan <= 190 -> "6mo"
+            daySpan <= 370 -> "1y"
+            daySpan <= 740 -> "2y"
+            else           -> "5y"
+        }
+        return try {
+            val url = "https://query1.finance.yahoo.com/v8/finance/chart/$symbol?interval=1d&range=$range"
+            val body = restClient.get().uri(url).retrieve().body(Map::class.java) ?: return emptyMap()
+            parseHistorical(body, fromDate, toDate)
+        } catch (e: Exception) {
+            log.warn("YahooFinance historical fetch failed for {}: {}", symbol, e.message)
+            emptyMap()
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
-    private fun parseResponse(symbol: String, body: Map<*, *>): PriceQuote? {
+    private fun parseQuote(symbol: String, body: Map<*, *>): PriceQuote? {
         return try {
             val chart = body["chart"] as? Map<*, *> ?: return null
             val results = chart["result"] as? List<*> ?: return null
@@ -45,19 +70,45 @@ class YahooFinanceAdapter(
                 is Number -> BigDecimal(rawPrice.toString())
                 else -> return null
             }
-
             val currency = meta["currency"] as? String ?: "USD"
 
-            PriceQuote(
-                symbol = symbol.uppercase(),
-                price = price,
-                currency = currency,
-                timestamp = Instant.now(),
-                source = sourceName,
-            )
+            PriceQuote(symbol = symbol.uppercase(), price = price, currency = currency,
+                timestamp = Instant.now(), source = sourceName)
         } catch (e: Exception) {
             log.warn("YahooFinance response parse failed for {}: {}", symbol, e.message)
             null
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun parseHistorical(body: Map<*, *>, fromDate: LocalDate, toDate: LocalDate): Map<LocalDate, BigDecimal> {
+        return try {
+            val chart = body["chart"] as? Map<*, *> ?: return emptyMap()
+            val results = chart["result"] as? List<*> ?: return emptyMap()
+            val first = results.firstOrNull() as? Map<*, *> ?: return emptyMap()
+
+            val timestamps = first["timestamp"] as? List<*> ?: return emptyMap()
+            val indicators = first["indicators"] as? Map<*, *> ?: return emptyMap()
+
+            // Prefer adjusted close; fall back to regular close
+            val adjcloseBlock = (indicators["adjclose"] as? List<*>)?.firstOrNull() as? Map<*, *>
+            val prices: List<*>? = (adjcloseBlock?.get("adjclose") as? List<*>)
+                ?: ((indicators["quote"] as? List<*>)?.firstOrNull() as? Map<*, *>)?.get("close") as? List<*>
+
+            if (prices == null) return emptyMap()
+
+            val result = mutableMapOf<LocalDate, BigDecimal>()
+            for (i in timestamps.indices) {
+                val ts = timestamps[i] as? Number ?: continue
+                val rawPrice = prices.getOrNull(i) as? Number ?: continue
+                val date = Instant.ofEpochSecond(ts.toLong()).atZone(marketTz).toLocalDate()
+                if (date.isBefore(fromDate) || date.isAfter(toDate)) continue
+                result[date] = BigDecimal(rawPrice.toString()).setScale(4, RoundingMode.HALF_UP)
+            }
+            result
+        } catch (e: Exception) {
+            log.warn("YahooFinance historical parse failed: {}", e.message)
+            emptyMap()
         }
     }
 }

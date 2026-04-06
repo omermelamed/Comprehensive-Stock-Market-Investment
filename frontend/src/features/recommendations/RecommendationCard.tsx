@@ -1,6 +1,7 @@
+import { ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/lib/currency'
-import type { RecommendationCard as RecommendationCardType } from '@/types'
+import type { RecommendationCard as RecommendationCardType, FundamentalsData } from '@/types'
 
 const SOURCE_STYLES: Record<RecommendationCardType['source'], string> = {
   ALLOCATION_GAP: 'bg-primary/15 text-primary border-primary/30',
@@ -32,6 +33,43 @@ const CONFIDENCE_LABELS: Record<RecommendationCardType['confidence'], string> = 
   LOW:    'Low confidence',
 }
 
+function formatMarketCap(raw: string | null): string {
+  if (!raw) return '—'
+  const n = Number(raw)
+  if (isNaN(n)) return raw
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
+  if (n >= 1e9)  return `$${(n / 1e9).toFixed(1)}B`
+  if (n >= 1e6)  return `$${(n / 1e6).toFixed(1)}M`
+  return `$${n.toLocaleString()}`
+}
+
+function FundamentalsPanel({ data }: { data: FundamentalsData }) {
+  const rows: [string, string][] = [
+    ['P/E', data.peRatio?.toFixed(1) ?? '—'],
+    ['PEG', data.pegRatio?.toFixed(2) ?? '—'],
+    ['EPS', data.eps != null ? `$${data.eps.toFixed(2)}` : '—'],
+    ['Div yield', data.dividendYield != null ? `${(data.dividendYield * 100).toFixed(2)}%` : '—'],
+    ['52W high', data.fiftyTwoWeekHigh != null ? `$${data.fiftyTwoWeekHigh.toFixed(2)}` : '—'],
+    ['52W low',  data.fiftyTwoWeekLow  != null ? `$${data.fiftyTwoWeekLow.toFixed(2)}`  : '—'],
+    ['Mkt cap',  formatMarketCap(data.marketCap)],
+  ].filter(([, v]) => v !== '—') as [string, string][]
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-2.5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{label}</span>
+            <span className="font-mono text-xs font-medium text-foreground">{value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   card: RecommendationCardType
   currency: string
@@ -47,7 +85,19 @@ export function RecommendationCard({ card, currency }: Props) {
         </span>
         <div className="flex flex-1 items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
-            <p className="font-mono text-lg font-bold text-card-foreground">{card.symbol}</p>
+            {card.sourceUrl ? (
+              <a
+                href={card.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 font-mono text-lg font-bold text-card-foreground hover:text-primary"
+              >
+                {card.symbol}
+                <ExternalLink className="h-3 w-3 opacity-50" />
+              </a>
+            ) : (
+              <p className="font-mono text-lg font-bold text-card-foreground">{card.symbol}</p>
+            )}
             {card.currentPrice !== null && (
               <span className="font-mono text-xs text-muted-foreground">
                 {formatMoney(card.currentPrice, currency)}
@@ -97,6 +147,9 @@ export function RecommendationCard({ card, currency }: Props) {
           ))}
         </ul>
       )}
+
+      {/* Fundamentals */}
+      {card.fundamentals && <FundamentalsPanel data={card.fundamentals} />}
 
       {/* Suggested amount */}
       {card.suggestedAmount !== null && (

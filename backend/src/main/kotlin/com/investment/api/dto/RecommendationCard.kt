@@ -10,7 +10,9 @@ data class RecommendationCard(
     val reason: String,
     val suggestedAmount: BigDecimal?,
     val confidence: String,        // "HIGH" | "MEDIUM" | "LOW"
-    val currentPrice: BigDecimal? = null,  // deterministic — from market data, set by service
-    val timeHorizon: String? = null,       // advisory — Claude's suggested holding period
-    val catalysts: List<String>? = null    // advisory — Claude's 2-3 key reasons
+    val currentPrice: BigDecimal? = null,    // deterministic — from market data, set by service
+    val timeHorizon: String? = null,         // advisory — Claude's suggested holding period
+    val catalysts: List<String>? = null,     // advisory — Claude's 2-3 key reasons
+    val fundamentals: FundamentalsData? = null, // deterministic — from Alpha Vantage OVERVIEW
+    val sourceUrl: String? = null            // deterministic — Yahoo Finance quote page URL
 )

@@ -93,6 +93,16 @@ export interface WatchlistItem {
   addedAt: string
 }
 
+export interface FundamentalsData {
+  peRatio: number | null
+  pegRatio: number | null
+  eps: number | null
+  dividendYield: number | null
+  fiftyTwoWeekHigh: number | null
+  fiftyTwoWeekLow: number | null
+  marketCap: string | null
+}
+
 export interface RecommendationCard {
   rank: number
   symbol: string
@@ -101,9 +111,11 @@ export interface RecommendationCard {
   reason: string
   suggestedAmount: number | null
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
-  currentPrice: number | null    // deterministic — from market data
-  timeHorizon: string | null     // advisory — Claude's suggested holding period
-  catalysts: string[] | null     // advisory — Claude's 2-3 key reasons
+  currentPrice: number | null      // deterministic — from market data
+  timeHorizon: string | null       // advisory — Claude's suggested holding period
+  catalysts: string[] | null       // advisory — Claude's 2-3 key reasons
+  fundamentals: FundamentalsData | null  // deterministic — from Alpha Vantage
+  sourceUrl: string | null         // deterministic — Yahoo Finance quote URL
 }
 
 export interface PortfolioContextSummary {

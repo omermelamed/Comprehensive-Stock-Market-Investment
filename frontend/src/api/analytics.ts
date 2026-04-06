@@ -16,6 +16,18 @@ export interface AnalyticsPerformanceMetrics {
 export interface AnalyticsChartPoint {
   date: string
   portfolioValue: number
+  portfolioIndex: number
+}
+
+export interface AnalyticsBenchmarkPoint {
+  date: string
+  benchmarkIndex: number
+}
+
+export interface AnalyticsBenchmark {
+  symbol: string
+  periodReturnPct: number
+  points: AnalyticsBenchmarkPoint[]
 }
 
 export interface AnalyticsPositionMetric {
@@ -34,6 +46,7 @@ export interface AnalyticsResponse {
   performanceMetrics: AnalyticsPerformanceMetrics
   chartPoints: AnalyticsChartPoint[]
   positions: AnalyticsPositionMetric[]
+  benchmark: AnalyticsBenchmark | null
 }
 
 export const getAnalytics = (range: string): Promise<AnalyticsResponse> =>

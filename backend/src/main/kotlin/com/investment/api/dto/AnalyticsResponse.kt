@@ -23,7 +23,21 @@ data class AnalyticsPerformanceMetrics(
 
 data class AnalyticsChartPoint(
     val date: String,
-    val portfolioValue: BigDecimal
+    val portfolioValue: BigDecimal,
+    /** Portfolio indexed to 100 at the first snapshot in the range. */
+    val portfolioIndex: BigDecimal
+)
+
+data class AnalyticsBenchmarkPoint(
+    val date: String,
+    /** Benchmark (SPY) indexed to 100 at the first available price in the range. */
+    val benchmarkIndex: BigDecimal
+)
+
+data class AnalyticsBenchmark(
+    val symbol: String,
+    val periodReturnPct: BigDecimal,
+    val points: List<AnalyticsBenchmarkPoint>
 )
 
 data class AnalyticsPositionMetric(
@@ -42,5 +56,7 @@ data class AnalyticsResponse(
     val currency: String,
     val performanceMetrics: AnalyticsPerformanceMetrics,
     val chartPoints: List<AnalyticsChartPoint>,
-    val positions: List<AnalyticsPositionMetric>
+    val positions: List<AnalyticsPositionMetric>,
+    /** Null when benchmark data is unavailable (network failure, no history). */
+    val benchmark: AnalyticsBenchmark?
 )

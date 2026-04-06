@@ -1,5 +1,7 @@
 package com.investment.application
 
+import com.investment.api.dto.AnalyticsBenchmark
+import com.investment.api.dto.AnalyticsBenchmarkPoint
 import com.investment.api.dto.AnalyticsChartPoint
 import com.investment.api.dto.AnalyticsPerformanceMetrics
 import com.investment.api.dto.AnalyticsPositionMetric
@@ -17,6 +19,7 @@ class AnalyticsService(
     private val snapshotRepository: SnapshotRepository,
     private val portfolioSummaryService: PortfolioSummaryService,
     private val userProfileService: UserProfileService,
+    private val benchmarkService: BenchmarkService,
     private val clock: Clock
 ) {
 
@@ -41,16 +44,30 @@ class AnalyticsService(
             totalCostBasis = summary.totalCostBasis
         )
 
+        // Build indexed portfolio chart points (100 at first snapshot)
+        val firstValue = snapshots.firstOrNull()?.totalValue ?: BigDecimal.ZERO
         val chartPoints = snapshots.map { s ->
-            AnalyticsChartPoint(date = s.date.toString(), portfolioValue = s.totalValue)
+            val index = if (firstValue.compareTo(BigDecimal.ZERO) != 0) {
+                s.totalValue.divide(firstValue, 6, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
+            } else BigDecimal("100")
+            AnalyticsChartPoint(
+                date = s.date.toString(),
+                portfolioValue = s.totalValue,
+                portfolioIndex = index
+            )
         }
+
+        // Benchmark: use date range from snapshots when available, otherwise the requested range
+        val fromDate = snapshots.firstOrNull()?.date ?: today.minusDays(rangeInDays(range))
+        val toDate = snapshots.lastOrNull()?.date ?: today
+        val benchmark = buildBenchmark(fromDate, toDate)
 
         val totalValue = summary.totalValue
         val positions = holdings.map { h ->
             val weightPct = if (totalValue.compareTo(BigDecimal.ZERO) != 0) {
                 h.currentValue.divide(totalValue, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal("100"))
-                    .setScale(2, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
             } else BigDecimal.ZERO
             AnalyticsPositionMetric(
                 symbol = h.symbol,
@@ -68,8 +85,24 @@ class AnalyticsService(
             currency = currency,
             performanceMetrics = metrics.toDto(),
             chartPoints = chartPoints,
-            positions = positions
+            positions = positions,
+            benchmark = benchmark
         )
+    }
+
+    private fun buildBenchmark(fromDate: LocalDate, toDate: LocalDate): AnalyticsBenchmark? {
+        val result = benchmarkService.getBenchmark("SPY", fromDate, toDate) ?: return null
+        return AnalyticsBenchmark(
+            symbol = result.symbol,
+            periodReturnPct = result.periodReturnPct,
+            points = result.indexedPoints.map { p ->
+                AnalyticsBenchmarkPoint(date = p.date, benchmarkIndex = p.index)
+            }
+        )
+    }
+
+    private fun rangeInDays(range: String): Long = when (range) {
+        "1M" -> 30L; "3M" -> 90L; "6M" -> 180L; "1Y" -> 365L; else -> 730L
     }
 
     private fun PerformanceCalculator.PerformanceMetrics.toDto() = AnalyticsPerformanceMetrics(

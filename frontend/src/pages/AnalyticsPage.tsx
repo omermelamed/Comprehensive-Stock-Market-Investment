@@ -3,7 +3,7 @@ import { createChart, ColorType, type IChartApi, type ISeriesApi, type LineData 
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/lib/currency'
 import { useCurrency } from '@/contexts/currency-context'
-import { getAnalytics, type AnalyticsResponse, type AnalyticsPerformanceMetrics } from '@/api/analytics'
+import { getAnalytics, type AnalyticsResponse, type AnalyticsPerformanceMetrics, type AnalyticsBenchmark } from '@/api/analytics'
 
 const RANGES = ['1M', '3M', '6M', '1Y', 'ALL'] as const
 
@@ -51,14 +51,16 @@ function MetricCard({ label, value, subLabel, colored, rawValue }: MetricCardPro
 // ── PerformanceChart ──────────────────────────────────────────────────────────
 
 interface ChartProps {
-  points: { date: string; portfolioValue: number }[]
+  points: { date: string; portfolioIndex: number }[]
+  benchmark: AnalyticsBenchmark | null
   loading: boolean
 }
 
-function PerformanceChart({ points, loading }: ChartProps) {
+function PerformanceChart({ points, benchmark, loading }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const seriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const portfolioSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const benchmarkSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -75,22 +77,30 @@ function PerformanceChart({ points, loading }: ChartProps) {
       handleScroll: false,
       handleScale: false,
     })
-    const series = chart.addLineSeries({ color: '#6366f1', lineWidth: 2, priceLineVisible: false, lastValueVisible: true })
+    portfolioSeriesRef.current = chart.addLineSeries({ color: '#6366f1', lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'Portfolio' })
+    benchmarkSeriesRef.current = chart.addLineSeries({ color: '#f59e0b', lineWidth: 2, priceLineVisible: false, lastValueVisible: true, lineStyle: 2, title: 'SPY' })
     chartRef.current = chart
-    seriesRef.current = series
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) chart.applyOptions({ width: entry.contentRect.width })
     })
     observer.observe(containerRef.current)
-    return () => { observer.disconnect(); chart.remove(); chartRef.current = null; seriesRef.current = null }
+    return () => { observer.disconnect(); chart.remove(); portfolioSeriesRef.current = null; benchmarkSeriesRef.current = null; chartRef.current = null }
   }, [])
 
   useEffect(() => {
-    if (!seriesRef.current) return
-    const data: LineData[] = points.map(p => ({ time: p.date as LineData['time'], value: p.portfolioValue }))
-    seriesRef.current.setData(data)
+    if (!portfolioSeriesRef.current) return
+    const data: LineData[] = points.map(p => ({ time: p.date as LineData['time'], value: p.portfolioIndex }))
+    portfolioSeriesRef.current.setData(data)
     if (data.length > 0) chartRef.current?.timeScale().fitContent()
   }, [points])
+
+  useEffect(() => {
+    if (!benchmarkSeriesRef.current) return
+    const data: LineData[] = benchmark
+      ? benchmark.points.map(p => ({ time: p.date as LineData['time'], value: p.benchmarkIndex }))
+      : []
+    benchmarkSeriesRef.current.setData(data)
+  }, [benchmark])
 
   return loading ? (
     <div className="h-60 animate-pulse rounded-xl bg-muted" />
@@ -224,7 +234,22 @@ export default function AnalyticsPage() {
                 ))}
               </div>
             </div>
-            <PerformanceChart points={data?.chartPoints ?? []} loading={loading} />
+            <PerformanceChart points={data?.chartPoints ?? []} benchmark={data?.benchmark ?? null} loading={loading} />
+            {/* Chart legend */}
+            {!loading && (
+              <div className="mt-2 flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-0.5 w-4 rounded bg-indigo-500" />
+                  <span className="text-xs text-muted-foreground">Portfolio (indexed to 100)</span>
+                </div>
+                {data?.benchmark && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-px w-4 border-t-2 border-dashed border-amber-500" />
+                    <span className="text-xs text-muted-foreground">SPY (indexed to 100)</span>
+                  </div>
+                )}
+              </div>
+            )}
             {m && m.snapshotCount === 0 && !loading && (
               <p className="mt-2 text-center text-xs text-muted-foreground">
                 No snapshot history yet. Snapshots are created daily — check back tomorrow.
@@ -244,11 +269,18 @@ export default function AnalyticsPage() {
                 rawValue={m?.costBasisReturnPct}
               />
               <MetricCard
-                label={`Period return (${range})`}
+                label={`Portfolio (${range})`}
                 value={m ? fmt(m.snapshotPeriodReturnPct) : '—'}
                 subLabel={m?.periodStart ? `${m.periodStart} → ${m.periodEnd}` : undefined}
                 colored
                 rawValue={m?.snapshotPeriodReturnPct}
+              />
+              <MetricCard
+                label={`SPY (${range})`}
+                value={data?.benchmark ? fmt(data.benchmark.periodReturnPct) : 'N/A'}
+                subLabel={data?.benchmark ? 'benchmark' : 'unavailable'}
+                colored
+                rawValue={data?.benchmark?.periodReturnPct ?? null}
               />
               <MetricCard
                 label="Annualized return"
@@ -256,11 +288,6 @@ export default function AnalyticsPage() {
                 subLabel="compound"
                 colored
                 rawValue={m?.annualizedReturnPct}
-              />
-              <MetricCard
-                label="Snapshot count"
-                value={m ? String(m.snapshotCount) : '—'}
-                subLabel="trading days"
               />
             </div>
           </div>

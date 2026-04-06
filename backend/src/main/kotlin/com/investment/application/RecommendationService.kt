@@ -12,6 +12,7 @@ import com.investment.infrastructure.HoldingsProjectionRepository
 import com.investment.infrastructure.RecommendationCacheRepository
 import com.investment.infrastructure.WatchlistRepository
 import com.investment.infrastructure.ai.ClaudeClient
+import com.investment.infrastructure.market.AlphaVantageAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -26,6 +27,7 @@ class RecommendationService(
     private val allocationRepository: AllocationRepository,
     private val watchlistRepository: WatchlistRepository,
     private val marketDataService: MarketDataService,
+    private val alphaVantageAdapter: AlphaVantageAdapter,
     private val claudeClient: ClaudeClient,
     private val objectMapper: ObjectMapper
 ) {
@@ -119,9 +121,14 @@ class RecommendationService(
                     generationError = "parse_failure"
                     emptyList()
                 } else {
-                    // Enrich each card with deterministic currentPrice from our market data
+                    // Enrich each card with deterministic data: price, fundamentals, source URL
                     parsed.map { card ->
-                        card.copy(currentPrice = prices[card.symbol.uppercase()])
+                        val upper = card.symbol.uppercase()
+                        card.copy(
+                            currentPrice = prices[upper],
+                            fundamentals = alphaVantageAdapter.fetchFundamentals(upper),
+                            sourceUrl = "https://finance.yahoo.com/quote/$upper"
+                        )
                     }
                 }
             }
