@@ -11,6 +11,7 @@ data class WatchlistItemResponse(
     val signal: String,
     val signalSummary: String?,
     val fullAnalysis: Map<String, Any>?,
+    val confidenceScore: Int? = null,
     val lastAnalyzedAt: Instant?,
     val addedAt: Instant
 )

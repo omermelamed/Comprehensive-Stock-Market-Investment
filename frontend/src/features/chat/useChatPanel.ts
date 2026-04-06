@@ -13,7 +13,19 @@ export function useChatPanel() {
     setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
 
+  const openWithPrompt = useCallback((prompt: string) => {
+    setIsOpen(true)
+    setInput(prompt)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }, [])
+
   const close = useCallback(() => setIsOpen(false), [])
+
+  const clear = useCallback(() => {
+    setMessages([])
+    setInput('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }, [])
 
   const send = useCallback(async () => {
     const text = input.trim()
@@ -51,5 +63,5 @@ export function useChatPanel() {
     [send],
   )
 
-  return { isOpen, open, close, messages, input, setInput, send, isLoading, inputRef, handleKeyDown }
+  return { isOpen, open, openWithPrompt, close, clear, messages, input, setInput, send, isLoading, inputRef, handleKeyDown }
 }

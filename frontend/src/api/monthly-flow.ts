@@ -4,6 +4,7 @@ import type { MonthlyFlowConfirmResult, MonthlyFlowPreview } from '@/types'
 export interface PositionSummary {
   symbol: string
   summary: string
+  sentiment: 'POSITIVE' | 'NEUTRAL' | 'CAUTIOUS'
 }
 
 export async function previewMonthlyFlow(budget: number): Promise<MonthlyFlowPreview> {

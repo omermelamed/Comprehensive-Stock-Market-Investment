@@ -95,4 +95,4 @@ No new migrations needed for this phase.
 - [x] COVER transaction is blocked if quantity > current short exposure
 - [x] App redirects to onboarding on first load
 - [x] App goes to dashboard after onboarding completed
-- [ ] Profile is editable from Settings without re-running full onboarding — Settings page not yet built (Phase 2+)
+- [x] Profile is editable from Settings without re-running full onboarding — `ProfilePage` with editable form

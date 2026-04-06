@@ -40,6 +40,8 @@ class WatchlistAnalysisService(
             {
               "signal": "GOOD_BUY_NOW" | "NOT_YET" | "WAIT_FOR_DIP",
               "summary": "<one sentence, max 120 chars>",
+              "confidenceScore": <0-100>,
+              "sources": ["<relevant URL 1>", "<relevant URL 2>"],
               "sections": {
                 "valuation": "<2-3 sentences>",
                 "momentum": "<2-3 sentences>",
@@ -70,7 +72,7 @@ class WatchlistAnalysisService(
             ""
         }
 
-        val (signal, summary, fullAnalysisJson) = parseAnalysisResponse(rawResponse)
+        val (signal, summary, _, fullAnalysisJson) = parseAnalysisResponse(rawResponse)
 
         return watchlistRepository.saveAnalysis(
             id = id,
@@ -80,7 +82,12 @@ class WatchlistAnalysisService(
         )
     }
 
-    private data class ParsedAnalysis(val signal: String, val summary: String, val fullAnalysisJson: String)
+    private data class ParsedAnalysis(
+        val signal: String,
+        val summary: String,
+        val confidenceScore: Int?,
+        val fullAnalysisJson: String
+    )
 
     private fun parseAnalysisResponse(raw: String): ParsedAnalysis {
         if (raw.isBlank()) {
@@ -99,7 +106,13 @@ class WatchlistAnalysisService(
                 ?.takeIf { it in VALID_SIGNALS }
                 ?: "NOT_YET"
             val summary = (parsed["summary"] as? String) ?: "Analysis unavailable"
-            ParsedAnalysis(signal = signal, summary = summary, fullAnalysisJson = raw)
+            val confidenceScore = (parsed["confidenceScore"] as? Number)?.toInt()
+            ParsedAnalysis(
+                signal = signal,
+                summary = summary,
+                confidenceScore = confidenceScore,
+                fullAnalysisJson = raw
+            )
         } catch (e: Exception) {
             log.warn("Failed to parse Claude analysis response: ${e.message}")
             fallback()
@@ -111,6 +124,8 @@ class WatchlistAnalysisService(
             mapOf(
                 "signal" to "NOT_YET",
                 "summary" to "Analysis unavailable",
+                "confidenceScore" to null,
+                "sources" to emptyList<String>(),
                 "sections" to mapOf(
                     "valuation" to "",
                     "momentum" to "",
@@ -120,7 +135,12 @@ class WatchlistAnalysisService(
                 )
             )
         )
-        return ParsedAnalysis(signal = "NOT_YET", summary = "Analysis unavailable", fullAnalysisJson = fallbackJson)
+        return ParsedAnalysis(
+            signal = "NOT_YET",
+            summary = "Analysis unavailable",
+            confidenceScore = null,
+            fullAnalysisJson = fallbackJson
+        )
     }
 
     companion object {

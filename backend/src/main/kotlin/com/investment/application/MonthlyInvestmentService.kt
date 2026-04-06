@@ -8,6 +8,8 @@ import com.investment.api.dto.TransactionRequest
 import com.investment.domain.MonthlyAllocationCalculator
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
+import com.investment.infrastructure.market.AlphaVantageAdapter
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -20,8 +22,11 @@ class MonthlyInvestmentService(
     private val allocationRepository: AllocationRepository,
     private val marketDataService: MarketDataService,
     private val transactionService: TransactionService,
-    private val userProfileService: UserProfileService
+    private val userProfileService: UserProfileService,
+    private val alphaVantageAdapter: AlphaVantageAdapter
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     fun preview(request: MonthlyFlowPreviewRequest): MonthlyFlowPreviewResponse {
         require(request.budget > BigDecimal.ZERO) { "Budget must be greater than zero" }
@@ -48,7 +53,20 @@ class MonthlyInvestmentService(
         }.toMap()
 
         val result = MonthlyAllocationCalculator.compute(holdings, allocations, prices, request.budget)
-        return result.copy(missingPrices = missing)
+
+        val enriched = result.copy(
+            positions = result.positions.map { pos ->
+                val fundamentals = try {
+                    alphaVantageAdapter.fetchFundamentals(pos.symbol.uppercase())
+                } catch (e: Exception) {
+                    log.debug("Fundamentals unavailable for {}: {}", pos.symbol, e.message)
+                    null
+                }
+                pos.copy(fundamentals = fundamentals)
+            },
+            missingPrices = missing
+        )
+        return enriched
     }
 
     @Transactional

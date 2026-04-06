@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTransactionForm } from '../features/transactions/useTransactionForm'
 import SymbolAutocomplete from '../features/transactions/SymbolAutocomplete'
 import TransactionList from '../features/transactions/TransactionList'
@@ -16,6 +17,7 @@ const inputClass =
   'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
 
 export default function TransactionFormPage() {
+  const [searchParams] = useSearchParams()
   const [allocations, setAllocations] = useState<TargetAllocation[]>([])
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [listKey, setListKey] = useState(0)
@@ -31,6 +33,13 @@ export default function TransactionFormPage() {
     setListKey(k => k + 1)
     setTimeout(() => setSuccessMessage(null), 3000)
   })
+
+  useEffect(() => {
+    const prefilledSymbol = searchParams.get('symbol')
+    if (prefilledSymbol) {
+      setField('symbol', prefilledSymbol.toUpperCase())
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

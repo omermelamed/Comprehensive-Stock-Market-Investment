@@ -1,9 +1,24 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useChatPanel } from '@/features/chat/useChatPanel'
 import { ChatPanel } from '@/features/chat/ChatPanel'
+import { ChatContext } from '@/contexts/chat-context'
+
+const PAGE_CHAT_CONTEXT: Record<string, string> = {
+  '/monthly-flow': 'Ask about your monthly allocation',
+  '/watchlist': 'Ask about your watchlist',
+  '/recommendations': 'Ask about these recommendations',
+  '/': 'Ask about your portfolio',
+}
+
+function getChatContext(pathname: string): string {
+  for (const [prefix, label] of Object.entries(PAGE_CHAT_CONTEXT)) {
+    if (prefix === '/' ? pathname === '/' : pathname.startsWith(prefix)) return label
+  }
+  return 'Ask your portfolio assistant'
+}
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -19,8 +34,11 @@ const NAV_ITEMS = [
 export function AppLayout() {
   const { theme, toggle } = useTheme()
   const chat = useChatPanel()
+  const location = useLocation()
+  const chatTooltip = getChatContext(location.pathname)
 
   return (
+    <ChatContext.Provider value={{ openWithPrompt: chat.openWithPrompt }}>
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
@@ -74,15 +92,17 @@ export function AppLayout() {
       {!chat.isOpen && (
         <button
           onClick={chat.open}
-          title="Ask your portfolio assistant"
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-colors hover:bg-purple-700"
+          title={chatTooltip}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-purple-600 px-4 py-3 text-white shadow-lg transition-colors hover:bg-purple-700"
         >
           <MessageCircle className="h-5 w-5" />
+          <span className="text-xs font-medium max-w-[160px] truncate">{chatTooltip}</span>
         </button>
       )}
 
       {/* Chat panel */}
-      <ChatPanel {...chat} />
+      <ChatPanel {...chat} pageContext={chatTooltip} />
     </div>
+    </ChatContext.Provider>
   )
 }

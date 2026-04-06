@@ -5,6 +5,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.investment.api.dto.PortfolioContextSummary
 import com.investment.api.dto.RecommendationCard
 import com.investment.api.dto.RecommendationsResponse
+import com.investment.application.agents.AgentContext
+import com.investment.application.agents.OrchestratorAgentService
 import com.investment.domain.MarketDataUnavailableException
 import com.investment.domain.RecommendationGapCalculator
 import com.investment.infrastructure.AllocationRepository
@@ -16,6 +18,7 @@ import com.investment.infrastructure.market.AlphaVantageAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -29,7 +32,8 @@ class RecommendationService(
     private val marketDataService: MarketDataService,
     private val alphaVantageAdapter: AlphaVantageAdapter,
     private val claudeClient: ClaudeClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val orchestratorAgentService: OrchestratorAgentService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -88,15 +92,16 @@ class RecommendationService(
 
         val watchlistItems = watchlistRepository.findAll().filter { it.signal in ACTIONABLE_SIGNALS }
 
-        val userMessage = buildUserMessage(
+        val agentContext = AgentContext(
             totalPortfolioValue = totalPortfolioValue,
             currency = currency,
             monthlyBudget = monthlyBudget,
             riskLevel = riskLevel,
             tracksEnabled = tracksEnabled,
             gaps = gaps,
-            watchlistItems = watchlistItems.map { it.symbol to it.signal }
+            watchlistItems = watchlistItems.map { it.symbol to it.signal },
         )
+        val userMessage = orchestratorAgentService.buildCombinedPrompt(agentContext)
 
         // Attempt Claude generation — distinguish Claude failure from parse failure
         var generationError: String? = null
@@ -121,15 +126,35 @@ class RecommendationService(
                     generationError = "parse_failure"
                     emptyList()
                 } else {
-                    // Enrich each card with deterministic data: price, fundamentals, source URL
-                    parsed.map { card ->
+                    val confidenceOrder = mapOf("HIGH" to 0, "MEDIUM" to 1, "LOW" to 2)
+                    val enriched = parsed.map { card ->
                         val upper = card.symbol.uppercase()
+                        val enrichedTargetPrice = card.targetPrice
+                        val enrichedCurrentPrice = prices[upper]
+                        val expectedReturn =
+                            if (
+                                enrichedTargetPrice != null &&
+                                enrichedCurrentPrice != null &&
+                                enrichedCurrentPrice > BigDecimal.ZERO
+                            ) {
+                                ((enrichedTargetPrice - enrichedCurrentPrice) / enrichedCurrentPrice * BigDecimal.valueOf(100))
+                                    .setScale(1, RoundingMode.HALF_UP)
+                            } else {
+                                null
+                            }
                         card.copy(
-                            currentPrice = prices[upper],
+                            currentPrice = enrichedCurrentPrice,
+                            expectedReturnPercent = expectedReturn,
                             fundamentals = alphaVantageAdapter.fetchFundamentals(upper),
-                            sourceUrl = "https://finance.yahoo.com/quote/$upper"
+                            sourceUrl = "https://finance.yahoo.com/quote/$upper",
                         )
                     }
+                    enriched
+                        .sortedWith(
+                            compareBy<RecommendationCard> { confidenceOrder[it.confidence] ?: 3 }
+                                .thenBy { it.rank },
+                        )
+                        .mapIndexed { i, card -> card.copy(rank = i + 1) }
                 }
             }
         }
@@ -189,60 +214,6 @@ class RecommendationService(
         return RecommendationGapCalculator.computePortfolioTotal(holdings, prices)
     }
 
-    private fun buildUserMessage(
-        totalPortfolioValue: BigDecimal,
-        currency: String,
-        monthlyBudget: BigDecimal,
-        riskLevel: String,
-        tracksEnabled: List<String>,
-        gaps: List<RecommendationGapCalculator.GapEntry>,
-        watchlistItems: List<Pair<String, String>>
-    ): String = buildString {
-        appendLine("Portfolio total: $totalPortfolioValue $currency")
-        appendLine("Monthly budget: $monthlyBudget $currency")
-        appendLine("Risk profile: $riskLevel")
-        appendLine("Tracks enabled: ${tracksEnabled.joinToString(", ").ifEmpty { "LONG" }}")
-        appendLine()
-        appendLine("Underweight positions (top 5 by allocation gap, descending):")
-        if (gaps.isEmpty()) {
-            appendLine("  None — portfolio is at or above target for all positions.")
-        } else {
-            gaps.forEach { g ->
-                appendLine("  ${g.symbol}: gap ${g.gapPercent}% (${g.gapValue} $currency below target), current price ${g.currentPrice} $currency")
-            }
-        }
-        appendLine()
-        appendLine("Watchlist items with actionable signals:")
-        if (watchlistItems.isEmpty()) {
-            appendLine("  None.")
-        } else {
-            watchlistItems.forEach { (symbol, signal) ->
-                appendLine("  $symbol: $signal")
-            }
-        }
-
-        // Track-specific orchestration sections
-        val upperTracks = tracksEnabled.map { it.uppercase() }
-
-        if ("SHORT" in upperTracks) {
-            appendLine()
-            appendLine("SHORT TRACK ACTIVE: In addition to BUY recommendations, identify any significantly overweight or overvalued positions in the portfolio that could be short candidates. You may include SHORT recommendations (action='SHORT') when the case is compelling. Be conservative — only clear overvaluation or deteriorating fundamentals warrant a short.")
-        }
-
-        if ("CRYPTO" in upperTracks) {
-            appendLine()
-            appendLine("CRYPTO TRACK ACTIVE: Treat any digital-asset or cryptocurrency watchlist items with crypto-appropriate context (market structure, trend, on-chain sentiment if known). Prioritize crypto watchlist items with GOOD_BUY_NOW signals.")
-        }
-
-        if ("OPTIONS" in upperTracks) {
-            appendLine()
-            appendLine("OPTIONS TRACK ACTIVE: For top long equity positions with significant holdings, consider whether a covered call overlay is appropriate for income generation. You may add COVERED_CALL recommendations (action='COVERED_CALL') alongside BUY recommendations. Do not suggest naked options or speculative strategies.")
-        }
-
-        appendLine()
-        append("Generate a prioritized list of investment recommendations based on the above context.")
-    }
-
     /**
      * Parses Claude's JSON response. Returns null on parse failure, empty list if Claude returns [].
      */
@@ -273,6 +244,7 @@ class RecommendationService(
           "reason": "<2-3 sentences explaining why>",
           "suggestedAmount": 1500.00,
           "confidence": "HIGH",
+          "targetPrice": 250.00,
           "timeHorizon": "6-12 months",
           "catalysts": ["key reason 1", "key reason 2"]
         }
@@ -283,6 +255,7 @@ class RecommendationService(
         - source: "ALLOCATION_GAP" | "WATCHLIST" | "AI_SUGGESTION"
         - suggestedAmount is optional — null if you cannot estimate; must not exceed the stated monthly budget
         - confidence: HIGH for strong allocation gap or GOOD_BUY_NOW; MEDIUM for moderate signals; LOW for speculative
+        - targetPrice is optional — your 12-month price target; omit if you cannot justify one
         - timeHorizon is optional — typical holding period suggestion, e.g. "3-6 months", "1-2 years"
         - catalysts is optional — 2-3 concise bullet-point reasons; omit if you have none beyond the gap
         - limit to 8 recommendations maximum

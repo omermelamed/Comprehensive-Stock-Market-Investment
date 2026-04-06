@@ -6,24 +6,24 @@
 
 **Status:** ✅ Complete
 
-> **Implementation note:** The PRD specified a multi-agent orchestrator pattern (orchestrator → separate sub-agents per track). The actual implementation uses a single Claude call with track-aware user message sections. This achieves the same functional outcome with significantly less complexity and fewer API calls. The simplification is intentional and aligned with the single-user local-app posture.
+> **Implementation note:** The system uses dedicated sub-agent classes per track (`LongEquityAgentService`, `ShortAgentService`, etc.) behind an `OrchestratorAgentService` that combines active agent prompt sections into a single Claude call. This achieves the multi-agent architecture with minimal API overhead.
 
 ---
 
 ## Backend Tasks
 
 ### Orchestrator Agent
-- [ ] `OrchestratorAgentService` as a separate class — not implemented; orchestration logic embedded in `RecommendationService`
+- [x] `OrchestratorAgentService` as a separate class — collects active sub-agents, combines prompt sections, delegates to `RecommendationService` for the Claude call
 - [x] Track-aware user message sections injected into the Claude prompt for SHORT, CRYPTO, OPTIONS tracks
 - [x] Input: full user context (holdings, gaps, risk profile, enabled tracks) sent to Claude
 
 ### Sub-Agents
-- [ ] `LongEquityAgentService` — not a separate class; handled by single Claude call
-- [ ] `ShortAgentService` — not a separate class; SHORT track adds instructions to the user message
-- [ ] `CryptoAgentService` — not a separate class; CRYPTO track adds instructions to the user message
-- [ ] `OptionsAgentService` — not a separate class; OPTIONS track adds instructions to the user message
-- [ ] `ReitAgentService` — not implemented
-- [ ] `BondAgentService` — not implemented
+- [x] `LongEquityAgentService` — always active, builds base context (portfolio, gaps, watchlist)
+- [x] `ShortAgentService` — active when SHORT track enabled
+- [x] `CryptoAgentService` — active when CRYPTO track enabled
+- [x] `OptionsAgentService` — active when OPTIONS track enabled
+- [x] `ReitAgentService` — active when REIT track enabled
+- [x] `BondAgentService` — active when BOND track enabled
 
 ### Recommendation Engine Coordinator
 - [x] `RecommendationService`:
@@ -77,8 +77,8 @@
   - fundamentals panel: P/E, PEG, EPS, div yield, 52W high/low, market cap
   - suggested amount (footer row)
 - [x] `FundamentalsPanel` — compact key/value grid, filters out missing values
-- [ ] `ConfidenceBar` — visual 0–100% indicator not implemented (text label only)
-- [ ] Target price + expected return % — not in output (AI not allowed to invent prices)
+- [x] `ConfidenceBar` — visual bar indicator (HIGH=85%, MEDIUM=55%, LOW=25%) with colored fill (green/yellow/muted)
+- [x] Target price + expected return % — `targetPrice` from Claude, `expectedReturnPercent` computed deterministically; rendered next to current price
 
 ### Loading + Empty States
 - [x] Skeleton cards while loading
@@ -97,4 +97,4 @@
 - [x] Manual refresh works and returns fresh results
 - [x] Claude failure does not crash the endpoint — returns empty list with generationError
 - [x] Portfolio fit note references the user's actual allocation gap
-- [ ] Confidence scores sorted highest first — sorting is by Claude-assigned rank, not by confidence score field
+- [x] Confidence scores sorted highest first — recommendations sorted by confidence (HIGH→MEDIUM→LOW) then by original rank, re-ranked sequentially

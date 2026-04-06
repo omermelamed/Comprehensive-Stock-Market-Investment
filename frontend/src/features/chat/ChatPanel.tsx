@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react'
-import { X, Send, BrainCircuit } from 'lucide-react'
+import { X, Send, BrainCircuit, RotateCcw } from 'lucide-react'
+import Markdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 import type { useChatPanel } from './useChatPanel'
 
-type ChatPanelProps = ReturnType<typeof useChatPanel>
+type ChatPanelProps = ReturnType<typeof useChatPanel> & { pageContext?: string }
 
 export function ChatPanel({
   isOpen,
   close,
+  clear,
   messages,
   input,
   setInput,
@@ -15,6 +17,7 @@ export function ChatPanel({
   isLoading,
   inputRef,
   handleKeyDown,
+  pageContext,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -40,15 +43,26 @@ export function ChatPanel({
             <BrainCircuit className="h-4 w-4 text-purple-500" />
             <span className="text-sm font-semibold text-foreground">Portfolio Assistant</span>
             <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-500">
-              Portfolio context active
+              {pageContext || 'Portfolio context active'}
             </span>
           </div>
-          <button
-            onClick={close}
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <button
+                onClick={clear}
+                title="Clear conversation"
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={close}
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -92,7 +106,24 @@ export function ChatPanel({
                     : 'border border-border bg-card text-card-foreground',
                 )}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <Markdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="mb-2 ml-4 list-disc last:mb-0">{children}</ul>,
+                      ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal last:mb-0">{children}</ol>,
+                      li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      code: ({ children }) => (
+                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">{children}</code>
+                      ),
+                    }}
+                  >
+                    {msg.content}
+                  </Markdown>
+                ) : (
+                  msg.content
+                )}
               </div>
             </div>
           ))}

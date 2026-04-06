@@ -55,15 +55,19 @@ export function useMonthlyFlow() {
       setIsLoadingSummaries(true)
       fetchAiSummaries(n)
         .then((summaries) => {
-          const bySymbol = Object.fromEntries(summaries.map((s) => [s.symbol, s.summary]))
+          const bySymbol = Object.fromEntries(summaries.map((s) => [s.symbol, s]))
           setPreview((prev) =>
             prev
               ? {
                   ...prev,
-                  positions: prev.positions.map((pos) => ({
-                    ...pos,
-                    aiSummary: bySymbol[pos.symbol] ?? undefined,
-                  })),
+                  positions: prev.positions.map((pos) => {
+                    const ai = bySymbol[pos.symbol]
+                    return {
+                      ...pos,
+                      aiSummary: ai?.summary ?? undefined,
+                      aiSentiment: ai?.sentiment ?? undefined,
+                    }
+                  }),
                 }
               : prev
           )

@@ -33,6 +33,7 @@ export function useDashboard(): DashboardState {
     let cancelled = false
     setLoading(true)
     setError(null)
+    const t0 = performance.now()
 
     Promise.all([
       getPortfolioSummary(),
@@ -51,7 +52,13 @@ export function useDashboard(): DashboardState {
         setError(msg)
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          const elapsed = performance.now() - t0
+          if (elapsed > 2000) {
+            console.warn(`[Dashboard] Load took ${Math.round(elapsed)}ms (target: <2000ms)`)
+          }
+        }
       })
 
     return () => {

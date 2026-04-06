@@ -26,7 +26,7 @@
   - enabled tracks
   - AI boundary declared: can explain/analyze, cannot create transactions or modify data
 - [x] Watchlist signals included in context
-- [ ] Latest recommendations from `ai_recommendation_cache` injected — not included in chatbot context
+- [x] Latest recommendations from `ai_recommendation_cache` injected — `ChatService.buildSystemPrompt()` loads fresh cached recommendations via `RecommendationCacheRepository.findFresh()`
 
 ---
 
@@ -43,16 +43,16 @@
 - [x] `ChatInput` — textarea + send button (Enter to send, Shift+Enter for newline)
 - [x] `ChatLoadingIndicator` — 3-dot bounce animation while waiting for response
 - [x] Empty state with 3 starter prompt buttons ("What should I buy this month?", "How is my portfolio doing?", "Am I too concentrated?")
-- [ ] `ChatClearButton` — not implemented (conversation clears on panel close / page refresh)
-- [ ] Markdown rendering — basic plain text only, no markdown parser
+- [x] `ChatClearButton` — `RotateCcw` icon in header, calls `clear()` to reset messages and input
+- [x] Markdown rendering — `react-markdown` with styled components for paragraphs, lists, bold, and code
 
 ### Conversation State
 - [x] `useChatConversation` embedded in `useChatPanel` — manages message array, sends to API, appends response
 - [x] Session history persisted in component state (cleared on page refresh)
 
 ### Pre-loaded Context (from other features)
-- [ ] "Ask AI" from watchlist → opens chat panel with message pre-filled — not implemented
-- [ ] Chat button context-aware for current page — not implemented
+- [x] "Ask AI" from watchlist → opens chat panel with message pre-filled via `ChatContext` + `openWithPrompt`
+- [x] Chat button context-aware for current page — `useLocation()` maps routes to contextual labels shown on button and in panel header
 
 ### API Client
 - [x] `api/chat.ts` — chat endpoint
@@ -66,6 +66,6 @@
 - [x] Conversation history maintained within session
 - [x] Chat still works if recommendations cache is empty (graceful degradation)
 - [x] ClaudeClient reuse via new `completeWithHistory()` overload (existing `complete()` delegates to it)
-- [ ] Clearing conversation resets to empty state — panel close achieves this, no explicit clear button
-- [ ] "Ask AI" from watchlist pre-loads the symbol context correctly — not implemented
-- [ ] Markdown renders correctly — not implemented (plain text only)
+- [x] Clearing conversation resets to empty state — explicit clear button in header resets messages
+- [x] "Ask AI" from watchlist pre-loads the symbol context correctly — `openWithPrompt` pre-fills input
+- [x] Markdown renders correctly — `react-markdown` with paragraph, list, bold, code components

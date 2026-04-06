@@ -70,6 +70,26 @@ function FundamentalsPanel({ data }: { data: FundamentalsData }) {
   )
 }
 
+const CONFIDENCE_BAR: Record<RecommendationCardType['confidence'], { pct: number; color: string }> = {
+  HIGH:   { pct: 85, color: 'bg-success' },
+  MEDIUM: { pct: 55, color: 'bg-warning' },
+  LOW:    { pct: 25, color: 'bg-muted-foreground' },
+}
+
+function ConfidenceBar({ level }: { level: RecommendationCardType['confidence'] }) {
+  const { pct, color } = CONFIDENCE_BAR[level]
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={cn('text-[10px] font-medium', CONFIDENCE_STYLES[level])}>
+        {CONFIDENCE_LABELS[level]}
+      </span>
+    </div>
+  )
+}
+
 interface Props {
   card: RecommendationCardType
   currency: string
@@ -101,6 +121,17 @@ export function RecommendationCard({ card, currency }: Props) {
             {card.currentPrice !== null && (
               <span className="font-mono text-xs text-muted-foreground">
                 {formatMoney(card.currentPrice, currency)}
+                {card.targetPrice != null && (
+                  <span className="ml-2">
+                    → target {formatMoney(card.targetPrice, currency)}
+                  </span>
+                )}
+                {card.expectedReturnPercent != null && (
+                  <span className="ml-1 text-success">
+                    ({card.expectedReturnPercent >= 0 ? '+' : ''}
+                    {card.expectedReturnPercent.toFixed(1)}%)
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -110,7 +141,7 @@ export function RecommendationCard({ card, currency }: Props) {
         </div>
       </div>
 
-      {/* Source + confidence + time horizon */}
+      {/* Source + confidence bar + time horizon */}
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={cn(
@@ -120,9 +151,7 @@ export function RecommendationCard({ card, currency }: Props) {
         >
           {SOURCE_LABELS[card.source]}
         </span>
-        <span className={cn('text-xs font-medium', CONFIDENCE_STYLES[card.confidence])}>
-          {CONFIDENCE_LABELS[card.confidence]}
-        </span>
+        <ConfidenceBar level={card.confidence} />
         {card.timeHorizon && (
           <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
             {card.timeHorizon}

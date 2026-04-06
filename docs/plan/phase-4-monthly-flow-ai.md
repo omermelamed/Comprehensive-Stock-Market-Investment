@@ -26,15 +26,15 @@ This phase fills it in using the `monthly-flow` agent.
 
 ### Shared Context Builder
 - [x] Context building embedded in each service (portfolio context passed as system prompt)
-- [ ] `SharedContextBuilder` as a dedicated reusable class — not extracted; context built inline per service
+- [x] `SharedContextBuilder` as a dedicated reusable class — extracts portfolio context into a single @Component used by ChatService and available to all AI services
 
 ### Monthly Flow Agent
 - [x] `MonthlyFlowAgentService` — calls Claude API with position context
   - input per position: symbol, label, target %, current %, gap, user context
   - output: `{ symbol, aiSummary, sentiment }` or null on failure
 - [x] On agent failure: return `aiSummary: null` gracefully — does not fail the whole preview
-- [ ] Parallel invocation via coroutines — sequential in current implementation
-- [ ] 15-minute in-memory cache keyed by position state hash — not implemented; AI called fresh each preview
+- [x] Parallel invocation via coroutines — `kotlinx.coroutines.async` + `Dispatchers.IO` fires all position summaries in parallel
+- [x] 15-minute in-memory cache keyed by position state hash — `ConcurrentHashMap` keyed by SHA-256 of budget+positions
 
 ### Preview Endpoint Update
 - [x] Update `MonthlyFlowPreviewService` to call `MonthlyFlowAgentService` after computing position cards
@@ -50,11 +50,12 @@ This phase fills it in using the `monthly-flow` agent.
 - [x] `AiSummarySection` — styled AI text block with purple accent
 - [x] If `aiSummary` is null: section hidden entirely (no placeholder text)
 - [x] AI text is visually secondary to the deterministic metrics
-- [ ] Skeleton loader for AI summary while loading — not implemented (loads with full response)
+- [x] Skeleton loader for AI summary while loading — `isLoadingSummary` prop triggers pulse animation
+- [x] Sentiment badge rendered next to "AI" label (POSITIVE=green, CAUTIOUS=amber, NEUTRAL=muted)
 
 ### Loading State
-- [x] Position cards render immediately with metrics
-- [x] AI summaries load with the full response (not streamed separately)
+- [x] Position cards render immediately with metrics (preview response)
+- [x] AI summaries loaded separately via `/summaries` and merged into cards without blocking
 
 ---
 
@@ -64,5 +65,5 @@ This phase fills it in using the `monthly-flow` agent.
 - [x] AI summary references the user's actual gap
 - [x] Deterministic suggested amounts are unchanged — AI does not affect them
 - [x] Agent failure does not crash the preview endpoint
-- [ ] Cache prevents duplicate API calls within 15 minutes — not implemented
-- [ ] Sentiment field correctly reflects positive / neutral / cautious tone — sentiment not in current response shape
+- [x] Cache prevents duplicate API calls within 15 minutes — `ConcurrentHashMap` with 15-minute TTL
+- [x] Sentiment field correctly reflects positive / neutral / cautious tone — parsed from Claude response `[POSITIVE]`/`[NEUTRAL]`/`[CAUTIOUS]` tag

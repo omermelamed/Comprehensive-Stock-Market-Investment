@@ -54,7 +54,9 @@ export interface PositionCard {
   gapValue: number
   suggestedAmount: number
   status: 'UNDERWEIGHT' | 'ON_TARGET' | 'OVERWEIGHT'
+  fundamentals?: FundamentalsData | null
   aiSummary?: string
+  aiSentiment?: 'POSITIVE' | 'NEUTRAL' | 'CAUTIOUS'
 }
 
 export interface MonthlyFlowPreview {
@@ -88,9 +90,30 @@ export interface WatchlistItem {
     signal: string
     summary: string
     sections: WatchlistAnalysisSections
+    confidenceScore?: number
+    sources?: string[]
   } | null
+  confidenceScore: number | null
   lastAnalyzedAt: string | null
   addedAt: string
+}
+
+export interface WatchlistMetrics {
+  symbol: string
+  currentPrice: number | null
+  currency: string
+  fundamentals: FundamentalsData | null
+}
+
+export interface Alert {
+  id: string
+  symbol: string
+  condition: 'ABOVE' | 'BELOW'
+  thresholdPrice: number
+  note: string | null
+  isActive: boolean
+  triggeredAt: string | null
+  createdAt: string
 }
 
 export interface FundamentalsData {
@@ -111,6 +134,8 @@ export interface RecommendationCard {
   reason: string
   suggestedAmount: number | null
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  targetPrice?: number | null           // optional — Claude 12-month target
+  expectedReturnPercent?: number | null // deterministic — vs current when both known
   currentPrice: number | null      // deterministic — from market data
   timeHorizon: string | null       // advisory — Claude's suggested holding period
   catalysts: string[] | null       // advisory — Claude's 2-3 key reasons

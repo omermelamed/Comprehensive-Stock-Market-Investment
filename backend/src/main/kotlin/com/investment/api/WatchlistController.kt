@@ -1,7 +1,10 @@
 package com.investment.api
 
+import com.investment.api.dto.AddToPortfolioRequest
 import com.investment.api.dto.AddWatchlistItemRequest
+import com.investment.api.dto.TransactionResponse
 import com.investment.api.dto.WatchlistItemResponse
+import com.investment.api.dto.WatchlistMetricsResponse
 import com.investment.application.WatchlistAnalysisService
 import com.investment.application.WatchlistService
 import org.springframework.http.ResponseEntity
@@ -36,6 +39,20 @@ class WatchlistController(
     fun removeItem(@PathVariable id: UUID): ResponseEntity<Void> {
         watchlistService.removeItem(id)
         return ResponseEntity.noContent().build()
+    }
+
+    @GetMapping("/{id}/metrics")
+    fun getMetrics(@PathVariable id: UUID): ResponseEntity<WatchlistMetricsResponse> {
+        return ResponseEntity.ok(watchlistService.getMetrics(id))
+    }
+
+    @PostMapping("/{id}/add-to-portfolio")
+    fun addToPortfolio(
+        @PathVariable id: UUID,
+        @RequestBody request: AddToPortfolioRequest
+    ): ResponseEntity<TransactionResponse> {
+        val transaction = watchlistService.addToPortfolio(id, request.amount)
+        return ResponseEntity.status(201).body(transaction)
     }
 
     @PostMapping("/{id}/analyze")

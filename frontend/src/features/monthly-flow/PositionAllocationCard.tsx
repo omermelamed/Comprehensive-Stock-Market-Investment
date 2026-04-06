@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 import type { PositionCard } from '@/types'
 import { useCurrency } from '@/contexts/currency-context'
 import { formatMoney, getCurrencySymbol } from '@/lib/currency'
+import { MetricBadges } from './MetricBadge'
 
 function fmtPct(value: number): string {
   return `${value.toFixed(2)}%`
@@ -83,6 +84,16 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
         </div>
       </div>
 
+      {/* Fundamental metric badges */}
+      {position.fundamentals && (
+        <MetricBadges
+          peRatio={position.fundamentals.peRatio}
+          pegRatio={position.fundamentals.pegRatio}
+          eps={position.fundamentals.eps}
+          dividendYield={position.fundamentals.dividendYield}
+        />
+      )}
+
       {/* Amount input */}
       <div className="border-t border-border pt-3">
         <p className="mb-1.5 text-xs text-muted-foreground">Invest this month</p>
@@ -116,10 +127,26 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
           {isLoadingSummary && !position.aiSummary ? (
             <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
           ) : (
-            <p className="text-xs text-purple-400 leading-relaxed">
-              <span className="mr-1 font-medium text-purple-500">AI</span>
-              {position.aiSummary}
-            </p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-purple-500">AI</span>
+                {position.aiSentiment && (
+                  <span
+                    className={cn(
+                      'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                      position.aiSentiment === 'POSITIVE' && 'bg-success/15 text-success border-success/30',
+                      position.aiSentiment === 'CAUTIOUS' && 'bg-warning/15 text-warning border-warning/30',
+                      position.aiSentiment === 'NEUTRAL' && 'bg-muted text-muted-foreground border-border',
+                    )}
+                  >
+                    {position.aiSentiment.charAt(0) + position.aiSentiment.slice(1).toLowerCase()}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-purple-400 leading-relaxed">
+                {position.aiSummary}
+              </p>
+            </div>
           )}
         </div>
       )}

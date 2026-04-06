@@ -76,7 +76,7 @@ Suggested Amount          = Monthly Budget × Position Weight
   - metrics (P/E, PEG, D/E, FCF) not included in phase 3
   - AI summary placeholder (Phase 4)
 - [x] `OverweightPositionCard` — simplified "no action needed" card
-- [ ] `MetricBadge` — colored signal indicator (🟢/🟡/🔴) per metric value (deferred — no metrics in phase 3)
+- [x] `MetricBadge` — colored signal indicator per metric value (P/E, PEG, EPS, Div) with green/yellow/red dots; fundamentals enriched from AlphaVantage
 - [x] `AmountInput` — currency input that updates running total on change
 
 ### Running Total Footer

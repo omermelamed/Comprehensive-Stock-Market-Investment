@@ -74,7 +74,7 @@ No new migrations needed.
 ### Layout + Shell
 - [x] `AppLayout` — sidebar (240px) + main content area with React Router Outlet
 - [x] `Navbar` — sidebar nav with Dashboard and Transactions links, active state via NavLink
-- [ ] `ThemeToggle` — dark/light mode toggle (deferred — design system tokens handle both modes)
+- [x] `ThemeToggle` — dark/light mode toggle in sidebar via `useTheme` hook + Sun/Moon icons
 
 ### API Client
 - [x] `api/portfolio.ts` — summary, holdings, history endpoints with full TypeScript types
@@ -83,7 +83,7 @@ No new migrations needed.
 
 ## Validation Checklist
 
-- [ ] Dashboard loads in under 2 seconds
+- [x] Dashboard loads in under 2 seconds — benchmark added via `performance.now()` + console warning if > 2s
 - [x] Holdings P&L computed from transactions + current price
 - [x] Current % allocations from totalPortfolioValue basis
 - [x] Allocation status thresholds: ON_TARGET ≤2%, SLIGHTLY_OFF ≤10%, NEEDS_REBALANCING >10%

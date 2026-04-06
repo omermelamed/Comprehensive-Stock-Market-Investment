@@ -92,6 +92,8 @@ class WatchlistRepository(
 
         val lastAnalyzedRaw = get("last_analyzed_at", java.sql.Timestamp::class.java)
 
+        val confidenceScore = (fullAnalysisMap?.get("confidenceScore") as? Number)?.toInt()
+
         return WatchlistItemResponse(
             id = UUID.fromString(get("id", String::class.java)),
             symbol = get("symbol", String::class.java),
@@ -100,6 +102,7 @@ class WatchlistRepository(
             signal = get("signal", String::class.java),
             signalSummary = get("signal_summary", String::class.java),
             fullAnalysis = fullAnalysisMap,
+            confidenceScore = confidenceScore,
             lastAnalyzedAt = lastAnalyzedRaw?.toInstant(),
             addedAt = get("added_at", java.sql.Timestamp::class.java).toInstant()
         )

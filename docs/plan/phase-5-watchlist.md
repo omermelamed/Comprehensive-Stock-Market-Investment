@@ -18,8 +18,8 @@
 - [x] `WatchlistService` — orchestration
 
 ### Market Data for Watchlist
-- [ ] `GET /api/watchlist/{id}/metrics` — dedicated metrics endpoint not implemented; metrics fetched inline during analysis
-- [ ] Detailed valuation/cash flow/health/growth/momentum/sentiment metrics via separate adapters — not a separate endpoint; analysis uses ClaudeClient with available market context
+- [x] `GET /api/watchlist/{id}/metrics` — returns current price, currency, and fundamentals (P/E, PEG, EPS, div yield, 52W range, market cap)
+- [x] Metrics fetched from MarketDataService + AlphaVantageAdapter on demand
 
 ### Watchlist Analysis Agent
 - [x] `POST /api/watchlist/{id}/analyze` — trigger AI analysis for one symbol
@@ -30,7 +30,7 @@
 - [x] Cache result persisted to DB — user must manually re-trigger to refresh
 
 ### Watchlist → Portfolio Action
-- [ ] `POST /api/watchlist/{id}/add-to-portfolio` — not implemented; user manually navigates to transactions
+- [x] `POST /api/watchlist/{id}/add-to-portfolio` — creates BUY transaction from watchlist item at current market price
 
 ---
 
@@ -43,26 +43,26 @@
 ### Watchlist Table
 - [x] `WatchlistTable` — columns: symbol, company name, signal, summary, last analyzed, actions
 - [x] `SignalBadge` — GOOD_BUY_NOW / NOT_YET / WAIT_FOR_DIP / PENDING
-- [ ] `WatchlistMetricCell` — not implemented (metrics columns not included)
+- [x] `WatchlistMetricCell` — lazy-loaded metric grid (price, P/E, div yield, market cap) shown when analysis is expanded
 - [x] `WatchlistActions` — Analyze / Remove
 
 ### Add Symbol
 - [x] `AddToWatchlistInput` — symbol search input + add button
-- [ ] Validates symbol exists against market API — not separately validated on add; validation happens implicitly
+- [x] Validates symbol exists against market API — `WatchlistService.addItem()` calls `marketDataService.getQuote()` before insert
 
 ### Analysis Flow
 - [x] `AnalyzeButton` — triggers analysis, shows loading state
 - [x] `WatchlistAnalysisPanel` — expanded collapsible view of full analysis result
   - section-by-section analysis (valuation, momentum, financial health, growth, sentiment)
   - signal summary
-- [ ] `OverweightWarning` — not implemented
-- [ ] Confidence score — not in current output shape
-- [ ] Supporting sources (clickable links) — not implemented
+- [x] `OverweightWarning` — amber banner when symbol is already overweight in portfolio (fetches portfolio holdings)
+- [x] Confidence score — `confidenceScore: 0-100` in Claude analysis output, rendered as progress bar in card header
+- [x] Supporting sources (clickable links) — `sources` array in analysis JSON, rendered as clickable hostname links with ExternalLink icon
 
 ### Watchlist → Actions
-- [ ] "Add to Portfolio" → navigates to `/transactions/new?symbol=XXX` — not implemented
-- [ ] "Ask AI" → opens chatbot panel with symbol pre-loaded — not implemented
-- [ ] "Set Alert" → not implemented
+- [x] "Add to Portfolio" → navigates to `/transactions/new?symbol=XXX` with pre-filled symbol
+- [x] "Ask AI" → opens chatbot panel with symbol-specific question pre-loaded via `ChatContext`
+- [x] "Set Alert" → inline form on watchlist page (condition ABOVE/BELOW, price, note); AlertController + AlertRepository + AlertService + AlertCheckScheduler (every 5 min)
 
 ### API Client
 - [x] `api/watchlist.ts` — CRUD + analyze endpoints
@@ -73,8 +73,8 @@
 
 - [x] Signal is one of exactly three values: GOOD_BUY_NOW, NOT_YET, WAIT_FOR_DIP (plus PENDING before analysis)
 - [x] Signal justified by specific analysis sections
-- [ ] Overweight warning shown when user already holds symbol above target — not implemented
+- [x] Overweight warning shown when user already holds symbol above target — amber banner via portfolio holdings check
 - [x] Analysis result persisted — user does not lose it on page refresh
 - [x] Re-analyzing overwrites the previous result
-- [ ] "Add to Portfolio" pre-fills transaction form correctly — not implemented
+- [x] "Add to Portfolio" pre-fills transaction form correctly — `TransactionFormPage` reads `?symbol=` query param
 - [x] Analysis still works if some context is unavailable (graceful degradation)
