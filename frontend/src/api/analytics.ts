@@ -40,6 +40,21 @@ export interface AnalyticsPositionMetric {
   portfolioWeightPct: number
 }
 
+export interface RealizedTradeEntry {
+  symbol: string
+  quantity: number
+  buyPrice: number
+  sellPrice: number
+  pnl: number
+  pnlPercent: number
+  closedAt: string
+}
+
+export interface RealizedPnlSummary {
+  totalRealizedPnl: number
+  trades: RealizedTradeEntry[]
+}
+
 export interface AnalyticsResponse {
   range: string
   currency: string
@@ -47,7 +62,33 @@ export interface AnalyticsResponse {
   chartPoints: AnalyticsChartPoint[]
   positions: AnalyticsPositionMetric[]
   benchmark: AnalyticsBenchmark | null
+  realizedPnl?: RealizedPnlSummary | null
+}
+
+export interface MonthlyReturnEntry {
+  month: string
+  startValue: number
+  endValue: number
+  returnAbsolute: number
+  returnPct: number
+}
+
+export interface MonthlyReturnsResponse {
+  range: string
+  currency: string
+  months: MonthlyReturnEntry[]
 }
 
 export const getAnalytics = (range: string): Promise<AnalyticsResponse> =>
   client.get<AnalyticsResponse>('/api/analytics', { params: { range } }).then(r => r.data)
+
+export const getMonthlyReturns = (range: string): Promise<MonthlyReturnsResponse> =>
+  client.get<MonthlyReturnsResponse>('/api/analytics/monthly-returns', { params: { range } }).then(r => r.data)
+
+export const getAnalyticsBenchmark = (
+  symbol: string = 'SPY',
+  range: string = '1Y'
+): Promise<AnalyticsBenchmark | null> =>
+  client
+    .get<AnalyticsBenchmark | null>('/api/analytics/benchmark', { params: { symbol, range } })
+    .then(r => r.data)

@@ -71,7 +71,13 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
       </div>
 
       {/* Metrics row */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">Price</p>
+          <p className="font-mono font-semibold text-card-foreground">
+            {position.currentPrice != null ? fmt(position.currentPrice) : '—'}
+          </p>
+        </div>
         <div>
           <p className="text-muted-foreground">Current value</p>
           <p className="font-mono font-semibold text-card-foreground">{fmt(position.currentValue)}</p>
@@ -117,6 +123,11 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
         {isEditable && position.suggestedAmount > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
             Suggested {fmt(position.suggestedAmount)}
+            {position.suggestedShares > 0 && (
+              <span className="ml-1 font-semibold">
+                ({position.suggestedShares} {position.suggestedShares === 1 ? 'share' : 'shares'})
+              </span>
+            )}
           </p>
         )}
       </div>

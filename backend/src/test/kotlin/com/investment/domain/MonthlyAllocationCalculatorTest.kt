@@ -164,26 +164,37 @@ class MonthlyAllocationCalculatorTest {
 
         val result = MonthlyAllocationCalculator.compute(holdings, allocations, prices, budget)
 
-        // portfolioTotal = 0 -> all currentValues = 0 -> all gapValues = 0
-        // totalPositiveGap = 0 -> all suggestions = 0
         assertEquals(BigDecimal("0.00"), result.portfolioTotal)
-        result.positions.forEach { pos ->
-            assertEquals(BigDecimal("0.00"), pos.suggestedAmount, "Expected 0 for ${pos.symbol}")
-        }
+
+        val voo = result.positions.find { it.symbol == "VOO" }!!
+        val vti = result.positions.find { it.symbol == "VTI" }!!
+
+        // Rounded to whole shares:
+        // VOO: raw=600, price=400, floor(600/400)=1 share → 400
+        // VTI: raw=400, price=200, floor(400/200)=2 shares → 400
+        // Spent=800, remaining=200. VOO next share=400 > 200 → skip. VTI next share=200 ≤ 200 → +1 share
+        assertEquals("UNDERWEIGHT", voo.status)
+        assertEquals(BigDecimal("400.00"), voo.suggestedAmount)
+        assertEquals(1, voo.suggestedShares)
+        assertEquals("UNDERWEIGHT", vti.status)
+        assertEquals(BigDecimal("600.00"), vti.suggestedAmount)
+        assertEquals(3, vti.suggestedShares)
     }
 
     @Test
     fun `handles zero portfolio total without dividing by zero`() {
         val holdings = listOf(holding("VOO", "10"))
         val allocations = listOf(allocation("VOO", "100"))
-        // No price available for VOO -> portfolioTotal = 0
+        // No price available for VOO -> portfolioTotal = 0, can't compute shares
         val prices = emptyMap<String, BigDecimal>()
 
         val result = MonthlyAllocationCalculator.compute(holdings, allocations, prices, BigDecimal("500"))
 
         assertEquals(0, BigDecimal("0.00").compareTo(result.portfolioTotal))
         assertEquals(0, BigDecimal.ZERO.compareTo(result.positions.first().currentPercent))
-        assertEquals(0, BigDecimal.ZERO.compareTo(result.positions.first().suggestedAmount))
+        // No price → can't round to whole shares → suggestedAmount=0, shares=0
+        assertEquals(0, BigDecimal("0.00").compareTo(result.positions.first().suggestedAmount))
+        assertEquals(0, result.positions.first().suggestedShares)
     }
 
     @Test

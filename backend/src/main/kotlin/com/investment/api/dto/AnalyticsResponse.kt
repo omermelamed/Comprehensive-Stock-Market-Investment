@@ -51,6 +51,21 @@ data class AnalyticsPositionMetric(
     val portfolioWeightPct: BigDecimal
 )
 
+data class RealizedTradeEntry(
+    val symbol: String,
+    val quantity: BigDecimal,
+    val buyPrice: BigDecimal,
+    val sellPrice: BigDecimal,
+    val pnl: BigDecimal,
+    val pnlPercent: BigDecimal,
+    val closedAt: String
+)
+
+data class RealizedPnlSummary(
+    val totalRealizedPnl: BigDecimal,
+    val trades: List<RealizedTradeEntry>
+)
+
 data class AnalyticsResponse(
     val range: String,
     val currency: String,
@@ -58,5 +73,6 @@ data class AnalyticsResponse(
     val chartPoints: List<AnalyticsChartPoint>,
     val positions: List<AnalyticsPositionMetric>,
     /** Null when benchmark data is unavailable (network failure, no history). */
-    val benchmark: AnalyticsBenchmark?
+    val benchmark: AnalyticsBenchmark?,
+    val realizedPnl: RealizedPnlSummary? = null
 )

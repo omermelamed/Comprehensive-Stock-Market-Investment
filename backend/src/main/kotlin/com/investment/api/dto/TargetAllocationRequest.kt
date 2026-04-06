@@ -7,5 +7,6 @@ data class TargetAllocationRequest(
     val assetType: String,
     val targetPercentage: BigDecimal,
     val label: String,
-    val displayOrder: Int = 0
+    val displayOrder: Int = 0,
+    val parentId: String? = null
 )

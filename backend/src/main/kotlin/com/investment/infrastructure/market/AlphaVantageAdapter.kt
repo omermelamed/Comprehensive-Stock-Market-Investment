@@ -91,7 +91,9 @@ class AlphaVantageAdapter(
             dividendYield = decimal("DividendYield"),
             fiftyTwoWeekHigh = decimal("52WeekHigh"),
             fiftyTwoWeekLow = decimal("52WeekLow"),
-            marketCap = field("MarketCapitalization")
+            marketCap = field("MarketCapitalization"),
+            sector = field("Sector"),
+            country = field("Country")
         )
     }
 }

@@ -6,8 +6,16 @@ import com.investment.api.dto.AnalyticsChartPoint
 import com.investment.api.dto.AnalyticsPerformanceMetrics
 import com.investment.api.dto.AnalyticsPositionMetric
 import com.investment.api.dto.AnalyticsResponse
+import com.investment.api.dto.MonthlyReturnEntry
+import com.investment.api.dto.MonthlyReturnsResponse
+import com.investment.api.dto.RealizedPnlSummary
+import com.investment.api.dto.RealizedTradeEntry
 import com.investment.domain.PerformanceCalculator
+import com.investment.domain.RealizedPnlCalculator
+import com.investment.domain.UnrealizedPnlCalculator
+import com.investment.infrastructure.SnapshotRecord
 import com.investment.infrastructure.SnapshotRepository
+import com.investment.infrastructure.TransactionRepository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -20,19 +28,13 @@ class AnalyticsService(
     private val portfolioSummaryService: PortfolioSummaryService,
     private val userProfileService: UserProfileService,
     private val benchmarkService: BenchmarkService,
+    private val transactionRepository: TransactionRepository,
     private val clock: Clock
 ) {
 
     fun getAnalytics(range: String): AnalyticsResponse {
         val today = LocalDate.now(clock)
-        val snapshots = when (range) {
-            "1M"  -> snapshotRepository.findByDateRange(today.minusDays(30), today)
-            "3M"  -> snapshotRepository.findByDateRange(today.minusDays(90), today)
-            "6M"  -> snapshotRepository.findByDateRange(today.minusDays(180), today)
-            "1Y"  -> snapshotRepository.findByDateRange(today.minusDays(365), today)
-            "ALL" -> snapshotRepository.findAllOrderedByDate()
-            else  -> snapshotRepository.findByDateRange(today.minusDays(30), today)
-        }
+        val snapshots = snapshotsForRange(range, today)
 
         val summary = portfolioSummaryService.getPortfolioSummary()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
@@ -64,21 +66,51 @@ class AnalyticsService(
         val benchmark = buildBenchmark(fromDate, toDate)
 
         val totalValue = summary.totalValue
-        val positions = holdings.map { h ->
-            val weightPct = if (totalValue.compareTo(BigDecimal.ZERO) != 0) {
-                h.currentValue.divide(totalValue, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
-            } else BigDecimal.ZERO
-            AnalyticsPositionMetric(
+        val positionInputs = holdings.map { h ->
+            UnrealizedPnlCalculator.PositionInput(
                 symbol = h.symbol,
                 label = h.label,
                 currentValue = h.currentValue,
-                costBasis = h.costBasis,
-                pnlAbsolute = h.pnlAbsolute,
-                pnlPercent = h.pnlPercent,
-                portfolioWeightPct = weightPct
+                costBasis = h.costBasis
             )
-        }.sortedByDescending { it.currentValue }
+        }
+        val positions = UnrealizedPnlCalculator.compute(positionInputs, totalValue).map { p ->
+            AnalyticsPositionMetric(
+                symbol = p.symbol,
+                label = p.label,
+                currentValue = p.currentValue,
+                costBasis = p.costBasis,
+                pnlAbsolute = p.pnlAbsolute,
+                pnlPercent = p.pnlPercent,
+                portfolioWeightPct = p.portfolioWeightPct
+            )
+        }
+
+        val ledgerRows = transactionRepository.findAllOrderedByExecutedAtAsc()
+        val realizedEntries = ledgerRows.map { row ->
+            RealizedPnlCalculator.TransactionEntry(
+                symbol = row.symbol,
+                type = row.type,
+                quantity = row.quantity,
+                pricePerUnit = row.pricePerUnit,
+                executedAt = row.executedAt
+            )
+        }
+        val realizedResult = RealizedPnlCalculator.compute(realizedEntries)
+        val realizedPnl = RealizedPnlSummary(
+            totalRealizedPnl = realizedResult.totalRealizedPnl,
+            trades = realizedResult.trades.map { t ->
+                RealizedTradeEntry(
+                    symbol = t.symbol,
+                    quantity = t.quantity,
+                    buyPrice = t.buyPrice,
+                    sellPrice = t.sellPrice,
+                    pnl = t.pnl,
+                    pnlPercent = t.pnlPercent,
+                    closedAt = t.closedAt.toString()
+                )
+            }
+        )
 
         return AnalyticsResponse(
             range = range,
@@ -86,12 +118,64 @@ class AnalyticsService(
             performanceMetrics = metrics.toDto(),
             chartPoints = chartPoints,
             positions = positions,
-            benchmark = benchmark
+            benchmark = benchmark,
+            realizedPnl = realizedPnl
         )
     }
 
-    private fun buildBenchmark(fromDate: LocalDate, toDate: LocalDate): AnalyticsBenchmark? {
-        val result = benchmarkService.getBenchmark("SPY", fromDate, toDate) ?: return null
+    fun getMonthlyReturns(range: String): MonthlyReturnsResponse {
+        val today = LocalDate.now(clock)
+        val snapshots = snapshotsForRange(range, today)
+        val summary = portfolioSummaryService.getPortfolioSummary()
+        val currency = userProfileService.getProfile()?.preferredCurrency ?: summary.currency
+
+        val byMonth = snapshots.groupBy { snap ->
+            val m = snap.date.monthValue
+            "${snap.date.year}-${if (m < 10) "0$m" else "$m"}"
+        }
+        val months = byMonth.keys.sorted().map { monthKey ->
+            val snaps = byMonth.getValue(monthKey).sortedBy { it.date }
+            val startValue = snaps.first().totalValue
+            val endValue = snaps.last().totalValue
+            val returnAbsolute = (endValue - startValue).setScale(2, RoundingMode.HALF_UP)
+            val returnPct = if (startValue.compareTo(BigDecimal.ZERO) != 0) {
+                (endValue - startValue).divide(startValue, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
+            } else {
+                BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+            }
+            MonthlyReturnEntry(
+                month = monthKey,
+                startValue = startValue,
+                endValue = endValue,
+                returnAbsolute = returnAbsolute,
+                returnPct = returnPct
+            )
+        }
+        return MonthlyReturnsResponse(
+            range = range,
+            currency = currency,
+            months = months
+        )
+    }
+
+    fun getBenchmarkStandalone(symbol: String, from: LocalDate, to: LocalDate): AnalyticsBenchmark? {
+        return buildBenchmark(from, to, symbol)
+    }
+
+    private fun snapshotsForRange(range: String, today: LocalDate): List<SnapshotRecord> {
+        return when (range) {
+            "1M" -> snapshotRepository.findByDateRange(today.minusDays(30), today)
+            "3M" -> snapshotRepository.findByDateRange(today.minusDays(90), today)
+            "6M" -> snapshotRepository.findByDateRange(today.minusDays(180), today)
+            "1Y" -> snapshotRepository.findByDateRange(today.minusDays(365), today)
+            "ALL" -> snapshotRepository.findAllOrderedByDate()
+            else -> snapshotRepository.findByDateRange(today.minusDays(30), today)
+        }
+    }
+
+    private fun buildBenchmark(fromDate: LocalDate, toDate: LocalDate, symbol: String = "SPY"): AnalyticsBenchmark? {
+        val result = benchmarkService.getBenchmark(symbol, fromDate, toDate) ?: return null
         return AnalyticsBenchmark(
             symbol = result.symbol,
             periodReturnPct = result.periodReturnPct,

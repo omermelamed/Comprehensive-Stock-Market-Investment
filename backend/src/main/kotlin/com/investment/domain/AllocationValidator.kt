@@ -36,12 +36,35 @@ object AllocationValidator {
             )
         }
 
-        val total = allocations.fold(BigDecimal.ZERO) { acc, a -> acc + a.targetPercentage }
+        // Children grouped by parent reference (parentId holds the parent's symbol during bulk replace)
+        val childrenByParent = allocations
+            .filter { it.parentId != null }
+            .groupBy { it.parentId!!.uppercase() }
+
+        for ((parentRef, children) in childrenByParent) {
+            val parent = allocations.find { it.symbol.uppercase() == parentRef }
+            if (parent != null) {
+                val childSum = children.fold(BigDecimal.ZERO) { acc, c -> acc + c.targetPercentage }
+                if (childSum.compareTo(parent.targetPercentage) != 0) {
+                    errors.add(
+                        AllocationValidationError(
+                            "allocations.children",
+                            "Children of '${parent.symbol}' sum to $childSum but parent target is ${parent.targetPercentage}"
+                        )
+                    )
+                }
+            }
+        }
+
+        // Top-level total: only count rows that are NOT children (parentId == null).
+        // Category parents count in the total; their children do not (they sum to the parent).
+        val topLevel = allocations.filter { it.parentId == null }
+        val total = topLevel.fold(BigDecimal.ZERO) { acc, a -> acc + a.targetPercentage }
         if (total.compareTo(BigDecimal("100.00")) != 0) {
             errors.add(
                 AllocationValidationError(
                     "allocations.targetPercentage",
-                    "Target percentages must sum to 100, but sum is $total"
+                    "Top-level allocations must sum to 100, but sum is $total"
                 )
             )
         }

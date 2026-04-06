@@ -14,12 +14,14 @@ export interface UserProfile {
 }
 
 export interface TargetAllocation {
-  id: number
+  id: string
   symbol: string
   assetType: string
   targetPercentage: number
   label: string
   displayOrder: number
+  parentId: string | null
+  isCategory: boolean
 }
 
 export interface Transaction {
@@ -53,7 +55,10 @@ export interface PositionCard {
   gapPercent: number
   gapValue: number
   suggestedAmount: number
+  suggestedShares: number
   status: 'UNDERWEIGHT' | 'ON_TARGET' | 'OVERWEIGHT'
+  currentPrice?: number | null
+  priceCurrency?: string | null
   fundamentals?: FundamentalsData | null
   aiSummary?: string
   aiSentiment?: 'POSITIVE' | 'NEUTRAL' | 'CAUTIOUS'
@@ -124,6 +129,8 @@ export interface FundamentalsData {
   fiftyTwoWeekHigh: number | null
   fiftyTwoWeekLow: number | null
   marketCap: string | null
+  sector?: string | null
+  country?: string | null
 }
 
 export interface RecommendationCard {

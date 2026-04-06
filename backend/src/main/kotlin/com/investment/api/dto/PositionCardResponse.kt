@@ -11,6 +11,9 @@ data class PositionCardResponse(
     val gapPercent: BigDecimal,
     val gapValue: BigDecimal,
     val suggestedAmount: BigDecimal,
+    val suggestedShares: Int = 0,
     val status: String,
+    val currentPrice: BigDecimal? = null,
+    val priceCurrency: String? = null,
     val fundamentals: FundamentalsData? = null
 )

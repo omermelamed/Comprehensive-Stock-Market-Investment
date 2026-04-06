@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 class MarketDataService(
     private val providers: List<MarketDataProvider>,
     private val clock: Clock,
+    private val symbolResolverService: SymbolResolverService,
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -31,25 +32,27 @@ class MarketDataService(
 
     fun getQuote(symbol: String): PriceQuote {
         val upperSymbol = symbol.uppercase()
+        val resolvedSymbol = symbolResolverService.resolve(upperSymbol)
+        val cacheKey = upperSymbol // cache by user-facing symbol
         val now = clock.instant()
 
-        val cached = cache[upperSymbol]
+        val cached = cache[cacheKey]
         if (cached != null && now.isBefore(cached.cachedAt.plusSeconds(CACHE_TTL_SECONDS))) {
-            log.debug("Cache hit for {}", upperSymbol)
+            log.debug("Cache hit for {}", cacheKey)
             return cached.quote
         }
 
         for (provider in providers) {
             val quote = try {
-                provider.fetchQuote(upperSymbol)
+                provider.fetchQuote(resolvedSymbol)
             } catch (e: Exception) {
-                log.warn("Provider {} threw unexpectedly for {}: {}", provider.sourceName, upperSymbol, e.message)
+                log.warn("Provider {} threw unexpectedly for {} (resolved: {}): {}", provider.sourceName, upperSymbol, resolvedSymbol, e.message)
                 null
             }
 
             if (quote != null) {
-                cache[upperSymbol] = CachedQuote(quote = quote, cachedAt = now)
-                log.debug("Quote for {} fetched from {}", upperSymbol, provider.sourceName)
+                cache[cacheKey] = CachedQuote(quote = quote, cachedAt = now)
+                log.debug("Quote for {} (resolved: {}) fetched from {}", upperSymbol, resolvedSymbol, provider.sourceName)
                 return quote
             }
         }

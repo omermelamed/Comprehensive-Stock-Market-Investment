@@ -12,6 +12,7 @@ import AllocationPage from './pages/AllocationPage'
 import WatchlistPage from './pages/WatchlistPage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import RiskPage from './pages/RiskPage'
 import { AppLayout } from './layouts/app-layout'
 import { CurrencyProvider } from './contexts/currency-context'
 
@@ -87,6 +88,7 @@ function App() {
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/risk" element={<RiskPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -14,5 +14,7 @@ data class FundamentalsData(
     val dividendYield: BigDecimal?,
     val fiftyTwoWeekHigh: BigDecimal?,
     val fiftyTwoWeekLow: BigDecimal?,
-    val marketCap: String?          // raw string, e.g. "1234567890" — formatted by frontend
+    val marketCap: String?,          // raw string, e.g. "1234567890" — formatted by frontend
+    val sector: String? = null,
+    val country: String? = null
 )

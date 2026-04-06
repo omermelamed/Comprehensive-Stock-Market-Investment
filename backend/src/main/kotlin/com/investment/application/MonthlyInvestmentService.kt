@@ -32,19 +32,24 @@ class MonthlyInvestmentService(
         require(request.budget > BigDecimal.ZERO) { "Budget must be greater than zero" }
 
         val holdings = holdingsRepository.findAll()
-        val allocations = allocationRepository.findAll()
+        val allAllocations = allocationRepository.findAll()
+        // Only pass leaf allocations to the calculator — skip category parents
+        val allocations = allAllocations.filter { !it.isCategory }
         val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
         val symbols = (holdings.map { it.symbol } + allocations.map { it.symbol })
             .map { it.uppercase() }
             .distinct()
 
-        // Convert each stock's price from its native currency to the user's preferred currency.
+        data class QuoteInfo(val priceInUserCurrency: BigDecimal, val rawPrice: BigDecimal, val currency: String)
+
         val missing = mutableListOf<String>()
+        val quoteInfo = mutableMapOf<String, QuoteInfo>()
         val prices = symbols.mapNotNull { symbol ->
             try {
                 val quote = marketDataService.getQuote(symbol)
                 val rate = marketDataService.getExchangeRate(quote.currency, currency)
+                quoteInfo[symbol] = QuoteInfo(quote.price * rate, quote.price, quote.currency)
                 symbol to (quote.price * rate)
             } catch (e: Exception) {
                 missing.add(symbol)
@@ -56,13 +61,18 @@ class MonthlyInvestmentService(
 
         val enriched = result.copy(
             positions = result.positions.map { pos ->
+                val qi = quoteInfo[pos.symbol.uppercase()]
                 val fundamentals = try {
                     alphaVantageAdapter.fetchFundamentals(pos.symbol.uppercase())
                 } catch (e: Exception) {
                     log.debug("Fundamentals unavailable for {}: {}", pos.symbol, e.message)
                     null
                 }
-                pos.copy(fundamentals = fundamentals)
+                pos.copy(
+                    currentPrice = qi?.priceInUserCurrency,
+                    priceCurrency = currency,
+                    fundamentals = fundamentals
+                )
             },
             missingPrices = missing
         )

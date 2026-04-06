@@ -11,6 +11,8 @@ data class TargetAllocationResponse(
     val targetPercentage: BigDecimal,
     val label: String,
     val displayOrder: Int,
+    val parentId: UUID? = null,
+    val isCategory: Boolean = false,
     val createdAt: Instant,
     val updatedAt: Instant
 )

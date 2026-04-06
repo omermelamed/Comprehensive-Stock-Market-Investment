@@ -8,13 +8,40 @@ import org.springframework.stereotype.Repository
 import java.math.BigDecimal
 import java.sql.Date
 import java.sql.Timestamp
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+
+data class TransactionLedgerRow(
+    val symbol: String,
+    val type: String,
+    val quantity: BigDecimal,
+    val pricePerUnit: BigDecimal,
+    val executedAt: Instant
+)
 
 @Repository
 class TransactionRepository(
     private val dsl: DSLContext
 ) {
+
+    fun findAllOrderedByExecutedAtAsc(): List<TransactionLedgerRow> {
+        return dsl.fetch(
+            """
+            SELECT symbol, type, quantity, price_per_unit, executed_at
+            FROM transactions
+            ORDER BY executed_at ASC
+            """.trimIndent()
+        ).map { row ->
+            TransactionLedgerRow(
+                symbol = row.get("symbol", String::class.java),
+                type = row.get("type", String::class.java),
+                quantity = row.get("quantity", BigDecimal::class.java),
+                pricePerUnit = row.get("price_per_unit", BigDecimal::class.java),
+                executedAt = row.get("executed_at", Timestamp::class.java).toInstant()
+            )
+        }
+    }
 
     fun findAll(page: Int, size: Int): List<TransactionResponse> {
         val offset = page * size

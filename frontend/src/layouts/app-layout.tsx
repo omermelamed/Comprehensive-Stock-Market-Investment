@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle, BarChart2, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useChatPanel } from '@/features/chat/useChatPanel'
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { to: '/monthly-flow', label: 'Monthly Flow', icon: TrendingUp, end: false },
   { to: '/recommendations', label: 'Recommendations', icon: Lightbulb, end: false },
   { to: '/analytics', label: 'Analytics', icon: BarChart2, end: false },
+  { to: '/risk', label: 'Risk', icon: ShieldAlert, end: false },
   { to: '/transactions/new', label: 'Transactions', icon: ArrowLeftRight, end: false },
   { to: '/allocations', label: 'Allocations', icon: PieChart, end: false },
   { to: '/watchlist', label: 'Watchlist', icon: Star, end: false },
@@ -88,15 +89,14 @@ export function AppLayout() {
         <Outlet />
       </main>
 
-      {/* Floating chat button */}
+      {/* Floating chat button — bottom-20 to avoid overlapping sticky page footers */}
       {!chat.isOpen && (
         <button
           onClick={chat.open}
           title={chatTooltip}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-purple-600 px-4 py-3 text-white shadow-lg transition-colors hover:bg-purple-700"
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-colors hover:bg-purple-700"
         >
           <MessageCircle className="h-5 w-5" />
-          <span className="text-xs font-medium max-w-[160px] truncate">{chatTooltip}</span>
         </button>
       )}
 
