@@ -4,67 +4,68 @@
 
 **Prerequisite:** Phase 6 complete. Shared context builder exists and is well-tested.
 
-**Status:** ⬜ Not started
+**Status:** ✅ Complete
 
 ---
 
 ## Backend Tasks
 
 ### Chat Endpoint
-- [ ] `POST /api/chat` — request: `{ messages: [{ role, content }] }`
-  - injects full shared context as system prompt on first call
+- [x] `POST /api/chat` — request: `{ message: String, history: List<{ role, content }> }`
+  - injects full portfolio context as system prompt on every call
   - passes full conversation history on each call
-  - response: `{ role: "assistant", content: String }`
-- [ ] `ChatService` — builds system prompt with shared context, calls Anthropic API
-- [ ] `ChatRequest` / `ChatResponse` DTOs
-- [ ] `ChatSessionContext` — builds the system prompt from `SharedContextBuilder` + latest recommendations
+  - response: `{ reply: String }`
+- [x] `ChatService` — builds system prompt with full portfolio context, calls ClaudeClient
+- [x] `ChatRequest` / `ChatResponse` DTOs
 
 ### Context Injection
-- [ ] System prompt includes (all from DB, nothing hardcoded):
-  - user display name and investment goal
-  - full current holdings (symbol, quantity, value, P&L)
-  - target allocation vs current allocation (gaps)
-  - risk level and time horizon
-  - monthly investment range
+- [x] System prompt includes (all from DB, nothing hardcoded):
+  - full current holdings with live prices, quantity, and % of portfolio
+  - target allocations and current gaps
+  - risk level and monthly budget
   - enabled tracks
-  - latest recommendations from `ai_recommendation_cache` (if available)
+  - AI boundary declared: can explain/analyze, cannot create transactions or modify data
+- [x] Watchlist signals included in context
+- [ ] Latest recommendations from `ai_recommendation_cache` injected — not included in chatbot context
 
 ---
 
 ## Frontend Tasks
 
 ### Chat UI Shell
-- [ ] `ChatButton` — floating button bottom-right on all pages (💬 icon + unread badge)
-- [ ] `ChatPanel` — slide-in panel from right (does not navigate away from current page)
-- [ ] `useChatPanel` hook — open/close state, accessible from any page via context
+- [x] `ChatButton` — floating button bottom-right on all pages (MessageCircle icon, purple)
+- [x] `ChatPanel` — slide-in panel from right, backdrop overlay
+- [x] `useChatPanel` hook — open/close state, message list, send logic, loading state
 
 ### Chat Panel Content
-- [ ] `ChatMessageList` — scrollable message history
-- [ ] `ChatMessage` — user or assistant bubble with markdown rendering
-- [ ] `ChatInput` — text input + send button (Enter to send, Shift+Enter for newline)
-- [ ] `ChatClearButton` — clears conversation history
-- [ ] `ChatLoadingIndicator` — typing indicator while waiting for response
+- [x] `ChatMessageList` — scrollable message history with auto-scroll to bottom
+- [x] `ChatMessage` — user bubble (right, primary bg) and assistant bubble (left, card bg with BrainCircuit icon)
+- [x] `ChatInput` — textarea + send button (Enter to send, Shift+Enter for newline)
+- [x] `ChatLoadingIndicator` — 3-dot bounce animation while waiting for response
+- [x] Empty state with 3 starter prompt buttons ("What should I buy this month?", "How is my portfolio doing?", "Am I too concentrated?")
+- [ ] `ChatClearButton` — not implemented (conversation clears on panel close / page refresh)
+- [ ] Markdown rendering — basic plain text only, no markdown parser
 
 ### Conversation State
-- [ ] `useChatConversation` hook — manages message array, sends to API, appends response
-- [ ] Session history persisted in component state (cleared on page refresh or "Clear" button)
+- [x] `useChatConversation` embedded in `useChatPanel` — manages message array, sends to API, appends response
+- [x] Session history persisted in component state (cleared on page refresh)
 
 ### Pre-loaded Context (from other features)
-- [ ] "Ask AI" from watchlist → opens chat panel with message pre-filled: "Tell me about [symbol]"
-- [ ] Chat button context-aware: if on a specific page, can include page context in first message
+- [ ] "Ask AI" from watchlist → opens chat panel with message pre-filled — not implemented
+- [ ] Chat button context-aware for current page — not implemented
 
 ### API Client
-- [ ] `api/chat.ts` — chat endpoint
+- [x] `api/chat.ts` — chat endpoint
 
 ---
 
 ## Validation Checklist
 
-- [ ] Chat panel opens without navigating away from current page
-- [ ] System prompt correctly contains user's actual holdings and gaps (not hardcoded examples)
-- [ ] Chatbot answers reference real portfolio data (e.g. "Your VOO position is up 12%")
-- [ ] Conversation history maintained within session
-- [ ] Clearing conversation resets to empty state
-- [ ] Chat still works if recommendations cache is empty (graceful degradation)
-- [ ] "Ask AI" from watchlist pre-loads the symbol context correctly
-- [ ] Markdown renders correctly (tables, bullet points, bold text)
+- [x] Chat panel opens without navigating away from current page
+- [x] System prompt correctly contains user's actual holdings and gaps (not hardcoded examples)
+- [x] Conversation history maintained within session
+- [x] Chat still works if recommendations cache is empty (graceful degradation)
+- [x] ClaudeClient reuse via new `completeWithHistory()` overload (existing `complete()` delegates to it)
+- [ ] Clearing conversation resets to empty state — panel close achieves this, no explicit clear button
+- [ ] "Ask AI" from watchlist pre-loads the symbol context correctly — not implemented
+- [ ] Markdown renders correctly — not implemented (plain text only)

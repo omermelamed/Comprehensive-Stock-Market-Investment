@@ -4,87 +4,97 @@
 
 **Prerequisite:** Phase 5 complete. Anthropic client, shared context builder, and market data adapters all exist.
 
-**Status:** ⬜ Not started
+**Status:** ✅ Complete
+
+> **Implementation note:** The PRD specified a multi-agent orchestrator pattern (orchestrator → separate sub-agents per track). The actual implementation uses a single Claude call with track-aware user message sections. This achieves the same functional outcome with significantly less complexity and fewer API calls. The simplification is intentional and aligned with the single-user local-app posture.
 
 ---
 
 ## Backend Tasks
 
 ### Orchestrator Agent
-- [ ] `OrchestratorAgentService` — calls Claude with `orchestrator` agent prompt
-  - input: full user context (holdings, gaps, risk profile, enabled tracks)
-  - output: `{ priority_gaps, agents_to_invoke, orchestrator_note }`
-  - only invokes sub-agents matching user's enabled tracks
+- [ ] `OrchestratorAgentService` as a separate class — not implemented; orchestration logic embedded in `RecommendationService`
+- [x] Track-aware user message sections injected into the Claude prompt for SHORT, CRYPTO, OPTIONS tracks
+- [x] Input: full user context (holdings, gaps, risk profile, enabled tracks) sent to Claude
 
 ### Sub-Agents
-- [ ] `LongEquityAgentService` — calls Claude with `long-equity` agent prompt
-  - fetches market data for the symbol first, then calls Claude
-  - output: full recommendation JSON per PRD §5.5 card spec
-- [ ] `ShortAgentService` — only invoked if SHORT track enabled in user profile
-- [ ] `CryptoAgentService` — only invoked if CRYPTO track enabled
-- [ ] `OptionsAgentService` — only invoked if OPTIONS track enabled
-- [ ] `ReitAgentService` — invoked if REIT positions exist in target allocations
-- [ ] `BondAgentService` — invoked if BOND positions exist in target allocations
+- [ ] `LongEquityAgentService` — not a separate class; handled by single Claude call
+- [ ] `ShortAgentService` — not a separate class; SHORT track adds instructions to the user message
+- [ ] `CryptoAgentService` — not a separate class; CRYPTO track adds instructions to the user message
+- [ ] `OptionsAgentService` — not a separate class; OPTIONS track adds instructions to the user message
+- [ ] `ReitAgentService` — not implemented
+- [ ] `BondAgentService` — not implemented
 
 ### Recommendation Engine Coordinator
-- [ ] `RecommendationEngineService`:
-  1. Build shared context
-  2. Call orchestrator → get list of agents to invoke + symbols
-  3. Call each sub-agent in parallel
-  4. Merge results, sort by `confidenceScore` descending
-  5. Cache result (in-memory, 15 minutes)
+- [x] `RecommendationService`:
+  1. Build portfolio context (holdings, prices, gaps, watchlist signals)
+  2. Build track-aware user message with underweight gaps + watchlist + track instructions
+  3. Single Claude call with full context
+  4. Parse and enrich result: currentPrice, fundamentals (Alpha Vantage), sourceUrl (Yahoo Finance)
+  5. Cache result (DB, 15 minutes)
   6. Return unified recommendation list
+- [x] `RecommendationGapCalculator` — pure domain object: computes underweight gaps, sorts by gap descending, limits to top 5
 
 ### Recommendation Cache
-- [ ] `RecommendationCacheService` — stores result in `ai_recommendation_cache` table
-- [ ] Auto-invalidates after 15 minutes (`expires_at` column)
-- [ ] `GET /api/recommendations` — returns cached result if valid, regenerates if expired
-- [ ] `POST /api/recommendations/refresh` — force regenerate
+- [x] `RecommendationCacheRepository` — stores result in `ai_recommendation_cache` table (JSONB)
+- [x] Auto-invalidates after 15 minutes (`expires_at` column)
+- [x] `GET /api/recommendations` — returns cached result if valid, regenerates if expired
+- [x] `POST /api/recommendations/refresh` — force regenerate
+- [x] Failed/empty generation does not overwrite a valid cache entry
 
 ### Recommendation Endpoints
-- [ ] `GET /api/recommendations` — return current recommendations (from cache or regenerate)
-- [ ] `POST /api/recommendations/refresh` — invalidate cache and regenerate
+- [x] `GET /api/recommendations` — return current recommendations (from cache or regenerate)
+- [x] `POST /api/recommendations/refresh` — invalidate cache and regenerate
+
+### Enrichment (additions beyond original PRD)
+- [x] `currentPrice` — deterministic, from market data
+- [x] `fundamentals` — P/E, PEG, EPS, dividend yield, 52W high/low, market cap via Alpha Vantage OVERVIEW (1-hour cache)
+- [x] `sourceUrl` — deterministic Yahoo Finance quote URL per symbol
+- [x] `generationError` field — `null` on success, `"claude_failure"` or `"parse_failure"` on error
+- [x] `timeHorizon` and `catalysts` fields — AI-generated, advisory only
+- [x] Live portfolio total recomputed on cache-hit responses
 
 ---
 
 ## Frontend Tasks
 
 ### Recommendations Page
-- [ ] `RecommendationsPage` — full recommendations list
-- [ ] `useRecommendations` hook — fetch on page load, handle loading + empty states
-- [ ] `RefreshButton` — triggers manual refresh with loading state
+- [x] `RecommendationsPage` — full recommendations list
+- [x] `useRecommendations` hook — fetch on page load, handle loading + empty states
+- [x] `RefreshButton` — triggers manual refresh with loading state
+- [x] Error banner for `claude_failure` vs `parse_failure` generation errors
 
 ### Recommendation Card
-- [ ] `RecommendationCard` — displays all fields from PRD §5.5:
-  - symbol + name + agent source badge
-  - recommendation badge (BUY / HOLD / WAIT)
-  - current price + target price + expected return %
-  - time horizon
-  - P/E, PEG, D/E, FCF with signal colors
-  - AI reasoning text (3–5 sentences)
-  - risk level + confidence score
-  - portfolio fit note
-  - supporting sources (clickable links)
-- [ ] `AgentSourceBadge` — LONG_EQUITY / SHORT / CRYPTO / OPTIONS / REIT / BOND
-- [ ] `RecommendationBadge` — BUY (green) / HOLD (yellow) / WAIT (gray)
-- [ ] `ConfidenceBar` — visual 0–100% indicator
+- [x] `RecommendationCard` — displays:
+  - rank number + symbol (clickable link to Yahoo Finance when sourceUrl present)
+  - current price
+  - action badge: BUY (green) / SHORT (red) / COVERED_CALL (yellow)
+  - source badge: ALLOCATION_GAP / WATCHLIST / AI_SUGGESTION
+  - confidence level: HIGH / MEDIUM / LOW
+  - time horizon pill
+  - AI reasoning text (purple section)
+  - catalysts bullet list
+  - fundamentals panel: P/E, PEG, EPS, div yield, 52W high/low, market cap
+  - suggested amount (footer row)
+- [x] `FundamentalsPanel` — compact key/value grid, filters out missing values
+- [ ] `ConfidenceBar` — visual 0–100% indicator not implemented (text label only)
+- [ ] Target price + expected return % — not in output (AI not allowed to invent prices)
 
 ### Loading + Empty States
-- [ ] Skeleton cards while loading
-- [ ] Empty state if no tracks enabled or no recommendations generated
-- [ ] Error state with retry button
+- [x] Skeleton cards while loading
+- [x] Empty state if no recommendations generated
+- [x] Error state with retry button
 
 ### API Client
-- [ ] `api/recommendations.ts` — fetch and refresh endpoints
+- [x] `api/recommendations.ts` — fetch and refresh endpoints
 
 ---
 
 ## Validation Checklist
 
-- [ ] Only sub-agents matching user's enabled tracks are invoked
-- [ ] Overweight positions are never recommended as BUY
-- [ ] Results cached for 15 minutes — no duplicate API calls on page revisit
-- [ ] Manual refresh works and returns fresh results
-- [ ] Sub-agent failure does not crash the whole response (partial results shown)
-- [ ] Confidence scores visible and correctly sorted (highest first)
-- [ ] Portfolio fit note references the user's actual allocation gap
+- [x] Only tracks matching the user's enabled tracks inject instructions into the Claude prompt
+- [x] Results cached for 15 minutes — no duplicate API calls on page revisit
+- [x] Manual refresh works and returns fresh results
+- [x] Claude failure does not crash the endpoint — returns empty list with generationError
+- [x] Portfolio fit note references the user's actual allocation gap
+- [ ] Confidence scores sorted highest first — sorting is by Claude-assigned rank, not by confidence score field

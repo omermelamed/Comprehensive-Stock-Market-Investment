@@ -4,103 +4,113 @@
 
 **Prerequisite:** Phase 7 complete. Portfolio history (snapshots) has been accumulating.
 
-**Status:** ⬜ Not started
+**Status:** 🟡 Partially complete
+
+> **Implementation note:** Core analytics (performance metrics, SPY benchmark comparison, per-position P&L) are fully implemented. Risk warnings, sector/geographic exposure, monthly returns chart, and realized P&L from closed trades are deferred.
 
 ---
 
 ## Backend Tasks
 
 ### Performance Analytics
-- [ ] `GET /api/analytics/performance` — return:
-  - total return (absolute + %)
-  - realized P&L (from closed positions)
-  - unrealized P&L (from open positions)
-  - ROI % (return on total invested capital)
-  - allocation accuracy score over time
-  - best performer (symbol + % gain)
-  - worst performer (symbol + % loss)
-  - win rate (% of closed trades that were profitable)
-  - avg hold duration (average days positions held before closing)
-- [ ] `PerformanceCalculator` — pure function: transactions + prices + snapshots → performance metrics
-- [ ] `RealizedPnlCalculator` — match SELL/COVER transactions to their corresponding BUY/SHORT
-- [ ] `UnrealizedPnlCalculator` — open positions × current price vs cost basis
+- [x] `GET /api/analytics?range=1M|3M|6M|1Y|ALL` — combined analytics endpoint returning:
+  - total return (cost basis %, absolute value)
+  - snapshot-period return %
+  - annualized return % (compound)
+  - volatility (annualized std dev of daily returns)
+  - max drawdown (peak-to-trough)
+  - Sharpe ratio (vs 4.5% risk-free rate)
+  - per-position P&L (unrealized, from open holdings vs cost basis)
+  - SPY benchmark comparison (indexed)
+- [x] `PerformanceCalculator` — pure object: snapshots + totalCostBasis → PerformanceMetrics
+  - volatility: std dev of daily returns × √252 × 100
+  - max drawdown: peak-to-trough, null if < 2 snapshots
+  - Sharpe: (annualizedReturn − 0.045) / vol, null if vol unavailable
+  - annualized return: compound formula `(1+r)^(365/days)−1`, null if < 2 days
+- [ ] `RealizedPnlCalculator` — not implemented (closed position matching deferred)
+- [ ] `UnrealizedPnlCalculator` as separate class — logic embedded in `AnalyticsService`
 
 ### Benchmark Comparison
-- [ ] `GET /api/analytics/benchmark?symbol=SPY&range=1Y` — return portfolio vs benchmark over time
-  - portfolio values from `portfolio_snapshots`
-  - benchmark prices from market API (historical)
-  - normalized to 100 at start of range for fair comparison
-- [ ] `BenchmarkService` — fetch and normalize comparison data
+- [x] `BenchmarkService` — fetches historical SPY prices via YahooFinanceAdapter, normalizes to 100 at period start
+- [x] Historical price fetching via `YahooFinanceAdapter.fetchHistoricalPrices(symbol, fromDate, toDate)`
+  - uses Yahoo Finance chart API with period1/period2 range params
+  - parses adjclose (preferred) falling back to quote.close
+  - converts Unix timestamps using America/New_York timezone
+- [x] Benchmark data included in `AnalyticsResponse` (null when unavailable — degrades gracefully)
+- [ ] `GET /api/analytics/benchmark?symbol=SPY&range=1Y` as separate endpoint — merged into main `/api/analytics`
 
 ### Monthly Returns
-- [ ] `GET /api/analytics/monthly-returns` — return monthly P&L by month for chart
-- [ ] Derived from `portfolio_snapshots` — end of month value vs start of month
+- [ ] `GET /api/analytics/monthly-returns` — not implemented
+- [ ] Monthly P&L bar chart data — deferred
 
 ### Risk Metrics
-- [ ] `GET /api/risk/metrics` — return:
-  - concentration risk (% per position)
-  - allocation drift (current % vs target % per position)
-  - sector exposure (% per sector — sectors tagged from market API)
-  - geographic exposure (US / International / Israel / Global — from symbol metadata)
-  - volatility score (weighted average beta of holdings)
-- [ ] `RiskCalculator` — pure function: holdings + prices + targets → risk metrics
-- [ ] `BetaService` — fetch beta per symbol from market API
+- [ ] `GET /api/risk/metrics` — not implemented
+- [ ] `RiskCalculator` — not implemented
+- [ ] `BetaService` — not implemented
+- [ ] Sector exposure — not implemented
+- [ ] Geographic exposure — not implemented
 
 ### Risk Warnings
-- [ ] `GET /api/risk/warnings` — return active warnings based on user's configured thresholds:
-  - concentration warning if any position > user's limit (default 20%, configurable)
-  - drift warning if any position > user's drift limit from target (default 10%)
-  - rebalancing reminder if not rebalanced in > user's configured period (default 6 months)
-- [ ] `RiskWarningService` — evaluate thresholds against current state
-- [ ] `PUT /api/risk/thresholds` — update user's warning thresholds
+- [ ] `GET /api/risk/warnings` — not implemented
+- [ ] `RiskWarningService` — not implemented
+- [ ] `PUT /api/risk/thresholds` — not implemented
 
 ---
 
 ## Frontend Tasks
 
 ### Analytics Page
-- [ ] `AnalyticsPage` — tabs: Overview | Benchmark | Monthly Returns | Positions
-- [ ] `useAnalytics` hook — fetch all analytics data
+- [x] `AnalyticsPage` — single unified page (not tabbed)
+- [x] `getAnalytics` API function — fetches all analytics data
 
-### Overview Tab
-- [ ] `PerformanceSummaryGrid` — total return, realized P&L, unrealized P&L, ROI, win rate, avg hold duration
-- [ ] `BestWorstPerformers` — two cards side by side
-- [ ] `AllocationAccuracyChart` — area chart: actual vs target allocation over time (Recharts)
+### Performance Chart
+- [x] `PerformanceChart` — lightweight-charts with two series:
+  - Portfolio (indigo, solid line) — indexed to 100 at period start
+  - SPY benchmark (amber, dashed line) — indexed to 100 at period start
+- [x] Range selector buttons: 1M / 3M / 6M / 1Y / ALL
+- [x] Legend with color coding below chart
+- [x] Empty/no-snapshot message when snapshotCount = 0
 
-### Benchmark Tab
-- [ ] `BenchmarkComparisonChart` — line chart: portfolio vs SPY (and any user-added benchmark)
-- [ ] `BenchmarkSelector` — input to add any symbol as benchmark
-- [ ] `TimeframeSelector` — 1M / 3M / 6M / 1Y / All
+### Return Metrics
+- [x] `MetricCard` component — label, mono value, subLabel, optional color coding
+- [x] Returns section (4 cards): total return (cost basis), portfolio period return, SPY period return, annualized return
 
-### Monthly Returns Tab
-- [ ] `MonthlyReturnsChart` — bar chart: green/red per month (Recharts)
-- [ ] `MonthlyReturnsSummary` — best month, worst month, average monthly return
+### Risk Metrics
+- [x] Risk section (3 cards): volatility (annualized), max drawdown, Sharpe ratio
+- [x] Sharpe ratio color-coded (green ≥ 0, red < 0)
+- [x] Graceful N/A display when insufficient snapshot history
 
-### Positions P&L Tab
-- [ ] `PositionPnlChart` — horizontal bar chart sorted by P&L% (Recharts)
+### Position Breakdown
+- [x] `PositionsTable` — symbol, label, current value, cost basis, P&L (absolute + %), portfolio weight %
+
+### Missing tabs / sections
+- [ ] Overview Tab with allocation accuracy chart — not implemented
+- [ ] Benchmark Tab with benchmark selector — benchmark embedded in main page
+- [ ] Monthly Returns Tab with bar chart — not implemented
+- [ ] Positions P&L Tab with horizontal bar chart — P&L in table only, no separate chart tab
 
 ### Risk Management Page
-- [ ] `RiskPage` — risk metrics + warnings
-- [ ] `ConcentrationChart` — pie or treemap showing % per position
-- [ ] `AllocationDriftTable` — current % vs target % vs drift per position
-- [ ] `SectorExposureChart` — pie chart by sector
-- [ ] `GeographicExposureChart` — pie chart by region
-- [ ] `RiskWarningsList` — active warnings with ⚠️ icons
-- [ ] `RiskThresholdsSettings` — editable concentration, drift, rebalancing thresholds
+- [ ] `RiskPage` — not implemented
+- [ ] `ConcentrationChart` — not implemented
+- [ ] `AllocationDriftTable` — not implemented
+- [ ] `SectorExposureChart` — not implemented
+- [ ] `GeographicExposureChart` — not implemented
+- [ ] `RiskWarningsList` — not implemented
+- [ ] `RiskThresholdsSettings` — not implemented
 
 ### API Client
-- [ ] `api/analytics.ts` — performance, benchmark, monthly returns
-- [ ] `api/risk.ts` — metrics, warnings, thresholds
+- [x] `api/analytics.ts` — analytics endpoint with full type definitions
+- [ ] `api/risk.ts` — not implemented
 
 ---
 
 ## Validation Checklist
 
-- [ ] Total return matches manual calculation from transaction history
-- [ ] Realized P&L correctly matches BUY cost basis to SELL proceeds
-- [ ] Benchmark comparison normalized correctly (starts at same index value)
-- [ ] Monthly returns derived from snapshot history (not re-fetched from market API)
-- [ ] Concentration warning fires at user's configured threshold, not hardcoded 20%
-- [ ] Drift warning fires at user's configured threshold, not hardcoded 10%
-- [ ] Rebalancing reminder uses date of most recent confirmed monthly flow session
-- [ ] All charts render empty states when data is insufficient
+- [x] Total return matches manual calculation from transaction history
+- [ ] Realized P&L correctly matches BUY cost basis to SELL proceeds — deferred
+- [x] Benchmark comparison normalized correctly (both start at same index value of 100)
+- [x] Performance metrics derived from snapshot history (not re-fetched from market API)
+- [ ] Concentration warning fires at user's configured threshold — not implemented
+- [ ] Drift warning fires at user's configured threshold — not implemented
+- [ ] Rebalancing reminder uses date of most recent confirmed monthly flow session — not implemented
+- [x] Charts render empty states when data is insufficient (snapshotCount = 0 message)
