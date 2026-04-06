@@ -158,6 +158,15 @@ export default function RecommendationsPage() {
             </div>
           )}
 
+          {/* Generation error banner (distinct from network/load error) */}
+          {!isLoading && data?.generationError && (
+            <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+              {data.generationError === 'claude_failure'
+                ? 'Could not reach the AI service. Check that your Claude API key is configured and try refreshing.'
+                : 'The AI service returned an unexpected response. Try refreshing.'}
+            </div>
+          )}
+
           {/* Recommendation cards */}
           {!isLoading && data && data.recommendations.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -167,8 +176,8 @@ export default function RecommendationsPage() {
             </div>
           )}
 
-          {/* Empty state */}
-          {!isLoading && data && data.recommendations.length === 0 && (
+          {/* Empty state — no generation error and no cards */}
+          {!isLoading && data && data.recommendations.length === 0 && !data.generationError && (
             <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
               <p className="text-sm text-muted-foreground">
                 No recommendations generated. Make sure you have target allocations set up.

@@ -1,7 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
+import { useChatPanel } from '@/features/chat/useChatPanel'
+import { ChatPanel } from '@/features/chat/ChatPanel'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -15,6 +17,7 @@ const NAV_ITEMS = [
 
 export function AppLayout() {
   const { theme, toggle } = useTheme()
+  const chat = useChatPanel()
 
   return (
     <div className="flex min-h-screen">
@@ -65,6 +68,20 @@ export function AppLayout() {
       <main className="flex-1 overflow-y-auto bg-background">
         <Outlet />
       </main>
+
+      {/* Floating chat button */}
+      {!chat.isOpen && (
+        <button
+          onClick={chat.open}
+          title="Ask your portfolio assistant"
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white shadow-lg transition-colors hover:bg-purple-700"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* Chat panel */}
+      <ChatPanel {...chat} />
     </div>
   )
 }

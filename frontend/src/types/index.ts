@@ -96,11 +96,14 @@ export interface WatchlistItem {
 export interface RecommendationCard {
   rank: number
   symbol: string
-  action: string
+  action: 'BUY' | 'SHORT' | 'COVERED_CALL'
   source: 'ALLOCATION_GAP' | 'WATCHLIST' | 'AI_SUGGESTION'
   reason: string
   suggestedAmount: number | null
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  currentPrice: number | null    // deterministic — from market data
+  timeHorizon: string | null     // advisory — Claude's suggested holding period
+  catalysts: string[] | null     // advisory — Claude's 2-3 key reasons
 }
 
 export interface PortfolioContextSummary {
@@ -116,4 +119,6 @@ export interface RecommendationsResponse {
   generatedAt: string
   expiresAt: string
   portfolioContext: PortfolioContextSummary
+  /** null on success; 'claude_failure' | 'parse_failure' on generation error */
+  generationError: string | null
 }

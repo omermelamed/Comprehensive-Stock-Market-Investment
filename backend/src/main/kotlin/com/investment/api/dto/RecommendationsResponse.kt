@@ -7,7 +7,9 @@ data class RecommendationsResponse(
     val recommendations: List<RecommendationCard>,
     val generatedAt: Instant,
     val expiresAt: Instant,
-    val portfolioContext: PortfolioContextSummary
+    val portfolioContext: PortfolioContextSummary,
+    /** Null on success. "claude_failure" | "parse_failure" on generation error. */
+    val generationError: String? = null
 )
 
 data class PortfolioContextSummary(

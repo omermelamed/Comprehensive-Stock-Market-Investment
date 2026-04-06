@@ -30,7 +30,10 @@ class ClaudeClient(
         .defaultHeader("content-type", "application/json")
         .build()
 
-    fun complete(system: String, userMessage: String, maxTokens: Int = 150): String {
+    fun complete(system: String, userMessage: String, maxTokens: Int = 150): String =
+        completeWithHistory(system, listOf(ClaudeMessage(role = "user", content = userMessage)), maxTokens)
+
+    fun completeWithHistory(system: String, messages: List<ClaudeMessage>, maxTokens: Int = 800): String {
         if (apiKey.isBlank()) return ""
 
         val response = webClient.post()
@@ -40,12 +43,12 @@ class ClaudeClient(
                     model = model,
                     max_tokens = maxTokens,
                     system = system,
-                    messages = listOf(ClaudeMessage(role = "user", content = userMessage))
+                    messages = messages
                 )
             )
             .retrieve()
             .bodyToMono<ClaudeResponse>()
-            .timeout(Duration.ofSeconds(15))
+            .timeout(Duration.ofSeconds(30))
             .block() ?: return ""
 
         return response.content.firstOrNull()?.text?.trim() ?: ""
