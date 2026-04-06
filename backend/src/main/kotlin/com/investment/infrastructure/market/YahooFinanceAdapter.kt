@@ -18,6 +18,7 @@ class YahooFinanceAdapter(
 
     private val log = LoggerFactory.getLogger(javaClass)
     private val marketTz = ZoneId.of("America/New_York")
+    private val AGORA_DIVISOR = BigDecimal("100")
 
     override val sourceName: String = "YAHOO"
 
@@ -66,11 +67,17 @@ class YahooFinanceAdapter(
             val meta = first["meta"] as? Map<*, *> ?: return null
 
             val rawPrice = meta["regularMarketPrice"] ?: return null
-            val price = when (rawPrice) {
+            var price = when (rawPrice) {
                 is Number -> BigDecimal(rawPrice.toString())
                 else -> return null
             }
-            val currency = meta["currency"] as? String ?: "USD"
+            var currency = meta["currency"] as? String ?: "USD"
+
+            // Yahoo returns Israeli stock prices in Agorot (ILA). Convert to Shekels (ILS).
+            if (currency.equals("ILA", ignoreCase = true)) {
+                price = price.divide(AGORA_DIVISOR, 4, RoundingMode.HALF_UP)
+                currency = "ILS"
+            }
 
             PriceQuote(symbol = symbol.uppercase(), price = price, currency = currency,
                 timestamp = Instant.now(), source = sourceName)
@@ -86,6 +93,10 @@ class YahooFinanceAdapter(
             val chart = body["chart"] as? Map<*, *> ?: return emptyMap()
             val results = chart["result"] as? List<*> ?: return emptyMap()
             val first = results.firstOrNull() as? Map<*, *> ?: return emptyMap()
+
+            val meta = first["meta"] as? Map<*, *>
+            val currency = meta?.get("currency") as? String ?: "USD"
+            val isAgora = currency.equals("ILA", ignoreCase = true)
 
             val timestamps = first["timestamp"] as? List<*> ?: return emptyMap()
             val indicators = first["indicators"] as? Map<*, *> ?: return emptyMap()
@@ -103,7 +114,9 @@ class YahooFinanceAdapter(
                 val rawPrice = prices.getOrNull(i) as? Number ?: continue
                 val date = Instant.ofEpochSecond(ts.toLong()).atZone(marketTz).toLocalDate()
                 if (date.isBefore(fromDate) || date.isAfter(toDate)) continue
-                result[date] = BigDecimal(rawPrice.toString()).setScale(4, RoundingMode.HALF_UP)
+                var p = BigDecimal(rawPrice.toString()).setScale(4, RoundingMode.HALF_UP)
+                if (isAgora) p = p.divide(AGORA_DIVISOR, 4, RoundingMode.HALF_UP)
+                result[date] = p
             }
             result
         } catch (e: Exception) {
