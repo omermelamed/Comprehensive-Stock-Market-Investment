@@ -6,6 +6,7 @@ import { StepCurrencyGoal } from './step-currency-goal'
 import { StepHorizon } from './step-horizon'
 import { StepBudget } from './step-budget'
 import { StepTracks } from './step-tracks'
+import { StepWhatsApp } from './step-whatsapp'
 import { slideStep, stepTransition } from '@/lib/motion'
 import type { OnboardingData } from '@/features/onboarding/useOnboarding'
 
@@ -15,7 +16,7 @@ interface ProfileSetupProps {
   onNext: () => void
 }
 
-const TOTAL_INNER = 5
+const TOTAL_INNER = 6
 
 export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
   const [sub, setSub] = useState(1)
@@ -26,6 +27,7 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
   const [horizon, setHorizon]   = useState(data.timeHorizonYears  ?? 15)
   const [amount, setAmount]     = useState(data.monthlyInvestmentMin ?? 4000)
   const [tracks, setTracks]     = useState<string[]>(data.tracksEnabled ?? ['LONG_EQUITY'])
+  const [whatsapp, setWhatsapp] = useState(data.whatsappNumber ?? '')
 
   function fwd() { setDir(1); setSub(s => s + 1) }
   function bck() { setDir(-1); setSub(s => Math.max(s - 1, 1)) }
@@ -38,6 +40,7 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
       monthlyInvestmentMin: amount,
       monthlyInvestmentMax: amount,
       tracksEnabled: tracks,
+      whatsappNumber: whatsapp,
     })
     onNext()
   }
@@ -53,7 +56,8 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
           sub === 2 ? 'Currency & Goal' :
           sub === 3 ? 'Time Horizon' :
           sub === 4 ? 'Monthly Budget' :
-          'Investment Tracks'
+          sub === 5 ? 'Investment Tracks' :
+          'Notifications'
         }
       />
 
@@ -87,7 +91,10 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
             />
           )}
           {sub === 5 && (
-            <StepTracks tracks={tracks} onTracksChange={setTracks} onContinue={finish} onBack={bck} />
+            <StepTracks tracks={tracks} onTracksChange={setTracks} onContinue={fwd} onBack={bck} />
+          )}
+          {sub === 6 && (
+            <StepWhatsApp value={whatsapp} onValueChange={setWhatsapp} onContinue={finish} onBack={bck} />
           )}
         </motion.div>
       </AnimatePresence>

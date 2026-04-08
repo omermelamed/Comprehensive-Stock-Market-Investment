@@ -18,6 +18,7 @@ data class UserProfileResponse(
     val aiInferredScore: BigDecimal?,
     val theme: String,
     val onboardingCompleted: Boolean,
+    val whatsappNumber: String?,
     val createdAt: Instant,
     val lastUpdated: Instant
 )

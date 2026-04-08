@@ -8,6 +8,7 @@ import com.investment.api.dto.TransactionRequest
 import com.investment.domain.MonthlyAllocationCalculator
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
+import com.investment.infrastructure.WhatsAppNotificationService
 import com.investment.infrastructure.market.AlphaVantageAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -23,7 +24,8 @@ class MonthlyInvestmentService(
     private val marketDataService: MarketDataService,
     private val transactionService: TransactionService,
     private val userProfileService: UserProfileService,
-    private val alphaVantageAdapter: AlphaVantageAdapter
+    private val alphaVantageAdapter: AlphaVantageAdapter,
+    private val whatsAppNotificationService: WhatsAppNotificationService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -117,9 +119,18 @@ class MonthlyInvestmentService(
             transactionsCreated++
         }
 
-        return MonthlyFlowConfirmResponse(
+        val response = MonthlyFlowConfirmResponse(
             totalInvested = total.setScale(2, RoundingMode.HALF_UP),
             transactionsCreated = transactionsCreated
         )
+
+        whatsAppNotificationService.sendInvestmentSummary(
+            toWhatsAppNumber = userProfileService.getProfile()?.whatsappNumber,
+            totalInvested = response.totalInvested,
+            currency = userCurrency,
+            allocations = investable
+        )
+
+        return response
     }
 }

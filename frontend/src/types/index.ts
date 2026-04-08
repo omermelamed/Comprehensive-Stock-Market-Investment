@@ -11,6 +11,7 @@ export interface UserProfile {
   questionnaireAnswers: Record<string, number>
   theme: string
   onboardingCompleted: boolean
+  whatsappNumber?: string
 }
 
 export interface TargetAllocation {
@@ -148,49 +149,6 @@ export interface RecommendationCard {
   catalysts: string[] | null       // advisory — Claude's 2-3 key reasons
   fundamentals: FundamentalsData | null  // deterministic — from Alpha Vantage
   sourceUrl: string | null         // deterministic — Yahoo Finance quote URL
-}
-
-export interface OptionsTransaction {
-  id: string
-  underlyingSymbol: string
-  optionType: 'CALL' | 'PUT'
-  action: 'BUY' | 'SELL'
-  strikePrice: number
-  expirationDate: string    // YYYY-MM-DD
-  contracts: number
-  premiumPerContract: number
-  totalPremium: number
-  currentPremium: number | null
-  pnl: number | null
-  pnlPercent: number | null
-  daysToExpiry: number
-  status: 'ACTIVE' | 'EXPIRED' | 'EXERCISED' | 'CLOSED'
-  notes: string | null
-  executedAt: string
-  createdAt: string
-}
-
-export interface OptionsListResponse {
-  positions: OptionsTransaction[]
-  optionsTrackEnabled: boolean
-}
-
-export interface OptionsContractDetails {
-  optionType: 'CALL' | 'PUT'
-  suggestedStrike: string
-  suggestedExpiry: string
-  estimatedPremium: string
-  maxLoss: string
-  breakeven: string
-}
-
-export interface OptionsStrategyResponse {
-  symbol: string
-  strategyName: string
-  reasoning: string
-  contractDetails: OptionsContractDetails | null
-  greeksUnavailable: boolean
-  earningsWarning: string | null
 }
 
 export interface PortfolioContextSummary {

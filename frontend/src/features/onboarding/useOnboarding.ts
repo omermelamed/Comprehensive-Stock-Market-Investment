@@ -14,6 +14,7 @@ export interface OnboardingData {
   monthlyInvestmentMax: number
   investmentGoal: string
   timeHorizonYears: number
+  whatsappNumber: string
   allocations: Array<{
     symbol: string
     assetType: string
@@ -43,6 +44,7 @@ function buildProfilePayload(data: Partial<OnboardingData>) {
     investmentGoal: data.investmentGoal ?? '',
     timeHorizonYears: data.timeHorizonYears ?? 10,
     theme,
+    whatsappNumber: data.whatsappNumber ?? null,
   }
 }
 
@@ -81,6 +83,7 @@ export function useOnboarding(onComplete: (profile: UserProfile) => void) {
         monthlyInvestmentMax: profile.monthlyInvestmentMax,
         tracksEnabled: profile.tracksEnabled,
         questionnaireAnswers: profile.questionnaireAnswers ?? {},
+        whatsappNumber: profile.whatsappNumber ?? '',
       }
 
       const hasQuestionnaire = Object.keys(profile.questionnaireAnswers ?? {}).length > 0

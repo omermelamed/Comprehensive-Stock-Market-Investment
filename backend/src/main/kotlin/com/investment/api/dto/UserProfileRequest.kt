@@ -11,5 +11,6 @@ data class UserProfileRequest(
     val monthlyInvestmentMax: BigDecimal,
     val investmentGoal: String,
     val timeHorizonYears: Int,
-    val theme: String = "LIGHT"
+    val theme: String = "LIGHT",
+    val whatsappNumber: String? = null
 )
