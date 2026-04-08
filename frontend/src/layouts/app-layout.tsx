@@ -1,10 +1,12 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle, BarChart2, ShieldAlert } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, TrendingUp, PieChart, User, Sun, Moon, Star, Lightbulb, MessageCircle, BarChart2, ShieldAlert, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useChatPanel } from '@/features/chat/useChatPanel'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import { ChatContext } from '@/contexts/chat-context'
+import { useEffect, useState } from 'react'
+import { getProfile } from '@/api/profile'
 
 const PAGE_CHAT_CONTEXT: Record<string, string> = {
   '/monthly-flow': 'Ask about your monthly allocation',
@@ -20,7 +22,7 @@ function getChatContext(pathname: string): string {
   return 'Ask your portfolio assistant'
 }
 
-const NAV_ITEMS = [
+const BASE_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/monthly-flow', label: 'Monthly Flow', icon: TrendingUp, end: false },
   { to: '/recommendations', label: 'Recommendations', icon: Lightbulb, end: false },
@@ -32,11 +34,24 @@ const NAV_ITEMS = [
   { to: '/profile', label: 'Profile', icon: User, end: false },
 ]
 
+const OPTIONS_NAV = { to: '/options', label: 'Options', icon: Layers, end: false }
+
 export function AppLayout() {
   const { theme, toggle } = useTheme()
   const chat = useChatPanel()
   const location = useLocation()
   const chatTooltip = getChatContext(location.pathname)
+  const [optionsEnabled, setOptionsEnabled] = useState(false)
+
+  useEffect(() => {
+    getProfile()
+      .then(p => setOptionsEnabled(p?.tracksEnabled?.some((t: string) => t.toUpperCase() === 'OPTIONS') ?? false))
+      .catch(() => {})
+  }, [])
+
+  const NAV_ITEMS = optionsEnabled
+    ? [...BASE_NAV.slice(0, 5), OPTIONS_NAV, ...BASE_NAV.slice(5)]
+    : BASE_NAV
 
   return (
     <ChatContext.Provider value={{ openWithPrompt: chat.openWithPrompt }}>

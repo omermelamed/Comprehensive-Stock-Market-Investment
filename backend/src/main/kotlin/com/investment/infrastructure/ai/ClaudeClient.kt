@@ -1,8 +1,10 @@
 package com.investment.infrastructure.ai
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.Duration
 
@@ -23,6 +25,8 @@ class ClaudeClient(
     @Value("\${app.anthropic.api-key:}") private val apiKey: String,
     @Value("\${app.anthropic.model:claude-sonnet-4-6}") private val model: String
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     private val webClient = WebClient.builder()
         .baseUrl("https://api.anthropic.com")
         .defaultHeader("x-api-key", apiKey)
@@ -34,23 +38,30 @@ class ClaudeClient(
         completeWithHistory(system, listOf(ClaudeMessage(role = "user", content = userMessage)), maxTokens)
 
     fun completeWithHistory(system: String, messages: List<ClaudeMessage>, maxTokens: Int = 800): String {
-        if (apiKey.isBlank()) return ""
+        if (apiKey.isBlank()) {
+            log.warn("Claude API key is blank — skipping AI call")
+            return ""
+        }
 
-        val response = webClient.post()
-            .uri("/v1/messages")
-            .bodyValue(
-                ClaudeRequest(
-                    model = model,
-                    max_tokens = maxTokens,
-                    system = system,
-                    messages = messages
+        return try {
+            val response = webClient.post()
+                .uri("/v1/messages")
+                .bodyValue(
+                    ClaudeRequest(
+                        model = model,
+                        max_tokens = maxTokens,
+                        system = system,
+                        messages = messages
+                    )
                 )
-            )
-            .retrieve()
-            .bodyToMono<ClaudeResponse>()
-            .timeout(Duration.ofSeconds(30))
-            .block() ?: return ""
-
-        return response.content.firstOrNull()?.text?.trim() ?: ""
+                .retrieve()
+                .bodyToMono<ClaudeResponse>()
+                .timeout(Duration.ofSeconds(30))
+                .block() ?: return ""
+            response.content.firstOrNull()?.text?.trim() ?: ""
+        } catch (e: WebClientResponseException) {
+            log.error("Claude API HTTP {} {}: {}", e.statusCode, e.statusText, e.responseBodyAsString)
+            throw e
+        }
     }
 }

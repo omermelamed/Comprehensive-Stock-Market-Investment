@@ -58,6 +58,18 @@ class YahooFinanceAdapter(
         }
     }
 
+    /**
+     * Yahoo Finance always returns Tel Aviv Stock Exchange (TASE) prices in ILA (Israeli Agorot)
+     * regardless of whether the "currency" field says "ILA" or "ILS". The exchange can be
+     * identified reliably from the meta fields: exchangeName == "TLV" or market == "il_market".
+     */
+    private fun isIsraeliMarket(meta: Map<*, *>): Boolean {
+        val exchangeName = meta["exchangeName"] as? String ?: ""
+        val market = meta["market"] as? String ?: ""
+        return exchangeName.equals("TLV", ignoreCase = true) ||
+               market.equals("il_market", ignoreCase = true)
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun parseQuote(symbol: String, body: Map<*, *>): PriceQuote? {
         return try {
@@ -73,8 +85,9 @@ class YahooFinanceAdapter(
             }
             var currency = meta["currency"] as? String ?: "USD"
 
-            // Yahoo returns Israeli stock prices in Agorot (ILA). Convert to Shekels (ILS).
-            if (currency.equals("ILA", ignoreCase = true)) {
+            // TASE prices are always in ILA (Agorot). Detect via exchange/market fields,
+            // and also accept the explicit "ILA" currency code as a fallback.
+            if (isIsraeliMarket(meta) || currency.equals("ILA", ignoreCase = true)) {
                 price = price.divide(AGORA_DIVISOR, 4, RoundingMode.HALF_UP)
                 currency = "ILS"
             }
@@ -88,15 +101,20 @@ class YahooFinanceAdapter(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun parseHistorical(body: Map<*, *>, fromDate: LocalDate, toDate: LocalDate): Map<LocalDate, BigDecimal> {
+    private fun parseHistorical(
+        body: Map<*, *>,
+        fromDate: LocalDate,
+        toDate: LocalDate
+    ): Map<LocalDate, BigDecimal> {
         return try {
             val chart = body["chart"] as? Map<*, *> ?: return emptyMap()
             val results = chart["result"] as? List<*> ?: return emptyMap()
             val first = results.firstOrNull() as? Map<*, *> ?: return emptyMap()
 
-            val meta = first["meta"] as? Map<*, *>
-            val currency = meta?.get("currency") as? String ?: "USD"
-            val isAgora = currency.equals("ILA", ignoreCase = true)
+            val meta = first["meta"] as? Map<*, *> ?: emptyMap<String, Any>()
+            val currency = meta["currency"] as? String ?: "USD"
+            // Same rule as parseQuote: TASE prices are always in ILA.
+            val isAgora = isIsraeliMarket(meta) || currency.equals("ILA", ignoreCase = true)
 
             val timestamps = first["timestamp"] as? List<*> ?: return emptyMap()
             val indicators = first["indicators"] as? Map<*, *> ?: return emptyMap()

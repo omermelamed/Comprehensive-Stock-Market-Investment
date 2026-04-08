@@ -42,6 +42,9 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.2.5")
     implementation("com.opencsv:opencsv:5.9")
 
+    // .env file loading
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
