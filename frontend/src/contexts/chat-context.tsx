@@ -1,11 +1,13 @@
 import { createContext, useContext } from 'react'
 
-interface ChatActions {
+interface ChatContextValue {
   openWithPrompt: (prompt: string) => void
 }
 
-export const ChatContext = createContext<ChatActions>({ openWithPrompt: () => {} })
+export const ChatContext = createContext<ChatContextValue>({
+  openWithPrompt: () => {},
+})
 
-export function useChatActions() {
+export function useChatActions(): ChatContextValue {
   return useContext(ChatContext)
 }

@@ -11,10 +11,6 @@ import ProfilePage from './pages/ProfilePage'
 import AllocationPage from './pages/AllocationPage'
 import WatchlistPage from './pages/WatchlistPage'
 import RecommendationsPage from './pages/RecommendationsPage'
-import AnalyticsPage from './pages/AnalyticsPage'
-import RiskPage from './pages/RiskPage'
-import OptionsPage from './pages/OptionsPage'
-import OptionsTransactionFormPage from './pages/OptionsTransactionFormPage'
 import { AppLayout } from './layouts/app-layout'
 import { CurrencyProvider } from './contexts/currency-context'
 
@@ -89,10 +85,6 @@ function App() {
             <Route path="/allocations" element={<AllocationPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/risk" element={<RiskPage />} />
-            <Route path="/options" element={<OptionsPage />} />
-            <Route path="/options/new" element={<OptionsTransactionFormPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
