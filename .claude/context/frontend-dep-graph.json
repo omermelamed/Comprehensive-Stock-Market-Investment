@@ -3,6 +3,7 @@
     "api/profile.ts",
     "contexts/currency-context.tsx",
     "layouts/app-layout.tsx",
+    "pages/AlertsPage.tsx",
     "pages/AllocationPage.tsx",
     "pages/AnalyticsPage.tsx",
     "pages/DashboardPage.tsx",
@@ -147,6 +148,16 @@
     "lib/motion.ts",
     "lib/utils.ts"
   ],
+  "features/alerts/CreateAlertForm.tsx": [
+    "features/alerts/useAlerts.ts"
+  ],
+  "features/alerts/useAlertBadge.ts": [
+    "api/alerts.ts"
+  ],
+  "features/alerts/useAlerts.ts": [
+    "api/alerts.ts",
+    "types/index.ts"
+  ],
   "features/chat/ChatPanel.tsx": [
     "features/chat/useChatPanel.ts",
     "lib/utils.ts"
@@ -270,6 +281,7 @@
     "types/index.ts"
   ],
   "layouts/app-layout.tsx": [
+    "features/alerts/useAlertBadge.ts",
     "features/chat/ChatPanel.tsx",
     "features/chat/useChatPanel.ts",
     "hooks/useTheme.ts",
@@ -283,6 +295,11 @@
     "components/ui/card.tsx",
     "hooks/useTheme.ts",
     "layouts/centered-page.tsx"
+  ],
+  "pages/AlertsPage.tsx": [
+    "features/alerts/CreateAlertForm.tsx",
+    "features/alerts/useAlerts.ts",
+    "types/index.ts"
   ],
   "pages/AllocationPage.tsx": [
     "api/allocations.ts",
@@ -367,7 +384,6 @@
     "types/index.ts"
   ],
   "pages/WatchlistPage.tsx": [
-    "api/alerts.ts",
     "api/portfolio.ts",
     "api/watchlist.ts",
     "contexts/chat-context.tsx",
