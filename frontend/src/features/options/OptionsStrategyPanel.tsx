@@ -1,93 +1,131 @@
-import { useEffect } from 'react'
-import { X, AlertTriangle, Info } from 'lucide-react'
-import { useOptionsStrategy } from './useOptions'
-import type { OptionsContractDetails } from '../../types'
+import { useState, useEffect } from 'react'
+import { Bot, AlertTriangle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { getOptionsStrategy, type OptionsStrategy } from '@/api/options'
 
-interface Props {
+interface OptionsStrategyPanelProps {
   symbol: string
-  onClose: () => void
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+export function OptionsStrategyPanel({ symbol }: OptionsStrategyPanelProps) {
+  const [strategy, setStrategy] = useState<OptionsStrategy | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
+
+    getOptionsStrategy(symbol)
+      .then(data => {
+        if (!cancelled) setStrategy(data)
+      })
+      .catch(err => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load strategy')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [symbol])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3 rounded-xl border border-purple-500/30 bg-card p-5">
+        <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-full animate-pulse rounded bg-muted" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+      </div>
+    )
+  }
+
+  if (error || !strategy) {
+    return (
+      <div className="rounded-xl border border-purple-500/30 bg-card p-5">
+        <p className="text-sm text-muted-foreground">{error ?? 'No strategy available'}</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{value}</span>
-    </div>
-  )
-}
-
-function ContractDetails({ details }: { details: OptionsContractDetails }) {
-  return (
-    <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted/20 p-3">
-      <DetailRow label="Type" value={details.optionType} />
-      <DetailRow label="Suggested Strike" value={details.suggestedStrike} />
-      <DetailRow label="Suggested Expiry" value={details.suggestedExpiry} />
-      <DetailRow label="Est. Premium" value={details.estimatedPremium} />
-      <DetailRow label="Max Loss" value={details.maxLoss} />
-      <DetailRow label="Breakeven" value={details.breakeven} />
-    </div>
-  )
-}
-
-export function OptionsStrategyPanel({ symbol, onClose }: Props) {
-  const { strategy, loading, error, fetch } = useOptionsStrategy(symbol)
-
-  useEffect(() => { fetch() }, [fetch])
-
-  return (
-    <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-purple-300">AI Options Strategy</h3>
-          <p className="text-xs text-muted-foreground">{symbol} — Advisory only</p>
-        </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
+    <div className={cn('rounded-xl border border-purple-500/30 bg-card p-5 space-y-4')}>
+      {/* AI header */}
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4 text-purple-400" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+          AI Strategy Analysis
+        </span>
       </div>
 
-      {loading && (
-        <p className="mt-4 text-sm text-muted-foreground animate-pulse">Generating strategy…</p>
-      )}
+      {/* Strategy name */}
+      <div>
+        <h3 className="text-base font-bold text-foreground">{strategy.strategyName}</h3>
+        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{strategy.reasoning}</p>
+      </div>
 
-      {error && (
-        <p className="mt-4 text-sm text-destructive">{error}</p>
-      )}
-
-      {strategy && !loading && (
-        <div className="mt-4 space-y-3">
-          <div>
-            <span className="rounded bg-purple-500/20 px-2 py-1 text-xs font-semibold text-purple-300">
-              {strategy.strategyName}
-            </span>
-          </div>
-
-          <p className="text-sm text-foreground leading-relaxed">{strategy.reasoning}</p>
-
-          {strategy.contractDetails && (
-            <ContractDetails details={strategy.contractDetails} />
-          )}
-
-          {strategy.greeksUnavailable && (
-            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-2.5 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>Live Greeks require a Polygon.io subscription. Consult your broker for current premium and Greeks data.</span>
-            </div>
-          )}
-
-          {strategy.earningsWarning && (
-            <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-2.5 text-xs text-warning">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{strategy.earningsWarning}</span>
-            </div>
-          )}
-
-          <p className="text-xs text-muted-foreground">
-            AI suggestions are advisory only. Never commit to a trade based solely on this output.
-          </p>
+      {/* Earnings warning */}
+      {strategy.earningsWarning && (
+        <div className="flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5 text-sm text-yellow-400">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{strategy.earningsWarning}</span>
         </div>
       )}
+
+      {/* Greeks unavailable notice */}
+      {strategy.greeksUnavailable && (
+        <p className="text-xs text-muted-foreground italic">
+          Greeks data unavailable for this contract — estimates only.
+        </p>
+      )}
+
+      {/* Contract details table */}
+      {strategy.contractDetails && (
+        <div className="rounded-lg border border-border bg-muted/30">
+          <table className="w-full text-sm">
+            <tbody>
+              {[
+                { label: 'Option Type', value: strategy.contractDetails.optionType },
+                {
+                  label: 'Suggested Strike',
+                  value: strategy.contractDetails.suggestedStrike.toLocaleString('en-US', {
+                    style: 'currency', currency: 'USD',
+                  }),
+                },
+                { label: 'Suggested Expiry', value: strategy.contractDetails.suggestedExpiry },
+                {
+                  label: 'Estimated Premium',
+                  value: strategy.contractDetails.estimatedPremium.toLocaleString('en-US', {
+                    style: 'currency', currency: 'USD',
+                  }),
+                },
+                {
+                  label: 'Max Loss',
+                  value: strategy.contractDetails.maxLoss.toLocaleString('en-US', {
+                    style: 'currency', currency: 'USD',
+                  }),
+                },
+                {
+                  label: 'Breakeven',
+                  value: strategy.contractDetails.breakeven.toLocaleString('en-US', {
+                    style: 'currency', currency: 'USD',
+                  }),
+                },
+              ].map(({ label, value }) => (
+                <tr key={label} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2 text-muted-foreground">{label}</td>
+                  <td className="px-4 py-2 text-right font-mono font-medium text-foreground">{value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        AI analysis is advisory only. Verify all details before placing an order.
+      </p>
     </div>
   )
 }

@@ -1,207 +1,212 @@
 import { useState } from 'react'
-import { Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { OptionsTransaction } from '../../types'
-import { OptionsStrategyPanel } from './OptionsStrategyPanel'
+import type { OptionsPosition } from '@/api/options'
 
-interface Props {
-  positions: OptionsTransaction[]
-  onClose: (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => void
-  onDelete: (id: string) => void
+interface OptionsPositionsTableProps {
+  positions: OptionsPosition[]
+  onUpdateStatus: (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => Promise<void>
+  onDelete: (id: string) => Promise<void>
 }
 
-function pnlColor(pnl: number | null): string {
-  if (pnl === null) return 'text-muted-foreground'
-  return pnl >= 0 ? 'text-success' : 'text-destructive'
-}
-
-function dteColor(days: number): string {
-  if (days <= 7) return 'text-destructive font-semibold'
-  if (days <= 14) return 'text-warning'
-  return 'text-foreground'
-}
-
-function fmt(v: number | null, decimals = 2, prefix = ''): string {
+function formatCurrency(v: number | null): string {
   if (v === null) return '—'
-  return `${prefix}${v.toFixed(decimals)}`
+  return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 })
 }
 
-export function OptionsPositionsTable({ positions, onClose, onDelete }: Props) {
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
-  const [strategySymbol, setStrategySymbol] = useState<string | null>(null)
+function formatPnlPct(v: number | null): string {
+  if (v === null) return '—'
+  return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
+}
+
+const CLOSE_STATUSES = ['EXPIRED', 'EXERCISED', 'CLOSED'] as const
+
+export function OptionsPositionsTable({ positions, onUpdateStatus, onDelete }: OptionsPositionsTableProps) {
+  const [pendingId, setPendingId] = useState<string | null>(null)
+
+  const handleStatusChange = async (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => {
+    setPendingId(id)
+    try {
+      await onUpdateStatus(id, status)
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this options position? This cannot be undone.')) return
+    setPendingId(id)
+    try {
+      await onDelete(id)
+    } finally {
+      setPendingId(null)
+    }
+  }
 
   if (positions.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No options positions logged yet.
-      </p>
+      <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        No positions in this section.
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {strategySymbol && (
-        <OptionsStrategyPanel
-          symbol={strategySymbol}
-          onClose={() => setStrategySymbol(null)}
-        />
-      )}
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <th className="px-4 py-3 font-medium">Contract</th>
+            <th className="px-4 py-3 font-medium">Type</th>
+            <th className="px-4 py-3 font-medium">Action</th>
+            <th className="px-4 py-3 font-medium text-right">Contracts</th>
+            <th className="px-4 py-3 font-medium text-right">Premium Paid</th>
+            <th className="px-4 py-3 font-medium text-right">Current</th>
+            <th className="px-4 py-3 font-medium text-right">P&L</th>
+            <th className="px-4 py-3 font-medium text-right">DTE</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {positions.map(pos => {
+            const isPending = pendingId === pos.id
+            const isActive = pos.status === 'ACTIVE'
+            const pnlPositive = pos.pnl !== null && pos.pnl >= 0
+            const dteWarning = pos.daysToExpiry < 7
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted/40">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Position</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Contracts</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Entry Premium</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total Cost</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">P&amp;L</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">DTE</th>
-              <th className="px-4 py-2 text-center font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {positions.map(pos => {
-              const label = `${pos.underlyingSymbol} $${pos.strikePrice} ${pos.optionType} ${pos.expirationDate}`
-              const isExpanded = expandedId === pos.id
+            return (
+              <tr
+                key={pos.id}
+                className={cn(
+                  'border-b border-border last:border-0 transition-opacity',
+                  isPending && 'opacity-50',
+                )}
+              >
+                {/* Contract descriptor */}
+                <td className="px-4 py-3">
+                  <span className="font-mono font-semibold text-foreground">
+                    {pos.underlyingSymbol}
+                  </span>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ${pos.strikePrice} {pos.expirationDate}
+                  </span>
+                </td>
 
-              return [
-                <tr
-                  key={pos.id}
-                  className={cn(
-                    'transition-colors hover:bg-muted/30',
-                    isExpanded && 'bg-muted/20'
-                  )}
-                >
-                  {/* Position label */}
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : pos.id)}
-                      className="flex items-center gap-1 text-left font-mono text-xs font-medium"
-                    >
-                      {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      <span>{label}</span>
-                      <span className={cn(
-                        'ml-2 rounded px-1.5 py-0.5 text-xs font-semibold',
-                        pos.action === 'BUY' ? 'bg-primary/10 text-primary' : 'bg-orange-500/10 text-orange-500'
-                      )}>
-                        {pos.action}
-                      </span>
-                    </button>
-                  </td>
+                {/* Option type badge */}
+                <td className="px-4 py-3">
+                  <span
+                    className={cn(
+                      'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                      pos.optionType === 'CALL'
+                        ? 'bg-blue-500/15 text-blue-400'
+                        : 'bg-orange-500/15 text-orange-400',
+                    )}
+                  >
+                    {pos.optionType}
+                  </span>
+                </td>
 
-                  {/* Contracts */}
-                  <td className="px-4 py-3 text-right font-mono">{pos.contracts}</td>
+                {/* Action badge */}
+                <td className="px-4 py-3">
+                  <span
+                    className={cn(
+                      'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                      pos.action === 'BUY'
+                        ? 'bg-green-500/15 text-green-400'
+                        : 'bg-red-500/15 text-red-400',
+                    )}
+                  >
+                    {pos.action}
+                  </span>
+                </td>
 
-                  {/* Entry premium */}
-                  <td className="px-4 py-3 text-right font-mono">${fmt(pos.premiumPerContract, 4)}</td>
+                <td className="px-4 py-3 text-right font-mono">{pos.contracts}</td>
 
-                  {/* Total cost */}
-                  <td className="px-4 py-3 text-right font-mono">${fmt(pos.totalPremium)}</td>
+                <td className="px-4 py-3 text-right font-mono text-foreground">
+                  {formatCurrency(pos.totalPremium)}
+                </td>
 
-                  {/* P&L */}
-                  <td className={cn('px-4 py-3 text-right font-mono', pnlColor(pos.pnl))}>
-                    {pos.pnl !== null ? (
-                      <>
-                        {pos.pnl >= 0 ? '+' : ''}${fmt(pos.pnl)}
-                        {pos.pnlPercent !== null && (
-                          <span className="ml-1 text-xs">
-                            ({pos.pnlPercent >= 0 ? '+' : ''}{fmt(pos.pnlPercent)}%)
-                          </span>
-                        )}
-                      </>
-                    ) : '—'}
-                  </td>
+                <td className="px-4 py-3 text-right font-mono text-muted-foreground">
+                  {pos.currentPremium !== null
+                    ? formatCurrency(pos.currentPremium * pos.contracts * 100)
+                    : '—'}
+                </td>
 
-                  {/* DTE */}
-                  <td className={cn('px-4 py-3 text-right font-mono', dteColor(pos.daysToExpiry))}>
-                    {pos.daysToExpiry}d
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3 text-center">
-                    <span className={cn(
-                      'rounded-full px-2 py-0.5 text-xs font-medium',
-                      pos.status === 'ACTIVE' && 'bg-success/15 text-success',
-                      pos.status === 'EXPIRED' && 'bg-destructive/15 text-destructive',
-                      pos.status === 'EXERCISED' && 'bg-primary/15 text-primary',
-                      pos.status === 'CLOSED' && 'bg-muted text-muted-foreground',
-                    )}>
-                      {pos.status}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      {pos.status === 'ACTIVE' && (
-                        <select
-                          className="rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
-                          defaultValue=""
-                          onChange={e => {
-                            if (e.target.value) {
-                              onClose(pos.id, e.target.value as 'EXPIRED' | 'EXERCISED' | 'CLOSED')
-                              e.target.value = ''
-                            }
-                          }}
-                        >
-                          <option value="" disabled>Close…</option>
-                          <option value="EXPIRED">Expired</option>
-                          <option value="EXERCISED">Exercised</option>
-                          <option value="CLOSED">Closed</option>
-                        </select>
-                      )}
-                      {confirmDelete === pos.id ? (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => { onDelete(pos.id); setConfirmDelete(null) }}
-                            className="rounded bg-destructive px-2 py-0.5 text-xs font-medium text-destructive-foreground"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete(null)}
-                            className="rounded border border-border px-2 py-0.5 text-xs"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDelete(pos.id)}
-                          className="rounded p-1 text-muted-foreground hover:text-destructive"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                {/* P&L */}
+                <td className="px-4 py-3 text-right">
+                  {pos.pnl !== null ? (
+                    <div className={cn('font-mono', pnlPositive ? 'text-green-400' : 'text-red-400')}>
+                      <div>{formatCurrency(pos.pnl)}</div>
+                      <div className="text-xs">{formatPnlPct(pos.pnlPercent)}</div>
                     </div>
-                  </td>
-                </tr>,
+                  ) : (
+                    <span className="font-mono text-muted-foreground">—</span>
+                  )}
+                </td>
 
-                isExpanded && (
-                  <tr key={`${pos.id}-expand`} className="bg-muted/10">
-                    <td colSpan={8} className="px-6 py-3">
-                      <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
-                        {pos.notes && <span><span className="font-medium text-foreground">Notes:</span> {pos.notes}</span>}
-                        <span><span className="font-medium text-foreground">Executed:</span> {new Date(pos.executedAt).toLocaleDateString()}</span>
-                        <button
-                          onClick={() => setStrategySymbol(pos.underlyingSymbol)}
-                          className="ml-auto rounded bg-purple-600/10 px-3 py-1 text-xs font-medium text-purple-400 hover:bg-purple-600/20"
+                {/* Days to expiry */}
+                <td className={cn('px-4 py-3 text-right font-mono', dteWarning ? 'text-red-400 font-bold' : 'text-foreground')}>
+                  {pos.daysToExpiry}
+                </td>
+
+                {/* Status badge */}
+                <td className="px-4 py-3">
+                  <span
+                    className={cn(
+                      'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                      pos.status === 'ACTIVE' && 'bg-green-500/15 text-green-400',
+                      pos.status === 'EXPIRED' && 'bg-muted text-muted-foreground',
+                      pos.status === 'EXERCISED' && 'bg-blue-500/15 text-blue-400',
+                      pos.status === 'CLOSED' && 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {pos.status}
+                  </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1">
+                    {isActive && (
+                      <div className="relative">
+                        <select
+                          onChange={e => {
+                            const v = e.target.value
+                            if (v) handleStatusChange(pos.id, v as 'EXPIRED' | 'EXERCISED' | 'CLOSED')
+                            e.target.value = ''
+                          }}
+                          disabled={isPending}
+                          className={cn(
+                            'appearance-none rounded-md border border-border bg-background px-2 py-1 pr-6 text-xs',
+                            'text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+                            'cursor-pointer disabled:opacity-50',
+                          )}
+                          defaultValue=""
                         >
-                          Get AI Strategy for {pos.underlyingSymbol}
-                        </button>
+                          <option value="" disabled>Close as…</option>
+                          {CLOSE_STATUSES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                       </div>
-                    </td>
-                  </tr>
-                )
-              ]
-            })}
-          </tbody>
-        </table>
-      </div>
+                    )}
+                    <button
+                      onClick={() => handleDelete(pos.id)}
+                      disabled={isPending}
+                      aria-label="Delete position"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }

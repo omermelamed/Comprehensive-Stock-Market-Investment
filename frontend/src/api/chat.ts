@@ -1,6 +1,6 @@
 import client from './client'
 
-export interface ChatTurn {
+export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
 }
@@ -9,5 +9,10 @@ export interface ChatResponse {
   reply: string
 }
 
-export const sendChatMessage = (message: string, history: ChatTurn[]): Promise<ChatResponse> =>
-  client.post<ChatResponse>('/api/chat', { message, history }).then(r => r.data)
+export async function postChatMessage(
+  message: string,
+  history: ChatMessage[],
+): Promise<ChatResponse> {
+  const res = await client.post<ChatResponse>('/api/chat', { message, history })
+  return res.data
+}

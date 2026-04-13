@@ -1,6 +1,6 @@
 import client from './client'
 
-export interface AnalyticsPerformanceMetrics {
+export interface PerformanceMetrics {
   snapshotCount: number
   periodStart: string | null
   periodEnd: string | null
@@ -13,24 +13,13 @@ export interface AnalyticsPerformanceMetrics {
   sharpeRatio: number | null
 }
 
-export interface AnalyticsChartPoint {
+export interface ChartPoint {
   date: string
   portfolioValue: number
   portfolioIndex: number
 }
 
-export interface AnalyticsBenchmarkPoint {
-  date: string
-  benchmarkIndex: number
-}
-
-export interface AnalyticsBenchmark {
-  symbol: string
-  periodReturnPct: number
-  points: AnalyticsBenchmarkPoint[]
-}
-
-export interface AnalyticsPositionMetric {
+export interface PositionPnl {
   symbol: string
   label: string | null
   currentValue: number
@@ -40,7 +29,13 @@ export interface AnalyticsPositionMetric {
   portfolioWeightPct: number
 }
 
-export interface RealizedTradeEntry {
+export interface BenchmarkData {
+  symbol: string
+  periodReturnPct: number
+  points: Array<{ date: string; benchmarkIndex: number }>
+}
+
+export interface RealizedTrade {
   symbol: string
   quantity: number
   buyPrice: number
@@ -50,45 +45,37 @@ export interface RealizedTradeEntry {
   closedAt: string
 }
 
-export interface RealizedPnlSummary {
+export interface RealizedPnl {
   totalRealizedPnl: number
-  trades: RealizedTradeEntry[]
+  trades: RealizedTrade[]
 }
 
 export interface AnalyticsResponse {
   range: string
   currency: string
-  performanceMetrics: AnalyticsPerformanceMetrics
-  chartPoints: AnalyticsChartPoint[]
-  positions: AnalyticsPositionMetric[]
-  benchmark: AnalyticsBenchmark | null
-  realizedPnl?: RealizedPnlSummary | null
+  performanceMetrics: PerformanceMetrics
+  chartPoints: ChartPoint[]
+  positions: PositionPnl[]
+  benchmark: BenchmarkData | null
+  realizedPnl: RealizedPnl | null
 }
 
-export interface MonthlyReturnEntry {
+export interface MonthlyReturn {
   month: string
-  startValue: number
-  endValue: number
-  returnAbsolute: number
   returnPct: number
 }
 
-export interface MonthlyReturnsResponse {
-  range: string
-  currency: string
-  months: MonthlyReturnEntry[]
+export async function getAnalytics(range: string): Promise<AnalyticsResponse> {
+  const res = await client.get<AnalyticsResponse>('/api/analytics', { params: { range } })
+  return res.data
 }
 
-export const getAnalytics = (range: string): Promise<AnalyticsResponse> =>
-  client.get<AnalyticsResponse>('/api/analytics', { params: { range } }).then(r => r.data)
+export async function getMonthlyReturns(range: string): Promise<MonthlyReturn[]> {
+  const res = await client.get<MonthlyReturn[]>('/api/analytics/monthly-returns', { params: { range } })
+  return res.data
+}
 
-export const getMonthlyReturns = (range: string): Promise<MonthlyReturnsResponse> =>
-  client.get<MonthlyReturnsResponse>('/api/analytics/monthly-returns', { params: { range } }).then(r => r.data)
-
-export const getAnalyticsBenchmark = (
-  symbol: string = 'SPY',
-  range: string = '1Y'
-): Promise<AnalyticsBenchmark | null> =>
-  client
-    .get<AnalyticsBenchmark | null>('/api/analytics/benchmark', { params: { symbol, range } })
-    .then(r => r.data)
+export async function getBenchmark(symbol: string, range: string): Promise<BenchmarkData> {
+  const res = await client.get<BenchmarkData>('/api/analytics/benchmark', { params: { symbol, range } })
+  return res.data
+}

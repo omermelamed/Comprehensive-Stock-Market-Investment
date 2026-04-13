@@ -1,563 +1,380 @@
-import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { ShieldAlert, AlertTriangle, AlertCircle, Info } from 'lucide-react'
+import { stagger, staggerItem } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import {
   getRiskMetrics,
   getRiskWarnings,
   getRiskThresholds,
   updateRiskThresholds,
-  type RiskMetricsResponse,
+  type RiskMetrics,
   type RiskWarningsResponse,
   type RiskThresholds,
 } from '@/api/risk'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function fmtPlain(value: number | null | undefined, decimals = 2, suffix = '%'): string {
-  if (value === null || value === undefined) return 'N/A'
-  return `${value.toFixed(decimals)}${suffix}`
+function fmtPct(v: number | null): string {
+  if (v === null) return '—'
+  return `${v.toFixed(2)}%`
 }
 
-function signedPct(value: number | null | undefined, decimals = 2): string {
-  if (value === null || value === undefined) return 'N/A'
-  const sign = value >= 0 ? '+' : '−'
-  return `${sign}${Math.abs(value).toFixed(decimals)}%`
+function fmtDecimal(v: number | null, places = 2): string {
+  if (v === null) return '—'
+  return v.toFixed(places)
 }
 
-function returnColor(value: number | null | undefined): string {
-  if (value === null || value === undefined) return 'text-muted-foreground'
-  return value >= 0 ? 'text-success' : 'text-destructive'
-}
-
-function warningSeverityClass(severity: string): string {
-  const s = severity.toUpperCase()
-  if (s === 'HIGH') {
-    return 'border-destructive/50 bg-destructive/10 text-destructive'
-  }
-  if (s === 'MEDIUM') {
-    return 'border-warning/50 bg-warning/10 text-warning'
-  }
-  return 'border-border bg-muted/60 text-muted-foreground'
-}
-
-function driftStatusClass(status: string): string {
-  switch (status) {
-    case 'ON_TARGET':
-      return 'text-success'
-    case 'SLIGHTLY_OFF':
-      return 'text-warning'
-    case 'NEEDS_REBALANCING':
-      return 'text-destructive'
-    case 'UNTRACKED':
-      return 'text-muted-foreground'
-    default:
-      return 'text-muted-foreground'
-  }
-}
-
-const SECTOR_COLORS = [
-  'oklch(0.65 0.2 264)',
-  'oklch(0.7 0.15 200)',
-  'oklch(0.75 0.12 145)',
-  'oklch(0.72 0.18 45)',
-  'oklch(0.68 0.22 25)',
-  'oklch(0.62 0.18 300)',
-  'oklch(0.7 0.1 220)',
-]
-
-// ── MetricCard ────────────────────────────────────────────────────────────────
-
-interface MetricCardProps {
-  label: string
-  value: string
-  subLabel?: string
-  colored?: boolean
-  rawValue?: number | null
-}
-
-function MetricCard({ label, value, subLabel, colored, rawValue }: MetricCardProps) {
-  const colorClass = colored ? returnColor(rawValue) : 'text-foreground'
+function RiskSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn('mt-1 font-mono text-xl font-bold', colorClass)}>{value}</p>
-      {subLabel && <p className="mt-0.5 text-xs text-muted-foreground">{subLabel}</p>}
+    <div className="space-y-6">
+      <div className="h-28 animate-pulse rounded-xl bg-muted" />
+      <div className="h-48 animate-pulse rounded-xl bg-muted" />
+      <div className="h-48 animate-pulse rounded-xl bg-muted" />
     </div>
   )
 }
 
-// ── page ──────────────────────────────────────────────────────────────────────
+const STATUS_COLORS = {
+  ON_TARGET: 'bg-green-500/15 text-green-400',
+  UNDERWEIGHT: 'bg-yellow-500/15 text-yellow-400',
+  OVERWEIGHT: 'bg-red-500/15 text-red-400',
+}
 
 export default function RiskPage() {
-  const [metrics, setMetrics] = useState<RiskMetricsResponse | null>(null)
-  const [warningsData, setWarningsData] = useState<RiskWarningsResponse | null>(null)
+  const [metrics, setMetrics] = useState<RiskMetrics | null>(null)
+  const [warnings, setWarnings] = useState<RiskWarningsResponse | null>(null)
   const [thresholds, setThresholds] = useState<RiskThresholds | null>(null)
-  const [draft, setDraft] = useState<RiskThresholds | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Thresholds edit state
+  const [editingThresholds, setEditingThresholds] = useState<Partial<RiskThresholds>>({})
+  const [savingThresholds, setSavingThresholds] = useState(false)
+  const [thresholdSaveError, setThresholdSaveError] = useState<string | null>(null)
+  const [thresholdSaved, setThresholdSaved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
+
     Promise.all([getRiskMetrics(), getRiskWarnings(), getRiskThresholds()])
       .then(([m, w, t]) => {
         if (cancelled) return
         setMetrics(m)
-        setWarningsData(w)
+        setWarnings(w)
         setThresholds(t)
-        setDraft(t)
+        setEditingThresholds({
+          maxSinglePositionPct: t.maxSinglePositionPct,
+          maxSectorPct: t.maxSectorPct,
+          maxDrawdownPct: t.maxDrawdownPct,
+          driftWarningPct: t.driftWarningPct,
+          rebalanceReminderDays: t.rebalanceReminderDays,
+        })
       })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load risk data. Check that the backend is running.')
+      .catch(err => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load risk data')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
+
+    return () => { cancelled = true }
   }, [])
 
-  const m = metrics
-  const thresholdPct = thresholds?.maxSinglePositionPct ?? 0
-
-  const handleDraftChange = (patch: Partial<RiskThresholds>) => {
-    setDraft(prev => (prev ? { ...prev, ...patch } : prev))
-  }
-
   const handleSaveThresholds = async () => {
-    if (!draft) return
-    setSaving(true)
-    setSaveError(null)
+    setSavingThresholds(true)
+    setThresholdSaveError(null)
+    setThresholdSaved(false)
     try {
-      const updated = await updateRiskThresholds(draft)
+      const updated = await updateRiskThresholds(editingThresholds)
       setThresholds(updated)
-      setDraft(updated)
-      const fresh = await getRiskMetrics()
-      setMetrics(fresh)
-    } catch {
-      setSaveError('Could not save thresholds.')
+      setThresholdSaved(true)
+      setTimeout(() => setThresholdSaved(false), 3000)
+    } catch (err) {
+      setThresholdSaveError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
-      setSaving(false)
+      setSavingThresholds(false)
     }
   }
 
-  const sectorTotal =
-    m && m.sectorExposure.length > 0
-      ? m.sectorExposure.reduce((s, x) => s + x.weightPct, 0) || 1
-      : 1
-
-  const sectorConicStops = m
-    ? (() => {
-        let deg = 0
-        const parts: string[] = []
-        for (let i = 0; i < m.sectorExposure.length; i++) {
-          const sec = m.sectorExposure[i]
-          const span = (sec.weightPct / sectorTotal) * 360
-          const color = sec.exceedsThreshold ? 'oklch(0.55 0.22 25)' : SECTOR_COLORS[i % SECTOR_COLORS.length]
-          const end = deg + span
-          parts.push(`${color} ${deg}deg ${end}deg`)
-          deg = end
-        }
-        return parts.join(', ')
-      })()
-    : ''
-
-  return (
-    <div className="flex min-h-screen flex-col">
-      <div className="border-b border-border px-6 py-5">
-        <h1 className="text-xl font-bold text-foreground">Risk Management</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Concentration, drift, and threshold-based risk signals for your portfolio.
-        </p>
+  if (loading) {
+    return (
+      <div className="p-8">
+        <RiskSkeleton />
       </div>
+    )
+  }
 
-      <div className="flex-1 px-6 py-6">
-        <div className="mx-auto max-w-5xl space-y-6">
-          {error && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          {/* 1. Warnings banner */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">Risk warnings</h2>
-            {loading && !warningsData ? (
-              <div className="mt-3 h-16 animate-pulse rounded-lg bg-muted" />
-            ) : warningsData && warningsData.warnings.length > 0 ? (
-              <ul className="mt-3 space-y-2">
-                {warningsData.warnings.map((w, i) => (
-                  <li
-                    key={`${w.type}-${i}`}
-                    className={cn(
-                      'rounded-lg border px-3 py-2 text-sm',
-                      warningSeverityClass(w.severity),
-                    )}
-                  >
-                    {w.message}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-                No risk warnings
-              </p>
-            )}
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-              <span>
-                Last rebalance:{' '}
-                <span className="font-mono text-foreground">
-                  {warningsData?.lastRebalanceDate ?? '—'}
-                </span>
-              </span>
-              <span>
-                Days since rebalance:{' '}
-                <span className="font-mono text-foreground">
-                  {warningsData?.daysSinceRebalance !== null && warningsData?.daysSinceRebalance !== undefined
-                    ? warningsData.daysSinceRebalance
-                    : '—'}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* 2. Overview cards */}
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Overview</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <MetricCard
-                label="Volatility (annualized)"
-                value={m ? fmtPlain(m.volatilityAnnualizedPct) : '—'}
-                subLabel="std dev, annualized"
-              />
-              <MetricCard
-                label="Max drawdown"
-                value={m
-                  ? m.maxDrawdownPct !== null && m.maxDrawdownPct !== undefined
-                    ? `${m.maxDrawdownPct.toFixed(2)}%`
-                    : 'N/A'
-                  : '—'}
-                subLabel="historical peak-to-trough"
-              />
-              <MetricCard
-                label="Sharpe ratio"
-                value={m ? fmtPlain(m.sharpeRatio, 2, '') : '—'}
-                subLabel="risk-adjusted return"
-                colored
-                rawValue={m?.sharpeRatio}
-              />
-              <MetricCard
-                label="Portfolio beta"
-                value={m
-                  ? m.portfolioBeta !== null && m.portfolioBeta !== undefined
-                    ? m.portfolioBeta.toFixed(2)
-                    : 'N/A'
-                  : '—'}
-                subLabel="vs market"
-              />
-            </div>
-          </div>
-
-          {loading && !m && (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
-              ))}
-            </div>
-          )}
-
-          {m && (
-            <>
-              {/* 3. Concentration */}
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="border-b border-border px-4 py-3">
-                  <h3 className="text-sm font-semibold text-foreground">Concentration risk</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Position weights vs max single position threshold ({fmtPlain(thresholdPct, 2)}).
-                  </p>
-                </div>
-                <div className="p-4">
-                  {m.concentrationRisk.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No positions to display.</p>
-                  ) : (
-                    <div className="flex gap-4">
-                      <div className="flex min-w-[120px] flex-col gap-2">
-                        {m.concentrationRisk.map(row => (
-                          <div
-                            key={row.symbol}
-                            className="flex h-6 flex-col justify-center text-xs leading-tight"
-                          >
-                            <span className="font-mono font-semibold text-foreground">{row.symbol}</span>
-                            {row.label && row.label !== row.symbol && (
-                              <span className="truncate text-muted-foreground">{row.label}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="relative min-w-0 flex-1 space-y-2">
-                        {m.concentrationRisk.map(row => {
-                          const w = Math.min(Math.max(row.weightPct, 0), 100)
-                          return (
-                            <div key={row.symbol} className="relative h-6">
-                              <div className="h-full overflow-hidden rounded bg-muted/80">
-                                <div
-                                  className={cn(
-                                    'h-full rounded transition-colors',
-                                    row.exceedsThreshold ? 'bg-destructive/80' : 'bg-primary/80',
-                                  )}
-                                  style={{ width: `${w}%` }}
-                                />
-                              </div>
-                              <span className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground">
-                                {row.weightPct.toFixed(1)}%
-                              </span>
-                            </div>
-                          )
-                        })}
-                        <div
-                          className="pointer-events-none absolute inset-0 z-10"
-                          aria-hidden
-                        >
-                          <div
-                            className="absolute bottom-0 top-0 w-0 border-l-2 border-dashed border-foreground/70"
-                            style={{ left: `${Math.min(Math.max(thresholdPct, 0), 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 4. Drift table */}
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="border-b border-border px-4 py-3">
-                  <h3 className="text-sm font-semibold text-foreground">Allocation drift</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  {m.allocationDrift.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">No drift rows.</p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-xs text-muted-foreground">
-                          <th className="px-4 py-2 text-left font-medium">Symbol</th>
-                          <th className="px-4 py-2 text-right font-medium">Target %</th>
-                          <th className="px-4 py-2 text-right font-medium">Current %</th>
-                          <th className="px-4 py-2 text-right font-medium">Drift %</th>
-                          <th className="px-4 py-2 text-right font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {m.allocationDrift.map(row => (
-                          <tr
-                            key={row.symbol}
-                            className="border-b border-border/50 last:border-0 hover:bg-muted/30"
-                          >
-                            <td className="px-4 py-2.5">
-                              <span className="font-mono text-xs font-semibold">{row.symbol}</span>
-                              {row.label && row.label !== row.symbol && (
-                                <span className="ml-1.5 text-xs text-muted-foreground">{row.label}</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs">
-                              {row.targetPct.toFixed(2)}%
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs">
-                              {row.currentPct.toFixed(2)}%
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-xs">{signedPct(row.driftPct)}</td>
-                            <td
-                              className={cn(
-                                'px-4 py-2.5 text-right text-xs font-medium',
-                                driftStatusClass(row.status),
-                              )}
-                            >
-                              {row.status}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-
-              {/* 5. Sector exposure */}
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="border-b border-border px-4 py-3">
-                  <h3 className="text-sm font-semibold text-foreground">Sector exposure</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Sectors above max sector threshold are highlighted.
-                  </p>
-                </div>
-                <div className="p-4">
-                  {m.sectorExposure.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No sector breakdown.</p>
-                  ) : (
-                    <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                      <div
-                        className="relative h-40 w-40 shrink-0 rounded-full"
-                        style={{
-                          background: `conic-gradient(${sectorConicStops})`,
-                        }}
-                      >
-                        <div className="absolute inset-8 rounded-full bg-card" />
-                      </div>
-                      <div className="w-full min-w-0 flex-1 space-y-2">
-                        {m.sectorExposure.map((sec, i) => (
-                          <div key={sec.sector} className="flex items-center gap-2 text-xs">
-                            <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
-                              style={{
-                                background: sec.exceedsThreshold
-                                  ? 'oklch(0.55 0.22 25)'
-                                  : SECTOR_COLORS[i % SECTOR_COLORS.length],
-                              }}
-                            />
-                            <span className="min-w-0 flex-1 truncate font-medium text-foreground">
-                              {sec.sector}
-                            </span>
-                            <span
-                              className={cn(
-                                'font-mono',
-                                sec.exceedsThreshold ? 'text-destructive' : 'text-foreground',
-                              )}
-                            >
-                              {sec.weightPct.toFixed(1)}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 6. Geographic */}
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="border-b border-border px-4 py-3">
-                  <h3 className="text-sm font-semibold text-foreground">Geographic exposure</h3>
-                </div>
-                <div className="space-y-3 p-4">
-                  {m.geographicExposure.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No geographic breakdown.</p>
-                  ) : (
-                    m.geographicExposure.map(geo => (
-                      <div key={geo.region}>
-                        <div className="mb-0.5 flex justify-between text-xs">
-                          <span className="text-foreground">{geo.region}</span>
-                          <span className="font-mono text-muted-foreground">{geo.weightPct.toFixed(1)}%</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded bg-muted/80">
-                          <div
-                            className="h-full rounded bg-primary/60"
-                            style={{ width: `${Math.min(geo.weightPct, 100)}%` }}
-                          />
-                        </div>
-                        {geo.symbols.length > 0 && (
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            {geo.symbols.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 7. Thresholds settings */}
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(o => !o)}
-              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/40"
-            >
-              {settingsOpen ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              )}
-              Settings
-            </button>
-            {settingsOpen && draft && (
-              <div className="border-t border-border px-4 py-4 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-muted-foreground">Max single position %</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
-                      value={draft.maxSinglePositionPct}
-                      onChange={e => handleDraftChange({ maxSinglePositionPct: Number(e.target.value) })}
-                    />
-                  </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-muted-foreground">Max sector %</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
-                      value={draft.maxSectorPct}
-                      onChange={e => handleDraftChange({ maxSectorPct: Number(e.target.value) })}
-                    />
-                  </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-muted-foreground">Max drawdown %</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
-                      value={draft.maxDrawdownPct}
-                      onChange={e => handleDraftChange({ maxDrawdownPct: Number(e.target.value) })}
-                    />
-                  </label>
-                  <label className="block space-y-1.5">
-                    <span className="text-xs text-muted-foreground">Drift warning %</span>
-                    <input
-                      type="number"
-                      step="0.1"
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
-                      value={draft.driftWarningPct}
-                      onChange={e => handleDraftChange({ driftWarningPct: Number(e.target.value) })}
-                    />
-                  </label>
-                  <label className="block space-y-1.5 sm:col-span-2">
-                    <span className="text-xs text-muted-foreground">Rebalance reminder (days)</span>
-                    <input
-                      type="number"
-                      step="1"
-                      min="0"
-                      className="w-full max-w-xs rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground"
-                      value={draft.rebalanceReminderDays}
-                      onChange={e => handleDraftChange({ rebalanceReminderDays: Number(e.target.value) })}
-                    />
-                  </label>
-                </div>
-                {saveError && (
-                  <p className="text-sm text-destructive">{saveError}</p>
-                )}
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleSaveThresholds}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            )}
-          </div>
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+          {error}
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className="p-8">
+      <div className="mb-6 flex items-center gap-3">
+        <ShieldAlert className="h-6 w-6 text-foreground" />
+        <h1 className="text-2xl font-bold text-foreground">Risk Dashboard</h1>
+      </div>
+
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
+        {/* Warnings */}
+        <motion.div variants={staggerItem}>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Warnings</h2>
+          {warnings && warnings.warnings.length > 0 ? (
+            <div className="space-y-2">
+              {warnings.warnings.map((w, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border px-4 py-3 text-sm',
+                    w.severity === 'ERROR' && 'border-red-500/30 bg-red-500/10 text-red-400',
+                    w.severity === 'WARNING' && 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+                    w.severity === 'INFO' && 'border-border bg-muted text-muted-foreground',
+                  )}
+                >
+                  {w.severity === 'ERROR' && <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+                  {w.severity === 'WARNING' && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+                  {w.severity === 'INFO' && <Info className="mt-0.5 h-4 w-4 shrink-0" />}
+                  <div>
+                    <span>{w.message}</span>
+                    {w.symbol && <span className="ml-1 font-mono font-semibold">({w.symbol})</span>}
+                    {w.currentValue !== undefined && w.thresholdValue !== undefined && (
+                      <span className="ml-2 text-xs opacity-70">
+                        {fmtPct(w.currentValue)} / {fmtPct(w.thresholdValue)} limit
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {warnings.daysSinceRebalance !== null && (
+                <p className="text-xs text-muted-foreground">
+                  Last rebalance: {warnings.lastRebalanceDate ?? 'never'}
+                  {warnings.daysSinceRebalance !== null && ` (${warnings.daysSinceRebalance} days ago)`}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+              No active risk warnings.
+            </div>
+          )}
+        </motion.div>
+
+        {/* Risk stats row */}
+        {metrics && (
+          <motion.div variants={staggerItem} className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              { label: 'Portfolio Beta', value: fmtDecimal(metrics.portfolioBeta) },
+              { label: 'Volatility (Ann.)', value: fmtPct(metrics.volatilityAnnualizedPct) },
+              { label: 'Max Drawdown', value: fmtPct(metrics.maxDrawdownPct) },
+              { label: 'Sharpe Ratio', value: fmtDecimal(metrics.sharpeRatio) },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="mt-1 font-mono text-xl font-bold text-foreground">{value}</p>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Concentration risk */}
+        {metrics && metrics.concentrationRisk.length > 0 && (
+          <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 text-sm font-semibold text-foreground">Concentration Risk</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th className="pb-2 text-left font-medium">Symbol</th>
+                    <th className="pb-2 text-left font-medium">Label</th>
+                    <th className="pb-2 text-right font-medium">Weight %</th>
+                    <th className="pb-2 text-center font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.concentrationRisk.map(item => (
+                    <tr key={item.symbol} className="border-b border-border last:border-0">
+                      <td className="py-2 font-mono font-semibold text-foreground">{item.symbol}</td>
+                      <td className="py-2 text-muted-foreground">{item.label ?? '—'}</td>
+                      <td className={cn('py-2 text-right font-mono', item.exceedsThreshold ? 'text-red-400 font-bold' : 'text-foreground')}>
+                        {fmtPct(item.weightPct)}
+                      </td>
+                      <td className="py-2 text-center">
+                        {item.exceedsThreshold && (
+                          <span className="inline-flex rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-400">
+                            Over Limit
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Allocation drift */}
+        {metrics && metrics.allocationDrift.length > 0 && (
+          <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 text-sm font-semibold text-foreground">Allocation Drift</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th className="pb-2 text-left font-medium">Symbol</th>
+                    <th className="pb-2 text-right font-medium">Target %</th>
+                    <th className="pb-2 text-right font-medium">Current %</th>
+                    <th className="pb-2 text-right font-medium">Drift %</th>
+                    <th className="pb-2 text-center font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.allocationDrift.map(item => (
+                    <tr key={item.symbol} className="border-b border-border last:border-0">
+                      <td className="py-2 font-mono font-semibold text-foreground">
+                        {item.symbol}
+                        {item.label && (
+                          <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">
+                            {item.label}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right font-mono">{fmtPct(item.targetPct)}</td>
+                      <td className="py-2 text-right font-mono">{fmtPct(item.currentPct)}</td>
+                      <td className={cn(
+                        'py-2 text-right font-mono',
+                        Math.abs(item.driftPct) > 5 ? 'text-red-400' : Math.abs(item.driftPct) > 2 ? 'text-yellow-400' : 'text-foreground',
+                      )}>
+                        {item.driftPct >= 0 ? '+' : ''}{fmtPct(item.driftPct)}
+                      </td>
+                      <td className="py-2 text-center">
+                        <span className={cn(
+                          'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                          STATUS_COLORS[item.status],
+                        )}>
+                          {item.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Sector + Geographic exposure */}
+        {metrics && (
+          <motion.div variants={staggerItem} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Sector */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="mb-4 text-sm font-semibold text-foreground">Sector Exposure</h2>
+              {metrics.sectorExposure.length > 0 ? (
+                <div className="space-y-2">
+                  {metrics.sectorExposure.map(s => (
+                    <div key={s.sector}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className={cn('text-foreground', s.exceedsThreshold && 'text-red-400 font-semibold')}>
+                          {s.sector}
+                        </span>
+                        <span className={cn('font-mono', s.exceedsThreshold ? 'text-red-400 font-bold' : 'text-muted-foreground')}>
+                          {fmtPct(s.weightPct)}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn('h-full rounded-full', s.exceedsThreshold ? 'bg-red-500' : 'bg-primary')}
+                          style={{ width: `${Math.min(s.weightPct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No sector data.</p>
+              )}
+            </div>
+
+            {/* Geographic */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="mb-4 text-sm font-semibold text-foreground">Geographic Exposure</h2>
+              {metrics.geographicExposure.length > 0 ? (
+                <div className="space-y-2">
+                  {metrics.geographicExposure.map(g => (
+                    <div key={g.region}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">{g.region}</span>
+                        <span className="font-mono text-muted-foreground">{fmtPct(g.weightPct)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${Math.min(g.weightPct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No geographic data.</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Thresholds editor */}
+        {thresholds && (
+          <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 text-sm font-semibold text-foreground">Risk Thresholds</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { key: 'maxSinglePositionPct' as const, label: 'Max Single Position (%)', step: 0.5 },
+                { key: 'maxSectorPct' as const, label: 'Max Sector Concentration (%)', step: 0.5 },
+                { key: 'maxDrawdownPct' as const, label: 'Max Drawdown Alert (%)', step: 0.5 },
+                { key: 'driftWarningPct' as const, label: 'Drift Warning Threshold (%)', step: 0.5 },
+                { key: 'rebalanceReminderDays' as const, label: 'Rebalance Reminder (days)', step: 1 },
+              ].map(({ key, label, step }) => (
+                <div key={key} className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                  <input
+                    type="number"
+                    value={editingThresholds[key] ?? ''}
+                    onChange={e => setEditingThresholds(prev => ({ ...prev, [key]: parseFloat(e.target.value) }))}
+                    step={step}
+                    min={0}
+                    className={cn(
+                      'w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground',
+                      'focus:outline-none focus:ring-1 focus:ring-ring',
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={handleSaveThresholds}
+                disabled={savingThresholds}
+                className={cn(
+                  'rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground',
+                  'transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+              >
+                {savingThresholds ? 'Saving...' : 'Save Thresholds'}
+              </button>
+              {thresholdSaved && <span className="text-sm text-green-400">Saved.</span>}
+              {thresholdSaveError && <span className="text-sm text-destructive">{thresholdSaveError}</span>}
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   )
 }

@@ -1,97 +1,104 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { createOptionsTransaction, type CreateOptionsTransactionRequest } from '../../api/options'
+import { cn } from '@/lib/utils'
+import type { CreateOptionsPositionRequest } from '@/api/options'
 
-export function OptionsTransactionForm() {
-  const navigate = useNavigate()
-  const [submitting, setSubmitting] = useState(false)
+interface OptionsTransactionFormProps {
+  onSubmit: (data: CreateOptionsPositionRequest) => Promise<void>
+  isSubmitting?: boolean
+}
+
+export function OptionsTransactionForm({ onSubmit, isSubmitting = false }: OptionsTransactionFormProps) {
+  const [underlyingSymbol, setUnderlyingSymbol] = useState('')
+  const [optionType, setOptionType] = useState<'CALL' | 'PUT'>('CALL')
+  const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
+  const [strikePrice, setStrikePrice] = useState('')
+  const [expirationDate, setExpirationDate] = useState('')
+  const [contracts, setContracts] = useState('')
+  const [premiumPerContract, setPremiumPerContract] = useState('')
+  const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const [form, setForm] = useState<CreateOptionsTransactionRequest>({
-    underlyingSymbol: '',
-    optionType: 'CALL',
-    action: 'BUY',
-    strikePrice: 0,
-    expirationDate: '',
-    contracts: 1,
-    premiumPerContract: 0,
-    notes: '',
-  })
+  const totalPremium = (() => {
+    const c = parseFloat(contracts)
+    const p = parseFloat(premiumPerContract)
+    if (!isNaN(c) && !isNaN(p) && c > 0 && p > 0) {
+      return c * p * 100
+    }
+    return null
+  })()
 
-  const daysToExpiry = form.expirationDate
-    ? Math.ceil((new Date(form.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null
-
-  const earningsRisk = daysToExpiry !== null && daysToExpiry < 14
-
-  function set<K extends keyof CreateOptionsTransactionRequest>(
-    key: K,
-    value: CreateOptionsTransactionRequest[K]
-  ) {
-    setForm(prev => ({ ...prev, [key]: value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setSubmitting(true)
+
+    const c = parseFloat(contracts)
+    const p = parseFloat(premiumPerContract)
+    const s = parseFloat(strikePrice)
+
+    if (!underlyingSymbol.trim()) return setError('Underlying symbol is required.')
+    if (isNaN(s) || s <= 0) return setError('Strike price must be a positive number.')
+    if (!expirationDate) return setError('Expiration date is required.')
+    if (isNaN(c) || c < 1 || !Number.isInteger(c)) return setError('Contracts must be a positive whole number.')
+    if (isNaN(p) || p <= 0) return setError('Premium per contract must be a positive number.')
+
     try {
-      await createOptionsTransaction({
-        ...form,
-        underlyingSymbol: form.underlyingSymbol.trim().toUpperCase(),
-        notes: form.notes?.trim() || undefined,
+      await onSubmit({
+        underlyingSymbol: underlyingSymbol.trim().toUpperCase(),
+        optionType,
+        action,
+        strikePrice: s,
+        expirationDate,
+        contracts: c,
+        premiumPerContract: p,
+        notes: notes.trim() || undefined,
       })
-      navigate('/options')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to save options transaction'
-      setError(msg)
-    } finally {
-      setSubmitting(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create position')
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {earningsRisk && (
-        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-          Warning: expiration is within 14 days. Earnings or events within this window can dramatically affect option premiums.
-        </div>
-      )}
+      {/* Symbol */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-foreground">Underlying Symbol</label>
+        <input
+          type="text"
+          value={underlyingSymbol}
+          onChange={e => setUnderlyingSymbol(e.target.value.toUpperCase())}
+          placeholder="e.g. AAPL"
+          className={cn(
+            'w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground',
+            'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+          )}
+          required
+        />
+      </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        {/* Underlying Symbol */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Underlying Symbol</label>
-          <input
-            required
-            type="text"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm uppercase placeholder:normal-case focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="e.g. AAPL"
-            value={form.underlyingSymbol}
-            onChange={e => set('underlyingSymbol', e.target.value)}
-          />
-        </div>
-
-        {/* Option Type */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Option Type</label>
-          <div className="flex gap-2">
+      {/* Option type + action toggles */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Option Type</label>
+          <div className="flex rounded-lg border border-border overflow-hidden">
             {(['CALL', 'PUT'] as const).map(t => (
               <button
                 key={t}
                 type="button"
-                onClick={() => set('optionType', t)}
-                className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                  form.optionType === t
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-foreground hover:bg-muted'
-                }`}
+                onClick={() => setOptionType(t)}
+                className={cn(
+                  'flex-1 py-2 text-sm font-medium transition-colors',
+                  optionType === t
+                    ? t === 'CALL'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-orange-600 text-white'
+                    : 'bg-background text-muted-foreground hover:text-foreground',
+                )}
               >
                 {t}
               </button>
@@ -99,124 +106,141 @@ export function OptionsTransactionForm() {
           </div>
         </div>
 
-        {/* Action */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Action</label>
-          <div className="flex gap-2">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Action</label>
+          <div className="flex rounded-lg border border-border overflow-hidden">
             {(['BUY', 'SELL'] as const).map(a => (
               <button
                 key={a}
                 type="button"
-                onClick={() => set('action', a)}
-                className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                  form.action === a
+                onClick={() => setAction(a)}
+                className={cn(
+                  'flex-1 py-2 text-sm font-medium transition-colors',
+                  action === a
                     ? a === 'BUY'
-                      ? 'border-success bg-success/20 text-success'
-                      : 'border-orange-500 bg-orange-500/20 text-orange-400'
-                    : 'border-border bg-background text-foreground hover:bg-muted'
-                }`}
+                      ? 'bg-green-600 text-white'
+                      : 'bg-red-600 text-white'
+                    : 'bg-background text-muted-foreground hover:text-foreground',
+                )}
               >
                 {a}
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Strike Price */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Strike Price ($)</label>
+      {/* Strike + expiration */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Strike Price ($)</label>
           <input
-            required
             type="number"
+            value={strikePrice}
+            onChange={e => setStrikePrice(e.target.value)}
+            placeholder="150.00"
             min="0.01"
             step="0.01"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={form.strikePrice || ''}
-            onChange={e => set('strikePrice', parseFloat(e.target.value) || 0)}
+            className={cn(
+              'w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground',
+              'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+            )}
+            required
           />
         </div>
 
-        {/* Expiration Date */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Expiration Date</label>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Expiration Date</label>
           <input
-            required
             type="date"
-            min={new Date().toISOString().split('T')[0]}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={form.expirationDate}
-            onChange={e => set('expirationDate', e.target.value)}
-          />
-          {daysToExpiry !== null && (
-            <p className={`text-xs ${daysToExpiry <= 7 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {daysToExpiry} days to expiry
-            </p>
-          )}
-        </div>
-
-        {/* Contracts */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Contracts</label>
-          <input
+            value={expirationDate}
+            onChange={e => setExpirationDate(e.target.value)}
+            className={cn(
+              'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground',
+              'focus:outline-none focus:ring-1 focus:ring-ring',
+            )}
             required
+          />
+        </div>
+      </div>
+
+      {/* Contracts + premium */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Contracts</label>
+          <input
             type="number"
+            value={contracts}
+            onChange={e => setContracts(e.target.value)}
+            placeholder="1"
             min="1"
             step="1"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={form.contracts}
-            onChange={e => set('contracts', parseInt(e.target.value) || 1)}
+            className={cn(
+              'w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground',
+              'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+            )}
+            required
           />
-          <p className="text-xs text-muted-foreground">1 contract = 100 shares</p>
         </div>
 
-        {/* Premium per Contract */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium">Premium per Contract ($)</label>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Premium per Contract ($)</label>
           <input
-            required
             type="number"
-            min="0.0001"
-            step="0.0001"
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={form.premiumPerContract || ''}
-            onChange={e => set('premiumPerContract', parseFloat(e.target.value) || 0)}
+            value={premiumPerContract}
+            onChange={e => setPremiumPerContract(e.target.value)}
+            placeholder="2.50"
+            min="0.01"
+            step="0.01"
+            className={cn(
+              'w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground',
+              'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+            )}
+            required
           />
-          {form.premiumPerContract > 0 && form.contracts > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Total: ${(form.premiumPerContract * form.contracts * 100).toFixed(2)}
-            </p>
-          )}
         </div>
       </div>
 
       {/* Notes */}
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium">Notes (optional)</label>
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-foreground">Notes (optional)</label>
         <textarea
-          rows={2}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          placeholder="Strategy context, hedge reason, etc."
-          value={form.notes ?? ''}
-          onChange={e => set('notes', e.target.value)}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Strategy rationale, hedging notes..."
+          rows={3}
+          className={cn(
+            'w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground',
+            'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+          )}
         />
       </div>
 
-      <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
-          {submitting ? 'Saving…' : 'Log Options Position'}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/options')}
-          className="rounded-lg border border-border px-5 py-2 text-sm font-medium"
-        >
-          Cancel
-        </button>
-      </div>
+      {/* Calculated total */}
+      {totalPremium !== null && (
+        <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Total Premium</span>
+            <span className="font-mono text-lg font-semibold text-foreground">
+              {totalPremium.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+            </span>
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {contracts} contract{parseFloat(contracts) !== 1 ? 's' : ''} × ${premiumPerContract} × 100 shares
+          </p>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className={cn(
+          'w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground',
+          'transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50',
+        )}
+      >
+        {isSubmitting ? 'Creating...' : 'Create Position'}
+      </button>
     </form>
   )
 }

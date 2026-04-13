@@ -1,15 +1,44 @@
-import { OptionsTransactionForm } from '../features/options/OptionsTransactionForm'
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { OptionsTransactionForm } from '@/features/options/OptionsTransactionForm'
+import { useOptions } from '@/features/options/useOptions'
+import type { CreateOptionsPositionRequest } from '@/api/options'
 
 export default function OptionsTransactionFormPage() {
+  const navigate = useNavigate()
+  const { createPosition } = useOptions()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (data: CreateOptionsPositionRequest) => {
+    setIsSubmitting(true)
+    try {
+      await createPosition(data)
+      navigate('/options')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Log Options Position</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Record a new options transaction. One contract = 100 shares.
-        </p>
+    <div className="p-8">
+      <div className="mb-6 flex items-center gap-3">
+        <Link
+          to="/options"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Options
+        </Link>
       </div>
-      <OptionsTransactionForm />
+
+      <h1 className="mb-6 text-2xl font-bold text-foreground">New Options Position</h1>
+
+      <div className="max-w-xl">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <OptionsTransactionForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        </div>
+      </div>
     </div>
   )
 }

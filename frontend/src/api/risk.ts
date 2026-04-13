@@ -1,39 +1,39 @@
 import client from './client'
 
-export interface ConcentrationEntry {
+export interface ConcentrationRiskItem {
   symbol: string
   label: string | null
   weightPct: number
   exceedsThreshold: boolean
 }
 
-export interface DriftEntry {
+export interface AllocationDriftItem {
   symbol: string
   label: string | null
   targetPct: number
   currentPct: number
   driftPct: number
-  status: string
+  status: 'ON_TARGET' | 'UNDERWEIGHT' | 'OVERWEIGHT'
 }
 
-export interface SectorEntry {
+export interface SectorExposureItem {
   sector: string
   weightPct: number
   symbols: string[]
   exceedsThreshold: boolean
 }
 
-export interface GeographicEntry {
+export interface GeographicExposureItem {
   region: string
   weightPct: number
   symbols: string[]
 }
 
-export interface RiskMetricsResponse {
-  concentrationRisk: ConcentrationEntry[]
-  allocationDrift: DriftEntry[]
-  sectorExposure: SectorEntry[]
-  geographicExposure: GeographicEntry[]
+export interface RiskMetrics {
+  concentrationRisk: ConcentrationRiskItem[]
+  allocationDrift: AllocationDriftItem[]
+  sectorExposure: SectorExposureItem[]
+  geographicExposure: GeographicExposureItem[]
   portfolioBeta: number | null
   volatilityAnnualizedPct: number | null
   maxDrawdownPct: number | null
@@ -42,11 +42,11 @@ export interface RiskMetricsResponse {
 
 export interface RiskWarning {
   type: string
-  severity: string
+  severity: 'ERROR' | 'WARNING' | 'INFO'
   message: string
-  symbol: string | null
-  currentValue: number | null
-  thresholdValue: number | null
+  symbol?: string
+  currentValue?: number
+  thresholdValue?: number
 }
 
 export interface RiskWarningsResponse {
@@ -63,14 +63,22 @@ export interface RiskThresholds {
   rebalanceReminderDays: number
 }
 
-export const getRiskMetrics = () =>
-  client.get<RiskMetricsResponse>('/api/risk/metrics').then(r => r.data)
+export async function getRiskMetrics(): Promise<RiskMetrics> {
+  const res = await client.get<RiskMetrics>('/api/risk/metrics')
+  return res.data
+}
 
-export const getRiskWarnings = () =>
-  client.get<RiskWarningsResponse>('/api/risk/warnings').then(r => r.data)
+export async function getRiskWarnings(): Promise<RiskWarningsResponse> {
+  const res = await client.get<RiskWarningsResponse>('/api/risk/warnings')
+  return res.data
+}
 
-export const getRiskThresholds = () =>
-  client.get<RiskThresholds>('/api/risk/thresholds').then(r => r.data)
+export async function getRiskThresholds(): Promise<RiskThresholds> {
+  const res = await client.get<RiskThresholds>('/api/risk/thresholds')
+  return res.data
+}
 
-export const updateRiskThresholds = (thresholds: Partial<RiskThresholds>) =>
-  client.put<RiskThresholds>('/api/risk/thresholds', thresholds).then(r => r.data)
+export async function updateRiskThresholds(data: Partial<RiskThresholds>): Promise<RiskThresholds> {
+  const res = await client.put<RiskThresholds>('/api/risk/thresholds', data)
+  return res.data
+}

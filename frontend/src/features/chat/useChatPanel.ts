@@ -1,67 +1,50 @@
-import { useState, useRef, useCallback } from 'react'
-import { sendChatMessage, type ChatTurn } from '@/api/chat'
+import { useState, useCallback } from 'react'
+import { postChatMessage, type ChatMessage } from '@/api/chat'
 
-export function useChatPanel() {
+interface ChatPanelState {
+  messages: ChatMessage[]
+  isOpen: boolean
+  isLoading: boolean
+  sendMessage: (text: string) => Promise<void>
+  togglePanel: () => void
+  clearConversation: () => void
+}
+
+export function useChatPanel(): ChatPanelState {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<ChatTurn[]>([])
-  const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const open = useCallback(() => {
-    setIsOpen(true)
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }, [])
+  const sendMessage = useCallback(async (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || isLoading) return
 
-  const openWithPrompt = useCallback((prompt: string) => {
-    setIsOpen(true)
-    setInput(prompt)
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }, [])
-
-  const close = useCallback(() => setIsOpen(false), [])
-
-  const clear = useCallback(() => {
-    setMessages([])
-    setInput('')
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }, [])
-
-  const send = useCallback(async () => {
-    const text = input.trim()
-    if (!text || isLoading) return
-
-    const userTurn: ChatTurn = { role: 'user', content: text }
-    const historyBeforeSend = messages
-    const optimisticMessages = [...messages, userTurn]
-
-    setMessages(optimisticMessages)
-    setInput('')
+    const userMessage: ChatMessage = { role: 'user', content: trimmed }
+    const nextHistory = [...messages, userMessage]
+    setMessages(nextHistory)
     setIsLoading(true)
 
     try {
-      const { reply } = await sendChatMessage(text, historyBeforeSend)
-      setMessages([...optimisticMessages, { role: 'assistant', content: reply }])
-    } catch {
+      const { reply } = await postChatMessage(trimmed, messages)
+      setMessages([...nextHistory, { role: 'assistant', content: reply }])
+    } catch (err) {
+      const errorText = err instanceof Error ? err.message : 'Failed to get a response'
       setMessages([
-        ...optimisticMessages,
-        { role: 'assistant', content: 'Sorry, I ran into an error. Please try again.' },
+        ...nextHistory,
+        { role: 'assistant', content: `Error: ${errorText}` },
       ])
     } finally {
       setIsLoading(false)
-      setTimeout(() => inputRef.current?.focus(), 50)
     }
-  }, [input, isLoading, messages])
+  }, [messages, isLoading])
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        send()
-      }
-    },
-    [send],
-  )
+  const togglePanel = useCallback(() => {
+    setIsOpen(v => !v)
+  }, [])
 
-  return { isOpen, open, openWithPrompt, close, clear, messages, input, setInput, send, isLoading, inputRef, handleKeyDown }
+  const clearConversation = useCallback(() => {
+    setMessages([])
+  }, [])
+
+  return { messages, isOpen, isLoading, sendMessage, togglePanel, clearConversation }
 }

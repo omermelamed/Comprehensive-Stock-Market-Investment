@@ -1,54 +1,82 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
-  listOptions,
+  getOptionsPositions,
+  createOptionsPosition,
   updateOptionsStatus,
-  deleteOptionsTransaction,
+  deleteOptionsPosition,
   getOptionsStrategy,
-} from '../../api/options'
-import type { OptionsListResponse, OptionsStrategyResponse } from '../../types'
+  type OptionsPosition,
+  type CreateOptionsPositionRequest,
+  type OptionsStrategy,
+} from '@/api/options'
 
-export function useOptions() {
-  const [data, setData] = useState<OptionsListResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(() => {
-    setLoading(true)
-    listOptions()
-      .then(setData)
-      .catch(e => setError(e.message ?? 'Failed to load options'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  const closePosition = useCallback(async (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => {
-    await updateOptionsStatus(id, status)
-    load()
-  }, [load])
-
-  const remove = useCallback(async (id: string) => {
-    await deleteOptionsTransaction(id)
-    load()
-  }, [load])
-
-  return { data, loading, error, reload: load, closePosition, remove }
+interface OptionsState {
+  positions: OptionsPosition[]
+  isLoading: boolean
+  optionsEnabled: boolean
+  error: string | null
+  createPosition: (data: CreateOptionsPositionRequest) => Promise<OptionsPosition>
+  updateStatus: (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => Promise<void>
+  deletePosition: (id: string) => Promise<void>
+  getStrategy: (symbol: string) => Promise<OptionsStrategy>
 }
 
-export function useOptionsStrategy(symbol: string | null) {
-  const [strategy, setStrategy] = useState<OptionsStrategyResponse | null>(null)
-  const [loading, setLoading] = useState(false)
+export function useOptions(): OptionsState {
+  const [positions, setPositions] = useState<OptionsPosition[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [optionsEnabled, setOptionsEnabled] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetch = useCallback(() => {
-    if (!symbol) return
-    setLoading(true)
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
     setError(null)
-    getOptionsStrategy(symbol)
-      .then(setStrategy)
-      .catch(e => setError(e.message ?? 'Failed to fetch strategy'))
-      .finally(() => setLoading(false))
-  }, [symbol])
 
-  return { strategy, loading, error, fetch }
+    getOptionsPositions()
+      .then(res => {
+        if (cancelled) return
+        setPositions(res.positions)
+        setOptionsEnabled(res.optionsTrackEnabled)
+      })
+      .catch(err => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Failed to load options')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [])
+
+  const createPosition = useCallback(async (data: CreateOptionsPositionRequest) => {
+    const position = await createOptionsPosition(data)
+    setPositions(prev => [position, ...prev])
+    return position
+  }, [])
+
+  const updateStatus = useCallback(async (id: string, status: 'EXPIRED' | 'EXERCISED' | 'CLOSED') => {
+    const updated = await updateOptionsStatus(id, status)
+    setPositions(prev => prev.map(p => p.id === id ? updated : p))
+  }, [])
+
+  const deletePosition = useCallback(async (id: string) => {
+    await deleteOptionsPosition(id)
+    setPositions(prev => prev.filter(p => p.id !== id))
+  }, [])
+
+  const getStrategy = useCallback(async (symbol: string) => {
+    return getOptionsStrategy(symbol)
+  }, [])
+
+  return {
+    positions,
+    isLoading,
+    optionsEnabled,
+    error,
+    createPosition,
+    updateStatus,
+    deletePosition,
+    getStrategy,
+  }
 }
