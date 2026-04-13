@@ -33,4 +33,21 @@ class AlertController(private val alertService: AlertService) {
         alertService.deleteAlert(id)
         return ResponseEntity.noContent().build()
     }
+
+    @GetMapping("/unread-count")
+    fun unreadCount(): ResponseEntity<Map<String, Int>> {
+        return ResponseEntity.ok(mapOf("count" to alertService.countUnread()))
+    }
+
+    @PostMapping("/{id}/dismiss")
+    fun dismiss(@PathVariable id: UUID): ResponseEntity<Void> {
+        alertService.dismissAlert(id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/{id}/re-enable")
+    fun reEnable(@PathVariable id: UUID): ResponseEntity<AlertResponse> {
+        alertService.reEnableAlert(id)
+        return ResponseEntity.ok(alertService.listAlerts().first { it.id == id })
+    }
 }

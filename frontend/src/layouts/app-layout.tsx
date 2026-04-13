@@ -12,11 +12,13 @@ import {
   BarChart2,
   ShieldAlert,
   Layers,
+  Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import { useChatPanel } from '@/features/chat/useChatPanel'
+import { useAlertBadge } from '@/features/alerts/useAlertBadge'
 
 interface AppLayoutProps {
   tracksEnabled?: string[]
@@ -31,12 +33,14 @@ const STATIC_NAV_ITEMS = [
   { to: '/watchlist', label: 'Watchlist', icon: Star, end: false },
   { to: '/analytics', label: 'Analytics', icon: BarChart2, end: false },
   { to: '/risk', label: 'Risk', icon: ShieldAlert, end: false },
+  { to: '/alerts', label: 'Alerts', icon: Bell, end: false },
   { to: '/profile', label: 'Profile', icon: User, end: false },
 ]
 
 export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
   const { theme, toggle } = useTheme()
   const chatPanel = useChatPanel()
+  const { count: alertBadgeCount } = useAlertBadge()
 
   const optionsEnabled = tracksEnabled.includes('OPTIONS')
 
@@ -77,7 +81,12 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
                 }
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {to === '/alerts' && alertBadgeCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
+                    {alertBadgeCount > 99 ? '99+' : alertBadgeCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

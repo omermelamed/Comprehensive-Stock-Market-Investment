@@ -10,7 +10,9 @@ data class AlertResponse(
     val condition: String,
     val thresholdPrice: BigDecimal,
     val note: String?,
+    val source: String,
     val isActive: Boolean,
     val triggeredAt: Instant?,
+    val dismissedAt: Instant?,
     val createdAt: Instant
 )

@@ -45,6 +45,18 @@ class AlertService(
         alertRepository.delete(id)
     }
 
+    fun dismissAlert(id: UUID) {
+        alertRepository.dismiss(id)
+    }
+
+    fun reEnableAlert(id: UUID) {
+        alertRepository.reEnable(id)
+    }
+
+    fun countUnread(): Int {
+        return alertRepository.countUnread()
+    }
+
     fun checkAlerts() {
         val active = alertRepository.findActive()
         for (alert in active) {

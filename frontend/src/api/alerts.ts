@@ -16,3 +16,12 @@ export const createAlert = (
 
 export const deleteAlert = (id: string) =>
   client.delete(`/api/alerts/${id}`)
+
+export const getUnreadCount = () =>
+  client.get<{ count: number }>('/api/alerts/unread-count').then(r => r.data)
+
+export const dismissAlert = (id: string) =>
+  client.post(`/api/alerts/${id}/dismiss`)
+
+export const reEnableAlert = (id: string) =>
+  client.post<Alert>(`/api/alerts/${id}/re-enable`).then(r => r.data)

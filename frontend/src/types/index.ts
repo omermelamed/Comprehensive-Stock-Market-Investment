@@ -117,8 +117,10 @@ export interface Alert {
   condition: 'ABOVE' | 'BELOW'
   thresholdPrice: number
   note: string | null
+  source: string
   isActive: boolean
   triggeredAt: string | null
+  dismissedAt: string | null
   createdAt: string
 }
 
