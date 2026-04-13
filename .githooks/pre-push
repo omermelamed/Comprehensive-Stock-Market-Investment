@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# pre-push hook — regenerate dep graphs for any changed source files.
-#
-# Git passes pushed refs on stdin as:
-#   <local-ref> <local-sha1> <remote-ref> <remote-sha1>
-# We diff local-sha1..remote-sha1 to find exactly what's being pushed.
+# pre-push hook — safety net: regenerate dep graphs if they're stale.
+# Normally graphs are kept up to date by the pre-commit hook.
+# This hook catches the case where someone bypassed pre-commit (--no-verify).
 
 set -euo pipefail
 
@@ -13,7 +11,6 @@ REGEN="$REPO_ROOT/scripts/regen-dep-graphs.sh"
 CHANGED_FILES=()
 
 while read local_ref local_sha remote_ref remote_sha; do
-  # If remote doesn't have this branch yet (new branch), diff against empty tree
   EMPTY_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
   BASE="${remote_sha:-$EMPTY_TREE}"
   if [[ "$BASE" == "0000000000000000000000000000000000000000" ]]; then
@@ -29,20 +26,17 @@ if [[ ${#CHANGED_FILES[@]} -eq 0 ]]; then
   exit 0
 fi
 
-# Run regen only if source files changed
 "$REGEN" "${CHANGED_FILES[@]}"
 
-# If graphs were updated and staged, amend them into the push via a new commit
 GRAPH_CHANGED=$(git -C "$REPO_ROOT" diff --cached --name-only -- \
   .claude/context/frontend-dep-graph.json \
   .claude/context/backend-dep-graph.json 2>/dev/null || true)
 
 if [[ -n "$GRAPH_CHANGED" ]]; then
-  echo "[dep-graph] Committing updated graphs before push..."
+  echo "[dep-graph] Graphs were stale — committing update before push..."
   git -C "$REPO_ROOT" commit -m "chore: update dependency graphs [pre-push]" --no-verify
-
-  # Re-exec so git picks up the new HEAD and includes the graph commit in this push
-  exec "$0" "$@"
+  echo "[dep-graph] Run 'git push' once more to include the graph commit."
+  exit 1
 fi
 
 exit 0

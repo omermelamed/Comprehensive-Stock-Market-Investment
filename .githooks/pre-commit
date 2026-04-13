@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# pre-commit hook — regenerate dep graphs for any staged source files.
+# Graphs are added to the current commit so they always travel with code changes.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REGEN="$REPO_ROOT/scripts/regen-dep-graphs.sh"
+
+# Get list of staged files
+CHANGED_FILES=()
+while IFS= read -r file; do
+  CHANGED_FILES+=("$file")
+done < <(git -C "$REPO_ROOT" diff --cached --name-only 2>/dev/null || true)
+
+if [[ ${#CHANGED_FILES[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+"$REGEN" "${CHANGED_FILES[@]}"
+
+exit 0
