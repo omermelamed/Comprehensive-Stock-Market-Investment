@@ -38,3 +38,8 @@ When making tradeoffs:
 - choose clarity over extensibility theater
 - choose explicitness over meta-frameworks
 - choose a vertical slice that works over ambitious architecture that is not yet needed
+
+## Reference documents
+
+- Full PRD v1.4: `.claude/context/prd-v1.4.md`
+- Build phases (completed + remaining): `.claude/context/phasing-and-ai.md`

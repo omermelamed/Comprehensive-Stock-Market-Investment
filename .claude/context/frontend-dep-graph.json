@@ -1,0 +1,322 @@
+{
+  "App.tsx": [
+    "api/profile.ts",
+    "contexts/currency-context.tsx",
+    "layouts/app-layout.tsx",
+    "pages/AllocationPage.tsx",
+    "pages/DashboardPage.tsx",
+    "pages/MonthlyFlowPage.tsx",
+    "pages/OnboardingPage.tsx",
+    "pages/ProfilePage.tsx",
+    "pages/RecommendationsPage.tsx",
+    "pages/TransactionFormPage.tsx",
+    "pages/WatchlistPage.tsx",
+    "types/index.ts"
+  ],
+  "api/alerts.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/allocations.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/holdings.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/monthly-flow.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/portfolio.ts": [
+    "api/client.ts"
+  ],
+  "api/profile.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/recommendations.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/symbol-aliases.ts": [
+    "api/client.ts"
+  ],
+  "api/transactions.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "api/watchlist.ts": [
+    "api/client.ts",
+    "types/index.ts"
+  ],
+  "components/onboarding/profile-setup.tsx": [
+    "components/onboarding/step-budget.tsx",
+    "components/onboarding/step-currency-goal.tsx",
+    "components/onboarding/step-horizon.tsx",
+    "components/onboarding/step-identity.tsx",
+    "components/onboarding/step-tracks.tsx",
+    "components/onboarding/step-whatsapp.tsx",
+    "components/shared/step-dots.tsx",
+    "features/onboarding/useOnboarding.ts",
+    "lib/motion.ts"
+  ],
+  "components/onboarding/step-budget.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "data/onboarding.ts",
+    "lib/motion.ts"
+  ],
+  "components/onboarding/step-currency-goal.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/input.tsx",
+    "data/onboarding.ts",
+    "lib/utils.ts"
+  ],
+  "components/onboarding/step-footer.tsx": [
+    "components/ui/button.tsx"
+  ],
+  "components/onboarding/step-horizon.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/progress.tsx",
+    "data/onboarding.ts",
+    "lib/utils.ts"
+  ],
+  "components/onboarding/step-identity.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/input.tsx"
+  ],
+  "components/onboarding/step-review.tsx": [
+    "components/shared/section-header.tsx",
+    "components/ui/button.tsx",
+    "features/onboarding/useOnboarding.ts"
+  ],
+  "components/onboarding/step-tracks.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "components/shared/selectable-tile.tsx",
+    "data/onboarding.ts"
+  ],
+  "components/onboarding/step-whatsapp.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/input.tsx"
+  ],
+  "components/shared/empty-state.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/shared/section-header.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/shared/selectable-tile.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/badge.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/button.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/card.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/input.tsx": [
+    "lib/utils.ts"
+  ],
+  "components/ui/progress.tsx": [
+    "lib/motion.ts",
+    "lib/utils.ts"
+  ],
+  "features/dashboard/HoldingsTable.tsx": [
+    "api/portfolio.ts",
+    "components/ui/badge.tsx",
+    "components/ui/card.tsx",
+    "contexts/currency-context.tsx",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/dashboard/PortfolioHistoryChart.tsx": [
+    "api/portfolio.ts",
+    "components/ui/button.tsx",
+    "components/ui/card.tsx"
+  ],
+  "features/dashboard/PortfolioSummaryCard.tsx": [
+    "api/portfolio.ts",
+    "components/ui/badge.tsx",
+    "components/ui/button.tsx",
+    "components/ui/card.tsx",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/dashboard/useDashboard.ts": [
+    "api/portfolio.ts"
+  ],
+  "features/monthly-flow/AllocationSummaryFooter.tsx": [
+    "contexts/currency-context.tsx",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/monthly-flow/ConfirmInvestmentDialog.tsx": [
+    "contexts/currency-context.tsx",
+    "lib/currency.ts",
+    "types/index.ts"
+  ],
+  "features/monthly-flow/MetricBadge.tsx": [
+    "lib/utils.ts"
+  ],
+  "features/monthly-flow/MonthlyBudgetInput.tsx": [
+    "contexts/currency-context.tsx",
+    "lib/currency.ts"
+  ],
+  "features/monthly-flow/PositionAllocationCard.tsx": [
+    "contexts/currency-context.tsx",
+    "features/monthly-flow/MetricBadge.tsx",
+    "lib/currency.ts",
+    "lib/utils.ts",
+    "types/index.ts"
+  ],
+  "features/monthly-flow/useMonthlyFlow.ts": [
+    "api/monthly-flow.ts",
+    "types/index.ts"
+  ],
+  "features/onboarding/Step2Questionnaire.tsx": [
+    "components/shared/section-header.tsx",
+    "components/ui/button.tsx",
+    "components/ui/progress.tsx",
+    "features/onboarding/useOnboarding.ts",
+    "lib/utils.ts"
+  ],
+  "features/onboarding/Step3TargetAllocation.tsx": [
+    "components/shared/empty-state.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/button.tsx",
+    "components/ui/input.tsx",
+    "components/ui/progress.tsx",
+    "features/onboarding/useOnboarding.ts",
+    "lib/utils.ts"
+  ],
+  "features/onboarding/Step4InitialHoldings.tsx": [
+    "components/shared/empty-state.tsx",
+    "components/shared/section-header.tsx",
+    "components/ui/button.tsx",
+    "components/ui/input.tsx",
+    "data/onboarding.ts",
+    "features/onboarding/useOnboarding.ts"
+  ],
+  "features/onboarding/useOnboarding.ts": [
+    "api/allocations.ts",
+    "api/holdings.ts",
+    "api/profile.ts",
+    "api/transactions.ts",
+    "types/index.ts"
+  ],
+  "features/recommendations/RecommendationCard.tsx": [
+    "lib/currency.ts",
+    "lib/utils.ts",
+    "types/index.ts"
+  ],
+  "features/transactions/SymbolAutocomplete.tsx": [
+    "types/index.ts"
+  ],
+  "features/transactions/TransactionList.tsx": [
+    "api/transactions.ts",
+    "components/ui/card.tsx",
+    "types/index.ts"
+  ],
+  "features/transactions/useTransactionForm.ts": [
+    "api/transactions.ts"
+  ],
+  "features/watchlist/WatchlistCard.tsx": [
+    "api/watchlist.ts",
+    "lib/utils.ts",
+    "types/index.ts"
+  ],
+  "layouts/app-layout.tsx": [
+    "hooks/useTheme.ts",
+    "lib/utils.ts"
+  ],
+  "layouts/centered-page.tsx": [
+    "lib/utils.ts"
+  ],
+  "layouts/onboarding-layout.tsx": [
+    "components/shared/AllocaLogo.tsx",
+    "components/ui/card.tsx",
+    "hooks/useTheme.ts",
+    "layouts/centered-page.tsx"
+  ],
+  "pages/AllocationPage.tsx": [
+    "api/allocations.ts",
+    "api/symbol-aliases.ts",
+    "components/ui/card.tsx",
+    "data/onboarding.ts",
+    "lib/utils.ts",
+    "types/index.ts"
+  ],
+  "pages/DashboardPage.tsx": [
+    "features/dashboard/HoldingsTable.tsx",
+    "features/dashboard/PortfolioHistoryChart.tsx",
+    "features/dashboard/PortfolioSummaryCard.tsx",
+    "features/dashboard/useDashboard.ts",
+    "lib/motion.ts"
+  ],
+  "pages/MonthlyFlowPage.tsx": [
+    "contexts/currency-context.tsx",
+    "features/monthly-flow/AllocationSummaryFooter.tsx",
+    "features/monthly-flow/ConfirmInvestmentDialog.tsx",
+    "features/monthly-flow/MonthlyBudgetInput.tsx",
+    "features/monthly-flow/PositionAllocationCard.tsx",
+    "features/monthly-flow/useMonthlyFlow.ts",
+    "lib/currency.ts"
+  ],
+  "pages/OnboardingPage.tsx": [
+    "components/onboarding/profile-setup.tsx",
+    "components/onboarding/step-review.tsx",
+    "components/shared/step-dots.tsx",
+    "features/onboarding/Step2Questionnaire.tsx",
+    "features/onboarding/Step3TargetAllocation.tsx",
+    "features/onboarding/Step4InitialHoldings.tsx",
+    "features/onboarding/useOnboarding.ts",
+    "layouts/onboarding-layout.tsx",
+    "lib/motion.ts",
+    "types/index.ts"
+  ],
+  "pages/ProfilePage.tsx": [
+    "api/profile.ts",
+    "components/ui/badge.tsx",
+    "components/ui/card.tsx",
+    "contexts/currency-context.tsx",
+    "data/onboarding.ts",
+    "lib/currency.ts",
+    "types/index.ts"
+  ],
+  "pages/RecommendationsPage.tsx": [
+    "api/recommendations.ts",
+    "contexts/currency-context.tsx",
+    "data/onboarding.ts",
+    "features/recommendations/RecommendationCard.tsx",
+    "lib/currency.ts",
+    "types/index.ts"
+  ],
+  "pages/TransactionFormPage.tsx": [
+    "api/allocations.ts",
+    "components/ui/card.tsx",
+    "data/onboarding.ts",
+    "features/transactions/SymbolAutocomplete.tsx",
+    "features/transactions/TransactionList.tsx",
+    "features/transactions/useTransactionForm.ts",
+    "types/index.ts"
+  ],
+  "pages/WatchlistPage.tsx": [
+    "api/alerts.ts",
+    "api/portfolio.ts",
+    "api/watchlist.ts",
+    "contexts/chat-context.tsx",
+    "data/onboarding.ts",
+    "features/watchlist/WatchlistCard.tsx",
+    "types/index.ts"
+  ]
+}
