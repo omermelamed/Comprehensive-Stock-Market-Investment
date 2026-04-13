@@ -71,6 +71,11 @@
     "application.WatchlistAnalysisService",
     "application.WatchlistService"
   ],
+  "api.WhatsAppWebhookController": [
+    "application.UserProfileService",
+    "application.WhatsAppBotService",
+    "infrastructure.WhatsAppNotificationService"
+  ],
   "api.ChatController": [
     "api.dto.ChatRequest",
     "api.dto.ChatResponse",
@@ -124,10 +129,33 @@
     "infrastructure.SnapshotRepository",
     "infrastructure.TransactionRepository"
   ],
+  "application.WhatsAppReadHandlers": [
+    "api.dto.AddWatchlistItemRequest",
+    "api.dto.ChatRequest",
+    "domain.WhatsAppMessageFormatter",
+    "domain.WhatsAppMessageFormatter.DriftEntry"
+  ],
   "application.MarketDataService": [
     "domain.MarketDataUnavailableException",
     "domain.PriceQuote",
     "infrastructure.market.MarketDataProvider"
+  ],
+  "application.WhatsAppIntentClassifier": [
+    "domain.ClassifiedIntent",
+    "infrastructure.WhatsAppConversationRecord",
+    "infrastructure.ai.ClaudeClient",
+    "infrastructure.ai.ClaudeMessage"
+  ],
+  "application.WhatsAppConfirmationService": [
+    "api.dto.AddWatchlistItemRequest",
+    "api.dto.CreateAlertRequest",
+    "api.dto.MonthlyFlowConfirmRequest",
+    "api.dto.MonthlyFlowPreviewRequest",
+    "api.dto.TransactionRequest",
+    "domain.ClassifiedIntent",
+    "domain.WhatsAppMessageFormatter",
+    "infrastructure.PendingConfirmation",
+    "infrastructure.WhatsAppPendingConfirmationRepository"
   ],
   "application.WatchlistService": [
     "api.dto.AddWatchlistItemRequest",
@@ -201,6 +229,14 @@
   ],
   "application.BenchmarkService": [
     "infrastructure.market.YahooFinanceAdapter"
+  ],
+  "application.WhatsAppBotService": [
+    "domain.ClassifiedIntent",
+    "domain.WhatsAppMessageFormatter",
+    "infrastructure.WhatsAppConversationRepository",
+    "infrastructure.WhatsAppNotificationService",
+    "infrastructure.WhatsAppPendingConfirmationRepository",
+    "infrastructure.WhatsAppSessionRepository"
   ],
   "application.TransactionService": [
     "api.dto.TransactionRequest",

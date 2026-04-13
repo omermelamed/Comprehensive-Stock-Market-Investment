@@ -32,12 +32,12 @@ class UserProfileRepository(
                 id, display_name, preferred_currency, risk_level,
                 time_horizon_years, monthly_investment_min, monthly_investment_max,
                 investment_goal, tracks_enabled, questionnaire_answers, theme,
-                whatsapp_number, onboarding_completed, created_at, last_updated
+                whatsapp_number, whatsapp_enabled, onboarding_completed, created_at, last_updated
             ) VALUES (
                 ?::uuid, ?, ?, ?::risk_level_enum,
                 ?, ?, ?,
                 ?, ?::jsonb, ?::jsonb, ?,
-                ?, false, NOW(), NOW()
+                ?, ?, false, NOW(), NOW()
             )
             ON CONFLICT ((TRUE)) DO UPDATE SET
                 display_name = EXCLUDED.display_name,
@@ -51,6 +51,7 @@ class UserProfileRepository(
                 questionnaire_answers = EXCLUDED.questionnaire_answers,
                 theme = EXCLUDED.theme,
                 whatsapp_number = EXCLUDED.whatsapp_number,
+                whatsapp_enabled = EXCLUDED.whatsapp_enabled,
                 last_updated = NOW()
             RETURNING *
             """.trimIndent(),
@@ -65,7 +66,8 @@ class UserProfileRepository(
             tracksJson,
             answersJson,
             request.theme,
-            request.whatsappNumber
+            request.whatsappNumber,
+            request.whatsappEnabled
         ) ?: throw IllegalStateException("Upsert into user_profile returned no record")
 
         return record.toResponse()
@@ -88,7 +90,8 @@ class UserProfileRepository(
                 tracks_enabled = ?::jsonb,
                 questionnaire_answers = ?::jsonb,
                 theme = ?,
-                whatsapp_number = ?
+                whatsapp_number = ?,
+                whatsapp_enabled = ?
             RETURNING *
             """.trimIndent(),
             request.displayName,
@@ -101,7 +104,8 @@ class UserProfileRepository(
             tracksJson,
             answersJson,
             request.theme,
-            request.whatsappNumber
+            request.whatsappNumber,
+            request.whatsappEnabled
         ) ?: throw NoSuchElementException("No user profile found to update")
 
         return record.toResponse()
@@ -136,7 +140,8 @@ class UserProfileRepository(
             aiInferredScore = get("ai_inferred_score", BigDecimal::class.java),
             theme = get("theme", String::class.java),
             onboardingCompleted = get("onboarding_completed", Boolean::class.java),
-            whatsappNumber = get("whatsapp_number", String::class.java),
+            whatsappNumber  = get("whatsapp_number", String::class.java),
+            whatsappEnabled = get("whatsapp_enabled", Boolean::class.java) ?: false,
             createdAt = get("created_at", java.sql.Timestamp::class.java).toInstant(),
             lastUpdated = get("last_updated", java.sql.Timestamp::class.java).toInstant()
         )

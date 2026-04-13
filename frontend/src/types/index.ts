@@ -12,6 +12,7 @@ export interface UserProfile {
   theme: string
   onboardingCompleted: boolean
   whatsappNumber?: string
+  whatsappEnabled?: boolean
 }
 
 export interface TargetAllocation {

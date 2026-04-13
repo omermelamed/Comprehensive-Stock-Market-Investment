@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getProfile, updateProfile } from '@/api/profile'
+import { getProfile, updateProfile, sendWhatsAppTest } from '@/api/profile'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { UserProfile } from '@/types'
@@ -37,6 +37,12 @@ export default function ProfilePage() {
   const [budgetMax, setBudgetMax]       = useState(0)
   const [tracks, setTracks]             = useState<string[]>([])
 
+  // WhatsApp
+  const [whatsappNumber, setWhatsappNumber]   = useState('')
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false)
+  const [testSending, setTestSending]         = useState(false)
+  const [testResult, setTestResult]           = useState<string | null>(null)
+
   useEffect(() => {
     getProfile()
       .then(p => {
@@ -48,6 +54,8 @@ export default function ProfilePage() {
         setBudgetMin(p.monthlyInvestmentMin)
         setBudgetMax(p.monthlyInvestmentMax)
         setTracks(p.tracksEnabled)
+        setWhatsappNumber(p.whatsappNumber ?? '')
+        setWhatsappEnabled(p.whatsappEnabled ?? false)
       })
       .catch(() => setError('Failed to load profile'))
       .finally(() => setLoading(false))
@@ -75,6 +83,8 @@ export default function ProfilePage() {
         tracksEnabled: tracks,
         questionnaireAnswers: profile?.questionnaireAnswers ?? {},
         theme: profile?.theme ?? 'DARK',
+        whatsappNumber: whatsappNumber || null,
+        whatsappEnabled,
       })
       setProfile(updated)
       setSaved(true)
@@ -83,6 +93,19 @@ export default function ProfilePage() {
       setError('Failed to save profile')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSendTestWhatsApp() {
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const result = await sendWhatsAppTest()
+      setTestResult(`Test message sent to ${result.to}`)
+    } catch {
+      setTestResult('Failed to send test message. Check your number and Twilio config.')
+    } finally {
+      setTestSending(false)
     }
   }
 
@@ -244,6 +267,77 @@ export default function ProfilePage() {
                   {saving ? 'Saving…' : 'Save Changes'}
                 </button>
               </form>
+            </CardContent>
+          </Card>
+
+          {/* WhatsApp section */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">WhatsApp Bot</h2>
+                {whatsappEnabled && whatsappNumber ? (
+                  <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">Connected</span>
+                ) : (
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">Not configured</span>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass}>Phone Number (E.164 format, e.g. +972501234567)</label>
+                  <input
+                    type="tel"
+                    className={inputClass}
+                    value={whatsappNumber}
+                    onChange={e => setWhatsappNumber(e.target.value)}
+                    placeholder="+15551234567"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={whatsappEnabled}
+                    onClick={() => setWhatsappEnabled(prev => !prev)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                      whatsappEnabled ? 'bg-primary' : 'bg-muted'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                        whatsappEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-foreground">
+                    {whatsappEnabled ? 'Bot enabled' : 'Bot disabled'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Save your profile first to persist the number and enabled state, then use the test button to verify.
+                </p>
+
+                <button
+                  type="button"
+                  disabled={testSending || !whatsappNumber}
+                  onClick={() => void handleSendTestWhatsApp()}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {testSending ? 'Sending…' : 'Send Test Message'}
+                </button>
+
+                {testResult && (
+                  <div className={`rounded-lg border px-4 py-3 text-sm ${
+                    testResult.startsWith('Failed')
+                      ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                      : 'border-success/30 bg-success/10 text-success'
+                  }`}>
+                    {testResult}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

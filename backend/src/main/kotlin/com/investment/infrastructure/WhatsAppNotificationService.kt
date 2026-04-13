@@ -37,6 +37,29 @@ class WhatsAppNotificationService(
      * The "whatsapp:" prefix is added automatically.
      * If Twilio is not configured or [toWhatsAppNumber] is blank, the call is a no-op.
      */
+    /**
+     * Sends an arbitrary message body to [toWhatsAppNumber].
+     * The number must be in E.164 format, e.g. "+972501234567".
+     * The "whatsapp:" prefix is added automatically if not present.
+     * If Twilio is not configured or the number is blank, the call is a no-op.
+     */
+    fun sendMessage(toWhatsAppNumber: String?, body: String) {
+        if (!twilioReady || toWhatsAppNumber.isNullOrBlank()) return
+
+        val toNumber = if (toWhatsAppNumber.startsWith("whatsapp:")) toWhatsAppNumber
+                       else "whatsapp:$toWhatsAppNumber"
+        try {
+            Message.creator(
+                PhoneNumber(toNumber),
+                PhoneNumber(fromNumber),
+                body
+            ).create()
+            log.info("WhatsApp message sent to {}", toNumber)
+        } catch (e: Exception) {
+            log.warn("WhatsApp sendMessage failed: {}", e.message)
+        }
+    }
+
     fun sendInvestmentSummary(
         toWhatsAppNumber: String?,
         totalInvested: BigDecimal,

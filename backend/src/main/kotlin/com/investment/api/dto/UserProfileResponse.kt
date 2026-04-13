@@ -19,6 +19,7 @@ data class UserProfileResponse(
     val theme: String,
     val onboardingCompleted: Boolean,
     val whatsappNumber: String?,
+    val whatsappEnabled: Boolean = false,
     val createdAt: Instant,
     val lastUpdated: Instant
 )
