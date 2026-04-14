@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/shared/section-header'
+import { ASSET_TRACKS } from '@/data/onboarding'
 import type { OnboardingData } from '@/features/onboarding/useOnboarding'
 
 interface StepReviewProps {
@@ -13,12 +14,22 @@ interface StepReviewProps {
 }
 
 export function StepReview({ data, onSubmit, onBack, submitting, error }: StepReviewProps) {
+  const trackLabels = (data.tracksEnabled ?? [])
+    .map(v => ASSET_TRACKS.find(t => t.value === v)?.label ?? v)
+    .join(', ')
+
+  const whatsappStatus = data.whatsappNumber
+    ? (data.whatsappEnabled ? `${data.whatsappNumber} (enabled)` : `${data.whatsappNumber} (disabled)`)
+    : 'Not configured'
+
   const rows = [
     { icon: '👤', label: data.displayName ?? '—' },
     { icon: '€',  label: data.preferredCurrency ?? '—' },
     ...(data.timeHorizonYears ? [{ icon: '🗓', label: `${data.timeHorizonYears} yrs` }] : []),
     ...(data.monthlyInvestmentMin ? [{ icon: '💰', label: `$${data.monthlyInvestmentMin.toLocaleString()}/mo` }] : []),
-    ...(data.tracksEnabled ? [{ icon: '📊', label: `${data.tracksEnabled.length} tracks` }] : []),
+    ...(trackLabels ? [{ icon: '📊', label: trackLabels }] : []),
+    ...(data.timezone ? [{ icon: '🌐', label: data.timezone.replace(/_/g, ' ') }] : []),
+    { icon: '💬', label: whatsappStatus },
   ]
 
   return (

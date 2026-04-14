@@ -125,3 +125,11 @@ for f in "${UPDATED[@]}"; do
 done
 
 echo "[dep-graph] Done."
+
+# ── Obsidian vault ────────────────────────────────────────────────────────────
+
+if command -v python3 &>/dev/null; then
+  python3 "$SCRIPTS_DIR/gen-obsidian-vault.py"
+else
+  echo "[dep-graph] WARNING: python3 not found — skipping Obsidian vault update." >&2
+fi

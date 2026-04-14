@@ -117,6 +117,14 @@ class TransactionRepository(
         return inserted
     }
 
+    fun countByType(): Map<String, Int> {
+        return dsl.fetch(
+            "SELECT type, COUNT(*) AS cnt FROM transactions GROUP BY type"
+        ).associate { record ->
+            record.get("type", String::class.java) to record.get("cnt", Long::class.java).toInt()
+        }
+    }
+
     fun findEarliestTransactionDate(): LocalDate? {
         val record = dsl.fetchOne("SELECT MIN(executed_at::date) AS earliest_date FROM transactions")
         val date = record?.get("earliest_date", Date::class.java)

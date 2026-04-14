@@ -64,6 +64,9 @@
   "api/risk.ts": [
     "api/client.ts"
   ],
+  "api/riskProfile.ts": [
+    "api/client.ts"
+  ],
   "api/symbol-aliases.ts": [
     "api/client.ts"
   ],
@@ -83,6 +86,7 @@
     "components/onboarding/step-currency-goal.tsx",
     "components/onboarding/step-horizon.tsx",
     "components/onboarding/step-identity.tsx",
+    "components/onboarding/step-timezone.tsx",
     "components/onboarding/step-tracks.tsx",
     "components/onboarding/step-whatsapp.tsx",
     "components/shared/step-dots.tsx",
@@ -120,7 +124,12 @@
   "components/onboarding/step-review.tsx": [
     "components/shared/section-header.tsx",
     "components/ui/button.tsx",
+    "data/onboarding.ts",
     "features/onboarding/useOnboarding.ts"
+  ],
+  "components/onboarding/step-timezone.tsx": [
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx"
   ],
   "components/onboarding/step-tracks.tsx": [
     "components/onboarding/step-footer.tsx",
@@ -283,6 +292,17 @@
     "lib/utils.ts",
     "types/index.ts"
   ],
+  "features/risk/RiskProfileCard.tsx": [
+    "api/riskProfile.ts",
+    "lib/utils.ts"
+  ],
+  "features/risk/RiskScoreHistory.tsx": [
+    "api/riskProfile.ts",
+    "lib/utils.ts"
+  ],
+  "features/risk/useRiskProfile.ts": [
+    "api/riskProfile.ts"
+  ],
   "features/transactions/SymbolAutocomplete.tsx": [
     "types/index.ts"
   ],
@@ -417,6 +437,10 @@
   ],
   "pages/RiskPage.tsx": [
     "api/risk.ts",
+    "features/risk/RiskProfileCard.tsx",
+    "features/risk/RiskReasoningPanel.tsx",
+    "features/risk/RiskScoreHistory.tsx",
+    "features/risk/useRiskProfile.ts",
     "lib/motion.ts",
     "lib/utils.ts"
   ],

@@ -6,6 +6,9 @@ import com.investment.domain.TransactionValidator
 import com.investment.domain.ValidationResult
 import com.investment.infrastructure.HoldingsProjectionRepository
 import com.investment.infrastructure.TransactionRepository
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -13,8 +16,10 @@ import java.util.UUID
 @Service
 class TransactionService(
     private val transactionRepository: TransactionRepository,
-    private val holdingsProjectionRepository: HoldingsProjectionRepository
+    private val holdingsProjectionRepository: HoldingsProjectionRepository,
+    @Lazy @Autowired private val riskProfileService: RiskProfileService
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     fun getTransactions(page: Int, size: Int): Map<String, Any> {
         val content = transactionRepository.findAll(page, size)
@@ -39,7 +44,20 @@ class TransactionService(
             is ValidationResult.Valid -> { /* proceed */ }
         }
 
-        return transactionRepository.insert(request)
+        val saved = transactionRepository.insert(request)
+
+        val totalCount = transactionRepository.count()
+        if (totalCount % 10L == 0L) {
+            Thread {
+                try {
+                    riskProfileService.evaluate("AUTO")
+                } catch (e: Exception) {
+                    log.warn("Auto risk evaluation failed: {}", e.message)
+                }
+            }.also { it.isDaemon = true }.start()
+        }
+
+        return saved
     }
 
     @Transactional

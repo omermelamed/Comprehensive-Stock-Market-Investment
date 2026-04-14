@@ -17,5 +17,8 @@ frontend/.vite/
 .env.local
 .env.production
 
+# Generated
+obsidian-vault/
+
 # OS
 .DS_Store

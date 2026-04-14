@@ -38,6 +38,9 @@ export default function ProfilePage() {
   const [budgetMax, setBudgetMax]       = useState(0)
   const [tracks, setTracks]             = useState<string[]>([])
 
+  // Timezone
+  const [timezone, setTimezone] = useState('UTC')
+
   // WhatsApp
   const [whatsappNumber, setWhatsappNumber]   = useState('')
   const [whatsappEnabled, setWhatsappEnabled] = useState(false)
@@ -55,6 +58,7 @@ export default function ProfilePage() {
         setBudgetMin(p.monthlyInvestmentMin)
         setBudgetMax(p.monthlyInvestmentMax)
         setTracks(p.tracksEnabled)
+        setTimezone(p.timezone ?? 'UTC')
         setWhatsappNumber(p.whatsappNumber ?? '')
         setWhatsappEnabled(p.whatsappEnabled ?? false)
       })
@@ -84,6 +88,7 @@ export default function ProfilePage() {
         tracksEnabled: tracks,
         questionnaireAnswers: profile?.questionnaireAnswers ?? {},
         theme: profile?.theme ?? 'DARK',
+        timezone,
         whatsappNumber: whatsappNumber || null,
         whatsappEnabled,
       })
@@ -183,6 +188,27 @@ export default function ProfilePage() {
                       {GOALS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Timezone</label>
+                  <select
+                    className={inputClass}
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                  >
+                    {[
+                      'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+                      'America/Sao_Paulo','America/Argentina/Buenos_Aires','America/Toronto',
+                      'Europe/London','Europe/Paris','Europe/Berlin','Europe/Rome','Europe/Madrid',
+                      'Europe/Amsterdam','Europe/Stockholm','Europe/Warsaw','Europe/Athens','Europe/Istanbul',
+                      'Asia/Jerusalem','Asia/Riyadh','Asia/Dubai','Africa/Cairo','Africa/Johannesburg',
+                      'Asia/Kolkata','Asia/Singapore','Asia/Hong_Kong','Asia/Shanghai','Asia/Tokyo',
+                      'Asia/Seoul','Australia/Sydney','Pacific/Auckland','UTC',
+                    ].map(tz => (
+                      <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

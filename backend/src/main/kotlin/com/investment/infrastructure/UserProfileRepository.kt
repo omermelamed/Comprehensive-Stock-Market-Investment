@@ -131,6 +131,14 @@ class UserProfileRepository(
     /** Alias for findOne() with a name that matches scheduler usage. */
     fun findProfile() = findOne()
 
+    fun updateRiskScore(riskLevel: String, aiInferredScore: BigDecimal) {
+        dsl.execute(
+            "UPDATE user_profile SET risk_level = ?::risk_level_enum, ai_inferred_score = ?, last_updated = NOW()",
+            riskLevel,
+            aiInferredScore
+        )
+    }
+
     private fun Record.toResponse(): UserProfileResponse {
         val tracksJson = get("tracks_enabled")?.toString() ?: "[]"
         val answersJson = get("questionnaire_answers")?.toString() ?: "{}"

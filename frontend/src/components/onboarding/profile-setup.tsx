@@ -6,6 +6,7 @@ import { StepCurrencyGoal } from './step-currency-goal'
 import { StepHorizon } from './step-horizon'
 import { StepBudget } from './step-budget'
 import { StepTracks } from './step-tracks'
+import { StepTimezone } from './step-timezone'
 import { StepWhatsApp } from './step-whatsapp'
 import { slideStep, stepTransition } from '@/lib/motion'
 import type { OnboardingData } from '@/features/onboarding/useOnboarding'
@@ -16,7 +17,7 @@ interface ProfileSetupProps {
   onNext: () => void
 }
 
-const TOTAL_INNER = 6
+const TOTAL_INNER = 7
 
 export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
   const [sub, setSub] = useState(1)
@@ -26,8 +27,10 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
   const [goal, setGoal]         = useState(data.investmentGoal    ?? '')
   const [horizon, setHorizon]   = useState(data.timeHorizonYears  ?? 15)
   const [amount, setAmount]     = useState(data.monthlyInvestmentMin ?? 4000)
-  const [tracks, setTracks]     = useState<string[]>(data.tracksEnabled ?? ['LONG_EQUITY'])
-  const [whatsapp, setWhatsapp] = useState(data.whatsappNumber ?? '')
+  const [tracks, setTracks]         = useState<string[]>(data.tracksEnabled ?? ['LONG_EQUITY'])
+  const [timezone, setTimezone]     = useState(data.timezone ?? '')
+  const [whatsapp, setWhatsapp]     = useState(data.whatsappNumber ?? '')
+  const [waEnabled, setWaEnabled]   = useState(data.whatsappEnabled ?? false)
 
   function fwd() { setDir(1); setSub(s => s + 1) }
   function bck() { setDir(-1); setSub(s => Math.max(s - 1, 1)) }
@@ -40,7 +43,9 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
       monthlyInvestmentMin: amount,
       monthlyInvestmentMax: amount,
       tracksEnabled: tracks,
+      timezone,
       whatsappNumber: whatsapp,
+      whatsappEnabled: waEnabled,
     })
     onNext()
   }
@@ -57,6 +62,7 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
           sub === 3 ? 'Time Horizon' :
           sub === 4 ? 'Monthly Budget' :
           sub === 5 ? 'Investment Tracks' :
+          sub === 6 ? 'Timezone' :
           'Notifications'
         }
       />
@@ -94,7 +100,17 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
             <StepTracks tracks={tracks} onTracksChange={setTracks} onContinue={fwd} onBack={bck} />
           )}
           {sub === 6 && (
-            <StepWhatsApp value={whatsapp} onValueChange={setWhatsapp} onContinue={finish} onBack={bck} />
+            <StepTimezone value={timezone} onValueChange={setTimezone} onContinue={fwd} onBack={bck} />
+          )}
+          {sub === 7 && (
+            <StepWhatsApp
+              value={whatsapp}
+              onValueChange={setWhatsapp}
+              enabled={waEnabled}
+              onEnabledChange={setWaEnabled}
+              onContinue={finish}
+              onBack={bck}
+            />
           )}
         </motion.div>
       </AnimatePresence>

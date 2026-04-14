@@ -1,7 +1,10 @@
 package com.investment.api
 
+import com.investment.api.dto.RiskEvaluationResponse
+import com.investment.api.dto.RiskHistoryEntryResponse
 import com.investment.api.dto.UserProfileRequest
 import com.investment.api.dto.UserProfileResponse
+import com.investment.application.RiskProfileService
 import com.investment.application.UserProfileService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -14,7 +17,8 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/profile")
 class ProfileController(
-    private val userProfileService: UserProfileService
+    private val userProfileService: UserProfileService,
+    private val riskProfileService: RiskProfileService
 ) {
 
     @GetMapping
@@ -43,5 +47,15 @@ class ProfileController(
     fun completeOnboarding(): ResponseEntity<UserProfileResponse> {
         val profile = userProfileService.completeOnboarding()
         return ResponseEntity.ok(profile)
+    }
+
+    @GetMapping("/risk-history")
+    fun getRiskHistory(): ResponseEntity<List<RiskHistoryEntryResponse>> {
+        return ResponseEntity.ok(riskProfileService.getHistory())
+    }
+
+    @PostMapping("/risk/evaluate")
+    fun evaluateRisk(): ResponseEntity<RiskEvaluationResponse> {
+        return ResponseEntity.ok(riskProfileService.evaluate("MANUAL"))
     }
 }

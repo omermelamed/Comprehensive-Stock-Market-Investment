@@ -40,8 +40,11 @@
     "application.RecommendationService"
   ],
   "api.ProfileController": [
+    "api.dto.RiskEvaluationResponse",
+    "api.dto.RiskHistoryEntryResponse",
     "api.dto.UserProfileRequest",
     "api.dto.UserProfileResponse",
+    "application.RiskProfileService",
     "application.UserProfileService"
   ],
   "api.SymbolAliasController": [
@@ -290,6 +293,14 @@
     "infrastructure.HoldingsProjectionRepository",
     "infrastructure.TransactionRepository"
   ],
+  "application.RiskProfileService": [
+    "api.dto.RiskEvaluationResponse",
+    "api.dto.RiskHistoryEntryResponse",
+    "domain.RiskProfileEvaluator",
+    "infrastructure.RiskScoreHistoryRepository",
+    "infrastructure.TransactionRepository",
+    "infrastructure.UserProfileRepository"
+  ],
   "application.MonthlyInvestmentService": [
     "api.dto.MonthlyFlowConfirmRequest",
     "api.dto.MonthlyFlowConfirmResponse",
@@ -405,6 +416,9 @@
   "infrastructure.market.MarketDataProvider": [
     "domain.PriceQuote"
   ],
+  "infrastructure.RiskScoreHistoryRepository": [
+    "api.dto.RiskHistoryEntryResponse"
+  ],
   "infrastructure.TransactionRepository": [
     "api.dto.TransactionRequest",
     "api.dto.TransactionResponse",
@@ -432,6 +446,9 @@
   ],
   "domain.TransactionValidator": [
     "api.dto.TransactionRequest"
+  ],
+  "domain.RiskProfileEvaluator": [
+    "infrastructure.ai.ClaudeClient"
   ],
   "domain.PortfolioCalculator": [
     "api.dto.HoldingDashboardResponse",

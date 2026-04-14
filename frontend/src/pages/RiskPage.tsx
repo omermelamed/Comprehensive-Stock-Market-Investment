@@ -12,6 +12,10 @@ import {
   type RiskWarningsResponse,
   type RiskThresholds,
 } from '@/api/risk'
+import { useRiskProfile } from '@/features/risk/useRiskProfile'
+import { RiskProfileCard } from '@/features/risk/RiskProfileCard'
+import { RiskReasoningPanel } from '@/features/risk/RiskReasoningPanel'
+import { RiskScoreHistory } from '@/features/risk/RiskScoreHistory'
 
 function fmtPct(v: number | null): string {
   if (v === null) return '—'
@@ -40,6 +44,14 @@ const STATUS_COLORS = {
 }
 
 export default function RiskPage() {
+  const {
+    current,
+    history: riskHistory,
+    loading: profileLoading,
+    evaluating,
+    evaluate,
+  } = useRiskProfile()
+
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null)
   const [warnings, setWarnings] = useState<RiskWarningsResponse | null>(null)
   const [thresholds, setThresholds] = useState<RiskThresholds | null>(null)
@@ -123,6 +135,20 @@ export default function RiskPage() {
       </div>
 
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
+        {/* Risk Profile */}
+        <motion.div variants={staggerItem} className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Risk Profile</h2>
+          {profileLoading ? (
+            <div className="h-28 animate-pulse rounded-xl bg-muted" />
+          ) : (
+            <>
+              <RiskProfileCard current={current} evaluating={evaluating} onEvaluate={evaluate} />
+              <RiskReasoningPanel reasoning={current?.reasoning} />
+              <RiskScoreHistory history={riskHistory} />
+            </>
+          )}
+        </motion.div>
+
         {/* Warnings */}
         <motion.div variants={staggerItem}>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Warnings</h2>

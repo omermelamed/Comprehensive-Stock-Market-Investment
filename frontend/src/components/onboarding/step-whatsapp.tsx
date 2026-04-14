@@ -7,6 +7,8 @@ import { StepFooter } from './step-footer'
 interface StepWhatsAppProps {
   value: string
   onValueChange: (v: string) => void
+  enabled: boolean
+  onEnabledChange: (v: boolean) => void
   onContinue: () => void
   onBack?: () => void
 }
@@ -16,7 +18,7 @@ function isValidPhone(v: string) {
   return /^\+\d{7,15}$/.test(v.trim())
 }
 
-export function StepWhatsApp({ value, onValueChange, onContinue, onBack }: StepWhatsAppProps) {
+export function StepWhatsApp({ value, onValueChange, enabled, onEnabledChange, onContinue, onBack }: StepWhatsAppProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100) }, [])
 
@@ -54,6 +56,29 @@ export function StepWhatsApp({ value, onValueChange, onContinue, onBack }: StepW
         <p className="mt-2 text-xs text-destructive">
           Use international format starting with +, e.g. +972501234567
         </p>
+      )}
+
+      {valid && (
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => onEnabledChange(!enabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-ring ${
+              enabled ? 'bg-primary' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                enabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className="text-sm text-foreground">
+            {enabled ? 'Enable WhatsApp notifications' : 'Keep disabled for now'}
+          </span>
+        </div>
       )}
 
       <p className="mt-2 text-xs text-muted-foreground">

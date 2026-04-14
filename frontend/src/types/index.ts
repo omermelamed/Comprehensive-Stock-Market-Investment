@@ -13,6 +13,7 @@ export interface UserProfile {
   onboardingCompleted: boolean
   whatsappNumber?: string
   whatsappEnabled?: boolean
+  timezone?: string
 }
 
 export interface TargetAllocation {
