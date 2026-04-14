@@ -68,6 +68,9 @@
     "api/client.ts",
     "types/index.ts"
   ],
+  "api/whatsappSchedules.ts": [
+    "api/client.ts"
+  ],
   "components/onboarding/profile-setup.tsx": [
     "components/onboarding/step-budget.tsx",
     "components/onboarding/step-currency-goal.tsx",
@@ -280,6 +283,22 @@
     "lib/utils.ts",
     "types/index.ts"
   ],
+  "features/whatsapp/ScheduleForm.tsx": [
+    "api/whatsappSchedules.ts"
+  ],
+  "features/whatsapp/ScheduleSendHistory.tsx": [
+    "api/whatsappSchedules.ts"
+  ],
+  "features/whatsapp/ScheduledMessagesList.tsx": [
+    "api/whatsappSchedules.ts",
+    "components/ui/card.tsx",
+    "features/whatsapp/ScheduleForm.tsx",
+    "features/whatsapp/ScheduleSendHistory.tsx",
+    "features/whatsapp/useWhatsAppSchedules.ts"
+  ],
+  "features/whatsapp/useWhatsAppSchedules.ts": [
+    "api/whatsappSchedules.ts"
+  ],
   "layouts/app-layout.tsx": [
     "features/alerts/useAlertBadge.ts",
     "features/chat/ChatPanel.tsx",
@@ -358,6 +377,7 @@
     "components/ui/card.tsx",
     "contexts/currency-context.tsx",
     "data/onboarding.ts",
+    "features/whatsapp/ScheduledMessagesList.tsx",
     "lib/currency.ts",
     "types/index.ts"
   ],

@@ -32,12 +32,12 @@ class UserProfileRepository(
                 id, display_name, preferred_currency, risk_level,
                 time_horizon_years, monthly_investment_min, monthly_investment_max,
                 investment_goal, tracks_enabled, questionnaire_answers, theme,
-                whatsapp_number, whatsapp_enabled, onboarding_completed, created_at, last_updated
+                whatsapp_number, whatsapp_enabled, timezone, onboarding_completed, created_at, last_updated
             ) VALUES (
                 ?::uuid, ?, ?, ?::risk_level_enum,
                 ?, ?, ?,
                 ?, ?::jsonb, ?::jsonb, ?,
-                ?, ?, false, NOW(), NOW()
+                ?, ?, ?, false, NOW(), NOW()
             )
             ON CONFLICT ((TRUE)) DO UPDATE SET
                 display_name = EXCLUDED.display_name,
@@ -52,6 +52,7 @@ class UserProfileRepository(
                 theme = EXCLUDED.theme,
                 whatsapp_number = EXCLUDED.whatsapp_number,
                 whatsapp_enabled = EXCLUDED.whatsapp_enabled,
+                timezone = EXCLUDED.timezone,
                 last_updated = NOW()
             RETURNING *
             """.trimIndent(),
@@ -67,7 +68,8 @@ class UserProfileRepository(
             answersJson,
             request.theme,
             request.whatsappNumber,
-            request.whatsappEnabled
+            request.whatsappEnabled,
+            request.timezone
         ) ?: throw IllegalStateException("Upsert into user_profile returned no record")
 
         return record.toResponse()
@@ -91,7 +93,8 @@ class UserProfileRepository(
                 questionnaire_answers = ?::jsonb,
                 theme = ?,
                 whatsapp_number = ?,
-                whatsapp_enabled = ?
+                whatsapp_enabled = ?,
+                timezone = ?
             RETURNING *
             """.trimIndent(),
             request.displayName,
@@ -105,7 +108,8 @@ class UserProfileRepository(
             answersJson,
             request.theme,
             request.whatsappNumber,
-            request.whatsappEnabled
+            request.whatsappEnabled,
+            request.timezone
         ) ?: throw NoSuchElementException("No user profile found to update")
 
         return record.toResponse()
@@ -118,6 +122,14 @@ class UserProfileRepository(
 
         return record.toResponse()
     }
+
+    fun findTimezone(): String? {
+        return dsl.fetchOne("SELECT timezone FROM user_profile LIMIT 1")
+            ?.get("timezone", String::class.java)
+    }
+
+    /** Alias for findOne() with a name that matches scheduler usage. */
+    fun findProfile() = findOne()
 
     private fun Record.toResponse(): UserProfileResponse {
         val tracksJson = get("tracks_enabled")?.toString() ?: "[]"
@@ -142,6 +154,7 @@ class UserProfileRepository(
             onboardingCompleted = get("onboarding_completed", Boolean::class.java),
             whatsappNumber  = get("whatsapp_number", String::class.java),
             whatsappEnabled = get("whatsapp_enabled", Boolean::class.java) ?: false,
+            timezone = get("timezone", String::class.java) ?: "UTC",
             createdAt = get("created_at", java.sql.Timestamp::class.java).toInstant(),
             lastUpdated = get("last_updated", java.sql.Timestamp::class.java).toInstant()
         )

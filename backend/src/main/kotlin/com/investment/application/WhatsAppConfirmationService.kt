@@ -6,6 +6,7 @@ import com.investment.api.dto.AddWatchlistItemRequest
 import com.investment.api.dto.CreateAlertRequest
 import com.investment.api.dto.MonthlyFlowConfirmRequest
 import com.investment.api.dto.MonthlyFlowPreviewRequest
+import com.investment.api.dto.ScheduledMessageRequest
 import com.investment.api.dto.TransactionRequest
 import com.investment.domain.ClassifiedIntent
 import com.investment.domain.WhatsAppMessageFormatter
@@ -25,6 +26,7 @@ class WhatsAppConfirmationService(
     private val monthlyInvestmentService: MonthlyInvestmentService,
     private val alertService: AlertService,
     private val watchlistService: WatchlistService,
+    private val scheduledMessageService: WhatsAppScheduledMessageService,
     private val objectMapper: ObjectMapper
 ) {
 
@@ -75,6 +77,7 @@ class WhatsAppConfirmationService(
                 "SET_ALERT" -> executeSetAlert(data)
                 "ADD_WATCHLIST" -> executeAddWatchlist(data)
                 "REMOVE_WATCHLIST" -> executeRemoveWatchlist(data)
+                "SCHEDULE_MESSAGE" -> executeScheduleMessage(data)
                 else -> WhatsAppMessageFormatter.error("unknown intent ${pending.intent}")
             }
         } catch (e: Exception) {
@@ -152,6 +155,29 @@ class WhatsAppConfirmationService(
         return WhatsAppMessageFormatter.success("${symbol.uppercase()} removed from watchlist.")
     }
 
+    private fun executeScheduleMessage(data: Map<String, Any>): String {
+        val messageType  = data["messageType"]?.toString() ?: return WhatsAppMessageFormatter.error("missing messageType")
+        val frequency    = data["frequency"]?.toString() ?: return WhatsAppMessageFormatter.error("missing frequency")
+        val sendTime     = data["sendTime"]?.toString() ?: return WhatsAppMessageFormatter.error("missing sendTime")
+        val label        = data["label"]?.toString() ?: "Scheduled message"
+        val dayOfWeek    = (data["dayOfWeek"] as? Number)?.toInt()
+        val biweeklyWeek = (data["biweeklyWeek"] as? Number)?.toInt()
+        val dayOfMonth   = (data["dayOfMonth"] as? Number)?.toInt()
+
+        scheduledMessageService.create(
+            ScheduledMessageRequest(
+                messageType  = messageType,
+                label        = label,
+                frequency    = frequency,
+                dayOfWeek    = dayOfWeek,
+                biweeklyWeek = biweeklyWeek,
+                dayOfMonth   = dayOfMonth,
+                sendTime     = sendTime
+            )
+        )
+        return WhatsAppMessageFormatter.success("Scheduled $messageType every $frequency at $sendTime.")
+    }
+
     private data class ConfirmationPayload(
         val action: String,
         val details: List<Pair<String, String>>,
@@ -221,6 +247,34 @@ class WhatsAppConfirmationService(
                     action        = "Remove from Watchlist",
                     details       = listOf("Symbol" to intent.symbol.uppercase()),
                     intentName    = "REMOVE_WATCHLIST",
+                    intentDataJson = objectMapper.writeValueAsString(data)
+                )
+            }
+            is ClassifiedIntent.ScheduleMessage -> {
+                val data = mapOf(
+                    "messageType"  to intent.messageType,
+                    "frequency"    to intent.frequency,
+                    "dayOfWeek"    to intent.dayOfWeek,
+                    "biweeklyWeek" to intent.biweeklyWeek,
+                    "dayOfMonth"   to intent.dayOfMonth,
+                    "sendTime"     to intent.sendTime,
+                    "label"        to intent.label
+                )
+                val dayLabel = when (intent.dayOfWeek) {
+                    0 -> "Sunday"; 1 -> "Monday"; 2 -> "Tuesday"
+                    3 -> "Wednesday"; 4 -> "Thursday"; 5 -> "Friday"; 6 -> "Saturday"
+                    else -> intent.dayOfMonth?.let { "Day $it" } ?: "—"
+                }
+                ConfirmationPayload(
+                    action        = "Schedule Message",
+                    details       = listOf(
+                        "Type"      to intent.messageType,
+                        "Frequency" to intent.frequency,
+                        "Day"       to dayLabel,
+                        "Time"      to intent.sendTime,
+                        "Label"     to intent.label
+                    ),
+                    intentName    = "SCHEDULE_MESSAGE",
                     intentDataJson = objectMapper.writeValueAsString(data)
                 )
             }

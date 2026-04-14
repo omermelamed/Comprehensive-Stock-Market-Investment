@@ -43,20 +43,27 @@ class WhatsAppNotificationService(
      * The "whatsapp:" prefix is added automatically if not present.
      * If Twilio is not configured or the number is blank, the call is a no-op.
      */
-    fun sendMessage(toWhatsAppNumber: String?, body: String) {
-        if (!twilioReady || toWhatsAppNumber.isNullOrBlank()) return
+    /**
+     * Sends an arbitrary message body to [toWhatsAppNumber].
+     * Returns the Twilio message SID on success, or null if Twilio is not configured
+     * or the send fails.
+     */
+    fun sendMessage(toWhatsAppNumber: String?, body: String): String? {
+        if (!twilioReady || toWhatsAppNumber.isNullOrBlank()) return null
 
         val toNumber = if (toWhatsAppNumber.startsWith("whatsapp:")) toWhatsAppNumber
                        else "whatsapp:$toWhatsAppNumber"
-        try {
-            Message.creator(
+        return try {
+            val message = Message.creator(
                 PhoneNumber(toNumber),
                 PhoneNumber(fromNumber),
                 body
             ).create()
             log.info("WhatsApp message sent to {}", toNumber)
+            message.sid
         } catch (e: Exception) {
             log.warn("WhatsApp sendMessage failed: {}", e.message)
+            null
         }
     }
 

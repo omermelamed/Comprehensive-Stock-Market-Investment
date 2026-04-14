@@ -84,6 +84,7 @@ class WhatsAppBotService(
             is ClassifiedIntent.SetAlert         -> confirmationService.requestConfirmation(sessionId, intent)
             is ClassifiedIntent.AddWatchlist     -> confirmationService.requestConfirmation(sessionId, intent)
             is ClassifiedIntent.RemoveWatchlist  -> confirmationService.requestConfirmation(sessionId, intent)
+            is ClassifiedIntent.ScheduleMessage  -> confirmationService.requestConfirmation(sessionId, intent)
 
             is ClassifiedIntent.Unknown          -> WhatsAppMessageFormatter.fallback()
         }

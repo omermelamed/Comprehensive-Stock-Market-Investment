@@ -76,6 +76,12 @@
     "application.WhatsAppBotService",
     "infrastructure.WhatsAppNotificationService"
   ],
+  "api.WhatsAppSchedulesController": [
+    "api.dto.ScheduledMessageLogEntry",
+    "api.dto.ScheduledMessageRequest",
+    "api.dto.ScheduledMessageResponse",
+    "application.WhatsAppScheduledMessageService"
+  ],
   "api.ChatController": [
     "api.dto.ChatRequest",
     "api.dto.ChatResponse",
@@ -151,6 +157,7 @@
     "api.dto.CreateAlertRequest",
     "api.dto.MonthlyFlowConfirmRequest",
     "api.dto.MonthlyFlowPreviewRequest",
+    "api.dto.ScheduledMessageRequest",
     "api.dto.TransactionRequest",
     "domain.ClassifiedIntent",
     "domain.WhatsAppMessageFormatter",
@@ -230,6 +237,12 @@
   "application.BenchmarkService": [
     "infrastructure.market.YahooFinanceAdapter"
   ],
+  "application.WhatsAppScheduledMessageContentGenerator": [
+    "api.dto.MonthlyFlowPreviewRequest",
+    "infrastructure.TransactionRepository",
+    "infrastructure.ai.ClaudeClient",
+    "infrastructure.ai.ClaudeMessage"
+  ],
   "application.WhatsAppBotService": [
     "domain.ClassifiedIntent",
     "domain.WhatsAppMessageFormatter",
@@ -294,6 +307,19 @@
     "domain.RiskLevelCalculator",
     "infrastructure.UserProfileRepository"
   ],
+  "application.WhatsAppScheduledMessageService": [
+    "api.dto.ScheduledMessageLogEntry",
+    "api.dto.ScheduledMessageRequest",
+    "api.dto.ScheduledMessageResponse",
+    "domain.NextSendAtCalculator",
+    "infrastructure.UserProfileRepository",
+    "infrastructure.WhatsAppScheduledMessageRepository"
+  ],
+  "infrastructure.WhatsAppScheduledMessageJob": [
+    "application.WhatsAppScheduledMessageContentGenerator",
+    "application.WhatsAppScheduledMessageService",
+    "domain.NextSendAtCalculator"
+  ],
   "infrastructure.AlertRepository": [
     "api.dto.AlertResponse"
   ],
@@ -323,6 +349,11 @@
   "infrastructure.UserProfileRepository": [
     "api.dto.UserProfileRequest",
     "api.dto.UserProfileResponse"
+  ],
+  "infrastructure.WhatsAppScheduledMessageRepository": [
+    "api.dto.ScheduledMessageLogEntry",
+    "api.dto.ScheduledMessageRequest",
+    "api.dto.ScheduledMessageResponse"
   ],
   "infrastructure.HoldingsProjectionRepository": [
     "api.dto.HoldingResponse"

@@ -6,6 +6,7 @@ import type { UserProfile } from '@/types'
 import { ASSET_TRACKS } from '@/data/onboarding'
 import { useCurrency } from '@/contexts/currency-context'
 import { getCurrencySymbol } from '@/lib/currency'
+import { ScheduledMessagesList } from '@/features/whatsapp/ScheduledMessagesList'
 
 const CURRENCIES = ['USD', 'ILS', 'EUR', 'GBP']
 const GOALS = ['GROWTH', 'INCOME', 'PRESERVATION', 'SPECULATION']
@@ -340,6 +341,20 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Scheduled WhatsApp Messages */}
+          {(profile?.whatsappEnabled || whatsappEnabled) && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Scheduled Messages
+                  </h2>
+                </div>
+                <ScheduledMessagesList />
+              </CardContent>
+            </Card>
+          )}
 
         </div>
       </div>

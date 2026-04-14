@@ -55,6 +55,7 @@ class WhatsAppIntentClassifier(
             {"intent": "SET_ALERT", "symbol": "AAPL", "condition": "ABOVE", "threshold": 200.00}
             {"intent": "ADD_WATCHLIST", "symbol": "MSFT"}
             {"intent": "REMOVE_WATCHLIST", "symbol": "MSFT"}
+            {"intent": "SCHEDULE_MESSAGE", "messageType": "PORTFOLIO_SUMMARY", "frequency": "WEEKLY", "dayOfWeek": 1, "biweeklyWeek": null, "dayOfMonth": null, "sendTime": "09:00", "label": "Weekly portfolio update"}
 
             Unknown:
             {"intent": "UNKNOWN"}
@@ -66,6 +67,12 @@ class WhatsAppIntentClassifier(
             - if the user mentions buying or selling a stock with quantity and price, use LOG_TRANSACTION
             - if the user asks about their portfolio value or holdings, use PORTFOLIO_STATUS
             - if the user asks to invest their monthly budget, use START_MONTHLY_FLOW
+            - messageType must be one of: PORTFOLIO_SUMMARY, PERFORMANCE_REPORT, ALLOCATION_CHECK, INVESTMENT_REMINDER, TOP_MOVERS
+            - frequency must be WEEKLY, BIWEEKLY, or MONTHLY
+            - dayOfWeek is 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat (required for WEEKLY and BIWEEKLY)
+            - biweeklyWeek is 1 (odd ISO weeks) or 2 (even ISO weeks), required for BIWEEKLY only
+            - dayOfMonth is 1-28, required for MONTHLY only
+            - sendTime must be in HH:mm format
         """.trimIndent()
 
         return try {
@@ -116,6 +123,15 @@ class WhatsAppIntentClassifier(
                 )
                 "REMOVE_WATCHLIST"  -> ClassifiedIntent.RemoveWatchlist(
                     symbol = map["symbol"]?.toString() ?: return ClassifiedIntent.Unknown
+                )
+                "SCHEDULE_MESSAGE"  -> ClassifiedIntent.ScheduleMessage(
+                    messageType  = map["messageType"]?.toString()?.uppercase() ?: return ClassifiedIntent.Unknown,
+                    frequency    = map["frequency"]?.toString()?.uppercase() ?: return ClassifiedIntent.Unknown,
+                    dayOfWeek    = (map["dayOfWeek"] as? Number)?.toInt(),
+                    biweeklyWeek = (map["biweeklyWeek"] as? Number)?.toInt(),
+                    dayOfMonth   = (map["dayOfMonth"] as? Number)?.toInt(),
+                    sendTime     = map["sendTime"]?.toString() ?: return ClassifiedIntent.Unknown,
+                    label        = map["label"]?.toString() ?: "Scheduled message"
                 )
                 else                -> ClassifiedIntent.Unknown
             }

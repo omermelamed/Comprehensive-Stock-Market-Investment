@@ -20,6 +20,7 @@ data class UserProfileResponse(
     val onboardingCompleted: Boolean,
     val whatsappNumber: String?,
     val whatsappEnabled: Boolean = false,
+    val timezone: String = "UTC",
     val createdAt: Instant,
     val lastUpdated: Instant
 )

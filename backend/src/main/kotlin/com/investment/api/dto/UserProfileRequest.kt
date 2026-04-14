@@ -13,5 +13,6 @@ data class UserProfileRequest(
     val timeHorizonYears: Int,
     val theme: String = "LIGHT",
     val whatsappNumber: String? = null,
-    val whatsappEnabled: Boolean = false
+    val whatsappEnabled: Boolean = false,
+    val timezone: String = "UTC"
 )

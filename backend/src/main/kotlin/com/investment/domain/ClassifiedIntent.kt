@@ -31,6 +31,16 @@ sealed class ClassifiedIntent {
     data class AddWatchlist(val symbol: String) : ClassifiedIntent()
     data class RemoveWatchlist(val symbol: String) : ClassifiedIntent()
 
+    data class ScheduleMessage(
+        val messageType: String,
+        val frequency: String,
+        val dayOfWeek: Int?,
+        val biweeklyWeek: Int?,
+        val dayOfMonth: Int?,
+        val sendTime: String,
+        val label: String
+    ) : ClassifiedIntent()
+
     // Unrecognised
     object Unknown : ClassifiedIntent()
 }
