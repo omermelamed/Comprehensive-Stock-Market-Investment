@@ -2,6 +2,7 @@ package com.investment.infrastructure
 
 import com.investment.api.dto.TransactionRequest
 import com.investment.api.dto.TransactionResponse
+import com.investment.domain.ParsedTransactionRow
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.springframework.stereotype.Repository
@@ -10,6 +11,7 @@ import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 data class TransactionLedgerRow(
@@ -80,6 +82,39 @@ class TransactionRepository(
         ) ?: throw IllegalStateException("Insert into transactions returned no record")
 
         return record.toResponse()
+    }
+
+    /**
+     * Bulk-inserts a list of pre-validated [ParsedTransactionRow]s with source = 'IMPORT'.
+     * [ParsedTransactionRow.transactionDate] is an ISO date string (yyyy-MM-dd); it is stored
+     * as midnight UTC on that day so that holdings derivation treats it as an end-of-day event.
+     * Returns the count of successfully inserted rows.
+     */
+    fun insertImport(rows: List<ParsedTransactionRow>): Int {
+        var inserted = 0
+        for (row in rows) {
+            val id = UUID.randomUUID()
+            // Parse the date and store as start-of-day UTC timestamp
+            val executedAt = LocalDate.parse(row.transactionDate)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+            dsl.execute(
+                """
+                INSERT INTO transactions (id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at, source)
+                VALUES (?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW(), 'IMPORT')
+                """.trimIndent(),
+                id.toString(),
+                row.symbol.uppercase(),
+                row.transactionType.uppercase(),
+                row.track.uppercase(),
+                BigDecimal(row.quantity),
+                BigDecimal(row.pricePerUnit),
+                row.notes,
+                Timestamp.from(executedAt)
+            )
+            inserted++
+        }
+        return inserted
     }
 
     fun findEarliestTransactionDate(): LocalDate? {

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useTransactionForm } from '../features/transactions/useTransactionForm'
 import SymbolAutocomplete from '../features/transactions/SymbolAutocomplete'
 import TransactionList from '../features/transactions/TransactionList'
 import { getAllocations } from '../api/allocations'
 import { Card, CardContent } from '@/components/ui/card'
+import { ExportButton } from '@/features/export/ExportButton'
+import { downloadTransactions } from '@/api/export'
 import type { TargetAllocation } from '../types'
 
 import { ASSET_TRACKS } from '../data/onboarding'
@@ -50,8 +52,21 @@ export default function TransactionFormPage() {
     <div className="flex min-h-screen flex-col">
       {/* Page header */}
       <div className="border-b border-border px-6 py-5">
-        <h1 className="text-xl font-bold text-foreground">Log Transaction</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Record a buy, sell, or other portfolio event.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Log Transaction</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">Record a buy, sell, or other portfolio event.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/import"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Import CSV / Excel
+            </Link>
+            <ExportButton label="Export Transactions" onDownload={downloadTransactions} />
+          </div>
+        </div>
       </div>
 
       {/* Content */}

@@ -7,6 +7,7 @@
     "pages/AllocationPage.tsx",
     "pages/AnalyticsPage.tsx",
     "pages/DashboardPage.tsx",
+    "pages/ImportPage.tsx",
     "pages/MonthlyFlowPage.tsx",
     "pages/OnboardingPage.tsx",
     "pages/OptionsPage.tsx",
@@ -32,9 +33,15 @@
   "api/chat.ts": [
     "api/client.ts"
   ],
+  "api/export.ts": [
+    "api/client.ts"
+  ],
   "api/holdings.ts": [
     "api/client.ts",
     "types/index.ts"
+  ],
+  "api/import.ts": [
+    "api/client.ts"
   ],
   "api/monthly-flow.ts": [
     "api/client.ts",
@@ -192,6 +199,15 @@
   "features/dashboard/useDashboard.ts": [
     "api/portfolio.ts"
   ],
+  "features/import/ColumnMappingTable.tsx": [
+    "features/import/useImport.ts"
+  ],
+  "features/import/ImportPreviewTable.tsx": [
+    "api/import.ts"
+  ],
+  "features/import/useImport.ts": [
+    "api/import.ts"
+  ],
   "features/monthly-flow/AllocationSummaryFooter.tsx": [
     "contexts/currency-context.tsx",
     "lib/currency.ts",
@@ -330,15 +346,25 @@
   ],
   "pages/AnalyticsPage.tsx": [
     "api/analytics.ts",
+    "api/export.ts",
+    "features/export/ExportButton.tsx",
     "lib/motion.ts",
     "lib/utils.ts"
   ],
   "pages/DashboardPage.tsx": [
+    "api/export.ts",
     "features/dashboard/HoldingsTable.tsx",
     "features/dashboard/PortfolioHistoryChart.tsx",
     "features/dashboard/PortfolioSummaryCard.tsx",
     "features/dashboard/useDashboard.ts",
+    "features/export/ExportButton.tsx",
     "lib/motion.ts"
+  ],
+  "pages/ImportPage.tsx": [
+    "components/ui/card.tsx",
+    "features/import/ColumnMappingTable.tsx",
+    "features/import/ImportPreviewTable.tsx",
+    "features/import/useImport.ts"
   ],
   "pages/MonthlyFlowPage.tsx": [
     "contexts/currency-context.tsx",
@@ -396,8 +422,10 @@
   ],
   "pages/TransactionFormPage.tsx": [
     "api/allocations.ts",
+    "api/export.ts",
     "components/ui/card.tsx",
     "data/onboarding.ts",
+    "features/export/ExportButton.tsx",
     "features/transactions/SymbolAutocomplete.tsx",
     "features/transactions/TransactionList.tsx",
     "features/transactions/useTransactionForm.ts",

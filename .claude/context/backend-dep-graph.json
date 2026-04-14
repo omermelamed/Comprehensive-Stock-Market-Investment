@@ -5,6 +5,12 @@
     "infrastructure.market.PolygonAdapter",
     "infrastructure.market.YahooFinanceAdapter"
   ],
+  "api.dto.ImportPreviewResponse": [
+    "domain.ParsedTransactionRow"
+  ],
+  "api.dto.ImportConfirmRequest": [
+    "domain.ParsedTransactionRow"
+  ],
   "api.AllocationController": [
     "api.dto.TargetAllocationRequest",
     "api.dto.TargetAllocationResponse",
@@ -14,6 +20,12 @@
     "api.dto.TransactionRequest",
     "api.dto.TransactionResponse",
     "application.TransactionService"
+  ],
+  "api.ImportController": [
+    "api.dto.ImportConfirmRequest",
+    "api.dto.ImportPreviewResponse",
+    "api.dto.ImportSummaryResponse",
+    "application.ImportService"
   ],
   "api.PortfolioController": [
     "api.dto.HoldingDashboardResponse",
@@ -71,6 +83,9 @@
     "application.WatchlistAnalysisService",
     "application.WatchlistService"
   ],
+  "api.ExportController": [
+    "application.ExportService"
+  ],
   "api.WhatsAppWebhookController": [
     "application.UserProfileService",
     "application.WhatsAppBotService",
@@ -116,6 +131,11 @@
     "infrastructure.AllocationRepository",
     "infrastructure.HoldingsProjectionRepository",
     "infrastructure.ai.ClaudeClient"
+  ],
+  "application.ExportService": [
+    "domain.ExportFormatter",
+    "domain.UnrealizedPnlCalculator",
+    "infrastructure.TransactionRepository"
   ],
   "application.AnalyticsService": [
     "api.dto.AnalyticsBenchmark",
@@ -183,6 +203,17 @@
     "application.agents.OptionsStrategyAgent",
     "infrastructure.OptionsTransactionRepository",
     "infrastructure.UserProfileRepository"
+  ],
+  "application.ImportService": [
+    "api.dto.ImportConfirmRequest",
+    "api.dto.ImportPreviewResponse",
+    "api.dto.ImportRowResultDto",
+    "api.dto.ImportSummaryResponse",
+    "domain.ImportColumnMapper",
+    "domain.ImportParser",
+    "domain.ImportRowStatus",
+    "domain.ImportValidator",
+    "infrastructure.TransactionRepository"
   ],
   "application.agents.RecommendationSubAgent": [
     "domain.RecommendationGapCalculator"
@@ -376,7 +407,8 @@
   ],
   "infrastructure.TransactionRepository": [
     "api.dto.TransactionRequest",
-    "api.dto.TransactionResponse"
+    "api.dto.TransactionResponse",
+    "domain.ParsedTransactionRow"
   ],
   "infrastructure.AllocationRepository": [
     "api.dto.TargetAllocationRequest",

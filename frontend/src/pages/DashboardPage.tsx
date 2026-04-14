@@ -4,6 +4,8 @@ import { useDashboard } from '@/features/dashboard/useDashboard'
 import { PortfolioSummaryCard } from '@/features/dashboard/PortfolioSummaryCard'
 import { HoldingsTable } from '@/features/dashboard/HoldingsTable'
 import { PortfolioHistoryChart } from '@/features/dashboard/PortfolioHistoryChart'
+import { ExportButton } from '@/features/export/ExportButton'
+import { downloadHoldings } from '@/api/export'
 
 function DashboardSkeleton() {
   return (
@@ -36,6 +38,10 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+        <ExportButton label="Export Holdings" onDownload={downloadHoldings} />
+      </div>
       <motion.div
         variants={stagger}
         initial="hidden"

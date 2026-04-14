@@ -20,6 +20,8 @@ import {
   type AnalyticsResponse,
   type PerformanceMetrics,
 } from '@/api/analytics'
+import { ExportButton } from '@/features/export/ExportButton'
+import { downloadPerformance } from '@/api/export'
 
 const RANGES = ['1M', '3M', '6M', '1Y', 'ALL'] as const
 type Range = (typeof RANGES)[number]
@@ -113,8 +115,10 @@ export default function AnalyticsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
 
-        {/* Range tabs */}
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+        <div className="flex items-center gap-3">
+          <ExportButton label="Export P&L" onDownload={downloadPerformance} />
+          {/* Range tabs */}
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
           {RANGES.map(r => (
             <button
               key={r}
@@ -129,6 +133,7 @@ export default function AnalyticsPage() {
               {r}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

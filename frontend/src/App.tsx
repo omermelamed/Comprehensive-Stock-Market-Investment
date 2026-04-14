@@ -16,6 +16,7 @@ import RiskPage from './pages/RiskPage'
 import OptionsPage from './pages/OptionsPage'
 import OptionsTransactionFormPage from './pages/OptionsTransactionFormPage'
 import AlertsPage from './pages/AlertsPage'
+import ImportPage from './pages/ImportPage'
 import { AppLayout } from './layouts/app-layout'
 import { CurrencyProvider } from './contexts/currency-context'
 
@@ -101,6 +102,7 @@ function App() {
             <Route path="/options" element={<OptionsPage />} />
             <Route path="/options/new" element={<OptionsTransactionFormPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/import" element={<ImportPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
