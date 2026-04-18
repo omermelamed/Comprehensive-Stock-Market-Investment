@@ -1,6 +1,7 @@
 package com.investment.application
 
 import com.investment.api.dto.MonthlyFlowPreviewRequest
+import com.investment.domain.DailyBriefingFormatter
 import com.investment.domain.TelegramMessageFormatter
 import com.investment.infrastructure.TransactionRepository
 import com.investment.infrastructure.ai.ClaudeClient
@@ -27,6 +28,7 @@ class TelegramScheduledMessageContentGenerator(
     private val monthlyInvestmentService: MonthlyInvestmentService,
     private val transactionRepository: TransactionRepository,
     private val userProfileService: UserProfileService,
+    private val briefingDataCollector: DailyBriefingDataCollector,
     private val clock: Clock
 ) {
 
@@ -39,6 +41,7 @@ class TelegramScheduledMessageContentGenerator(
             "ALLOCATION_CHECK"   -> generateAllocationCheck()
             "INVESTMENT_REMINDER" -> generateInvestmentReminder()
             "TOP_MOVERS"         -> generateTopMovers()
+            "DAILY_BRIEFING"     -> generateDailyBriefing()
             else -> "Unknown scheduled message type: $messageType"
         }
     }
@@ -273,6 +276,16 @@ class TelegramScheduledMessageContentGenerator(
         }.trimEnd()
 
         return callClaude(prompt, fallback = fallback)
+    }
+
+    private fun generateDailyBriefing(): String {
+        return try {
+            val data = briefingDataCollector.collect()
+            DailyBriefingFormatter.format(data)
+        } catch (e: Exception) {
+            log.warn("Failed to generate daily briefing: {}", e.message)
+            "*Daily Portfolio Briefing*\n\nBriefing unavailable — please check back later."
+        }
     }
 
     private fun callClaude(prompt: String, fallback: String): String {
