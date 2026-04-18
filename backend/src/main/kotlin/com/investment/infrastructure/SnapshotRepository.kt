@@ -53,6 +53,20 @@ class SnapshotRepository(
         )
     }
 
+    fun findByDate(date: LocalDate): SnapshotRecord? {
+        return dsl.fetchOne(
+            "SELECT date, total_value, daily_pnl, snapshot_source FROM portfolio_snapshots WHERE date = ?",
+            Date.valueOf(date)
+        )?.let {
+            SnapshotRecord(
+                date = it.get("date", Date::class.java).toLocalDate(),
+                totalValue = it.get("total_value", BigDecimal::class.java),
+                dailyPnl = it.get("daily_pnl", BigDecimal::class.java),
+                snapshotSource = it.get("snapshot_source", String::class.java)
+            )
+        }
+    }
+
     fun findAllOrderedByDate(): List<SnapshotRecord> {
         return dsl.fetch(
             "SELECT date, total_value, daily_pnl, snapshot_source FROM portfolio_snapshots ORDER BY date ASC"
