@@ -12,21 +12,48 @@ object TelegramMessageFormatter {
 
     data class DriftEntry(val symbol: String, val currentPct: BigDecimal, val targetPct: BigDecimal, val gapPct: BigDecimal)
 
+    data class HoldingSummary(
+        val symbol: String,
+        val quantity: BigDecimal,
+        val avgCost: BigDecimal,
+        val currentPrice: BigDecimal,
+        val nativeCurrency: String,
+        val currentValue: BigDecimal,
+        val pnlAbsolute: BigDecimal,
+        val pnlPercent: BigDecimal,
+        val portfolioPercent: BigDecimal
+    )
+
     fun portfolioSummary(
         totalValue: BigDecimal,
+        totalPnl: BigDecimal,
+        totalPnlPercent: BigDecimal,
         currency: String,
-        topHoldings: List<Pair<String, BigDecimal>>
+        holdings: List<HoldingSummary>
     ): String = buildString {
         appendLine("*Portfolio Summary*")
-        appendLine("Total value: *$currency ${totalValue.setScale(2, RoundingMode.HALF_UP)}*")
-        if (topHoldings.isNotEmpty()) {
+        appendLine()
+        appendLine("*Total:* $currency ${fmt(totalValue)}")
+        val pnlSign = if (totalPnl >= BigDecimal.ZERO) "+" else ""
+        appendLine("*P&L:* $pnlSign$currency ${fmt(totalPnl)} ($pnlSign${totalPnlPercent.setScale(1, RoundingMode.HALF_UP)}%)")
+        appendLine("*Positions:* ${holdings.size}")
+
+        if (holdings.isNotEmpty()) {
             appendLine()
-            appendLine("Holdings:")
-            topHoldings.forEach { (symbol, value) ->
-                appendLine("  $symbol: $currency ${value.setScale(2, RoundingMode.HALF_UP)}")
+            appendLine("━━━━━━━━━━━━━━━━━━━━")
+            holdings.sortedByDescending { it.currentValue }.forEach { h ->
+                appendLine()
+                val hPnlSign = if (h.pnlPercent >= BigDecimal.ZERO) "+" else ""
+                appendLine("*${h.symbol}*  ${hPnlSign}${h.pnlPercent.setScale(1, RoundingMode.HALF_UP)}%")
+                appendLine("  ${h.quantity.stripTrailingZeros().toPlainString()} shares @ ${h.nativeCurrency} ${fmt(h.avgCost)}")
+                appendLine("  Price: ${h.nativeCurrency} ${fmt(h.currentPrice)}")
+                appendLine("  Value: $currency ${fmt(h.currentValue)}  (${h.portfolioPercent.setScale(1, RoundingMode.HALF_UP)}%)")
+                appendLine("  P&L: $hPnlSign$currency ${fmt(h.pnlAbsolute)}")
             }
         }
     }.trimEnd()
+
+    private fun fmt(v: BigDecimal): String = v.setScale(2, RoundingMode.HALF_UP).toPlainString()
 
     fun allocationCheck(drifts: List<DriftEntry>): String = buildString {
         appendLine("*Allocation Check*")

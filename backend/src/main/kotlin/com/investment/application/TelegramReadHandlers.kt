@@ -24,15 +24,26 @@ class TelegramReadHandlers(
             val summary = portfolioSummaryService.getPortfolioSummary()
             val holdings = portfolioSummaryService.getHoldingsDashboard()
 
-            val topHoldings = holdings
-                .sortedByDescending { it.currentValue }
-                .take(5)
-                .map { it.symbol to it.currentValue }
+            val holdingSummaries = holdings.map { h ->
+                TelegramMessageFormatter.HoldingSummary(
+                    symbol           = h.symbol,
+                    quantity         = h.quantity,
+                    avgCost          = h.avgBuyPrice,
+                    currentPrice     = h.currentPrice,
+                    nativeCurrency   = h.nativeCurrency,
+                    currentValue     = h.currentValue,
+                    pnlAbsolute      = h.pnlAbsolute,
+                    pnlPercent       = h.pnlPercent,
+                    portfolioPercent = h.currentPercent
+                )
+            }
 
             TelegramMessageFormatter.portfolioSummary(
-                totalValue   = summary.totalValue,
-                currency     = summary.currency,
-                topHoldings  = topHoldings
+                totalValue     = summary.totalValue,
+                totalPnl       = summary.totalPnlAbsolute,
+                totalPnlPercent = summary.totalPnlPercent,
+                currency       = summary.currency,
+                holdings       = holdingSummaries
             )
         } catch (e: Exception) {
             log.warn("portfolioStatus failed: {}", e.message)
