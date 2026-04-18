@@ -46,7 +46,7 @@ export function AreaChartComponent({
   return (
     <div className={cn(className)}>
       <ResponsiveContainer width="100%" height={height}>
-        <RechartsAreaChart data={data}>
+        <RechartsAreaChart data={data} margin={{ top: 5, right: 16, bottom: 0, left: 0 }}>
           <defs>
             {series.map((s, i) => {
               const c = s.color ?? seriesColor(i)
@@ -71,6 +71,7 @@ export function AreaChartComponent({
             stroke={recharts.yAxis.stroke}
             tickFormatter={yTickFormatter}
             domain={yDomain ?? ['auto', 'auto']}
+            width={60}
           />
           <Tooltip
             contentStyle={recharts.tooltip.contentStyle}

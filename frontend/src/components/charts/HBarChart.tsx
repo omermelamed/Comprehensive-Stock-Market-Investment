@@ -37,6 +37,8 @@ export function HBarChart({
   barSize = 28,
   className,
 }: HBarChartProps) {
+  const longestLabel = data.reduce((max, d) => Math.max(max, d.name.length), 0)
+  const yAxisWidth = Math.max(56, Math.min(longestLabel * 8 + 12, 120))
   const computedHeight = height ?? Math.max(200, data.length * 44 + 40)
 
   return (
@@ -45,7 +47,7 @@ export function HBarChart({
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: showLabels ? 72 : 16, bottom: 0, left: 4 }}
+          margin={{ top: 0, right: showLabels ? 72 : 16, bottom: 0, left: 0 }}
           barCategoryGap="20%"
         >
           <CartesianGrid horizontal={false} {...recharts.grid} />
@@ -58,7 +60,7 @@ export function HBarChart({
           <YAxis
             type="category"
             dataKey="name"
-            width={52}
+            width={yAxisWidth}
             tick={{ fontSize: 12, fontWeight: 600, fill: 'var(--color-foreground)' }}
             axisLine={false}
             tickLine={false}

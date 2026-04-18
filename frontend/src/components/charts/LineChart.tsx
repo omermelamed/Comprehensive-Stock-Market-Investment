@@ -46,7 +46,7 @@ export function LineChartComponent({
   return (
     <div className={cn(className)}>
       <ResponsiveContainer width="100%" height={height}>
-        <RechartsLineChart data={data}>
+        <RechartsLineChart data={data} margin={{ top: 5, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid {...recharts.grid} />
           <XAxis
             dataKey={xDataKey}
@@ -60,6 +60,7 @@ export function LineChartComponent({
             stroke={recharts.yAxis.stroke}
             tickFormatter={yTickFormatter}
             domain={yDomain ?? ['auto', 'auto']}
+            width={60}
           />
           <Tooltip
             contentStyle={recharts.tooltip.contentStyle}
