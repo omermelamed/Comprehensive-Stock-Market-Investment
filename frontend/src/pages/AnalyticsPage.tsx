@@ -334,6 +334,8 @@ function PositionPnlChart({ positions, currency }: { positions: PositionPnl[]; c
         allowedTypes={['bar', 'donut', 'radar']}
         height={Math.max(240, sorted.length * 48 + 40)}
         formatValue={(v) => `${v >= 0 ? '+' : ''}${fmtCurrency(v, currency)}`}
+        formatCenterValue={(total) => `${total >= 0 ? '+' : ''}${fmtCurrency(total, currency)}`}
+        centerLabel="Selected P&L"
       />
     </>
   )
