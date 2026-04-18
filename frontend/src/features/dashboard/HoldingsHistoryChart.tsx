@@ -100,13 +100,21 @@ export function HoldingsHistoryChart() {
   const [visibleFrom, setVisibleFrom] = useState(() => daysAgo(90))
   const [visibleTo, setVisibleTo] = useState(todayStr)
 
-  // OHLC state — shared by both line and candlestick views
-  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null)
-  const [allOhlcBars, setAllOhlcBars] = useState<OhlcBar[]>([])
-  const [ohlcCurrency, setOhlcCurrency] = useState('USD')
+  // Line mode: multi-select — set of visible symbols
+  const [visibleSymbols, setVisibleSymbols] = useState<Set<string>>(new Set())
+
+  // Candlestick mode: single-select
+  const [candlestickSymbol, setCandlestickSymbol] = useState<string | null>(null)
+
+  // OHLC cache: symbol → bars (fetched once per symbol, ALL range)
+  const [ohlcCache, setOhlcCache] = useState<Map<string, OhlcBar[]>>(new Map())
+  const [ohlcCurrencyMap, setOhlcCurrencyMap] = useState<Map<string, string>>(new Map())
   const [ohlcLoading, setOhlcLoading] = useState(false)
 
-  // Fetch holdings list (for symbol dropdown + legend)
+  // Track which symbols are currently being fetched to avoid duplicates
+  const fetchingRef = useRef<Set<string>>(new Set())
+
+  // Fetch holdings list
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -115,66 +123,121 @@ export function HoldingsHistoryChart() {
       .then(data => {
         if (!cancelled) {
           setAllSeries(data.series)
-          if (data.series.length > 0 && !selectedSymbol) {
-            setSelectedSymbol(data.series[0].symbol)
+          if (data.series.length > 0) {
+            const symbols = data.series.map(s => s.symbol)
+            setVisibleSymbols(new Set(symbols))
+            setCandlestickSymbol(symbols[0])
           }
         }
       })
       .catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Fetch OHLC for the selected symbol — always ALL, filter client-side
-  useEffect(() => {
-    if (!selectedSymbol) return
-    let cancelled = false
+  // Fetch OHLC data for symbols that aren't cached yet
+  const fetchOhlcForSymbols = useCallback((symbols: string[]) => {
+    const needed = symbols.filter(s => !ohlcCache.has(s) && !fetchingRef.current.has(s))
+    if (needed.length === 0) return
+
+    needed.forEach(s => fetchingRef.current.add(s))
     setOhlcLoading(true)
-    getOhlcData(selectedSymbol, 'ALL')
-      .then(res => {
-        if (!cancelled) {
-          setAllOhlcBars(res.bars)
-          setOhlcCurrency(res.currency)
-        }
+
+    Promise.all(needed.map(s =>
+      getOhlcData(s, 'ALL')
+        .then(res => ({ symbol: s, bars: res.bars, currency: res.currency }))
+        .catch(() => ({ symbol: s, bars: [] as OhlcBar[], currency: 'USD' }))
+    )).then(results => {
+      setOhlcCache(prev => {
+        const next = new Map(prev)
+        for (const r of results) next.set(r.symbol, r.bars)
+        return next
       })
-      .catch(() => { if (!cancelled) setAllOhlcBars([]) })
-      .finally(() => { if (!cancelled) setOhlcLoading(false) })
-    return () => { cancelled = true }
-  }, [selectedSymbol])
+      setOhlcCurrencyMap(prev => {
+        const next = new Map(prev)
+        for (const r of results) next.set(r.symbol, r.currency)
+        return next
+      })
+      needed.forEach(s => fetchingRef.current.delete(s))
+      setOhlcLoading(false)
+    })
+  }, [ohlcCache])
+
+  // Trigger OHLC fetch when visible symbols change (line mode) or candlestick symbol changes
+  useEffect(() => {
+    if (viewMode === 'line') {
+      fetchOhlcForSymbols(Array.from(visibleSymbols))
+    } else if (candlestickSymbol) {
+      fetchOhlcForSymbols([candlestickSymbol])
+    }
+  }, [viewMode, visibleSymbols, candlestickSymbol, fetchOhlcForSymbols])
 
   const colorBySymbol = useMemo(
     () => new Map(allSeries.map((s, i) => [s.symbol, seriesColor(i)])),
     [allSeries],
   )
 
-  // Date bounds from OHLC data
-  const ohlcMinDate = useMemo(
-    () => allOhlcBars.length > 0 ? allOhlcBars[0].date : daysAgo(365 * 5),
-    [allOhlcBars],
-  )
-  const ohlcMaxDate = useMemo(
-    () => allOhlcBars.length > 0 ? allOhlcBars[allOhlcBars.length - 1].date : todayStr(),
-    [allOhlcBars],
-  )
+  // Date bounds from all cached OHLC data
+  const { ohlcMinDate, ohlcMaxDate } = useMemo(() => {
+    let min = '9999-12-31'
+    let max = '0000-01-01'
+    for (const bars of ohlcCache.values()) {
+      if (bars.length > 0) {
+        if (bars[0].date < min) min = bars[0].date
+        if (bars[bars.length - 1].date > max) max = bars[bars.length - 1].date
+      }
+    }
+    return {
+      ohlcMinDate: min === '9999-12-31' ? daysAgo(365 * 5) : min,
+      ohlcMaxDate: max === '0000-01-01' ? todayStr() : max,
+    }
+  }, [ohlcCache])
 
-  // Filter OHLC bars to visible range
-  const visibleBars = useMemo(
-    () => allOhlcBars.filter(b => b.date >= visibleFrom && b.date <= visibleTo),
-    [allOhlcBars, visibleFrom, visibleTo],
-  )
+  // Determine the primary display currency (from first visible symbol)
+  const displayCurrency = useMemo(() => {
+    for (const s of visibleSymbols) {
+      const c = ohlcCurrencyMap.get(s)
+      if (c) return c
+    }
+    return ohlcCurrencyMap.get(candlestickSymbol ?? '') ?? 'USD'
+  }, [visibleSymbols, candlestickSymbol, ohlcCurrencyMap])
 
-  // Line chart data from OHLC close prices
-  const lineData = useMemo(
-    () => visibleBars.map(b => ({ date: b.date, close: b.close })),
-    [visibleBars],
-  )
+  // Line mode: merge all visible symbols' close prices into a single dataset
+  const { lineChartData, lineChartSeries } = useMemo(() => {
+    const activeSymbols = Array.from(visibleSymbols).filter(s => ohlcCache.has(s))
+    if (activeSymbols.length === 0) return { lineChartData: [], lineChartSeries: [] }
 
-  const lineSeries = useMemo(() => [{
-    dataKey: 'close',
-    name: selectedSymbol ?? 'Close',
-    color: colorBySymbol.get(selectedSymbol ?? '') ?? seriesColor(0),
-    strokeWidth: 2,
-  }], [selectedSymbol, colorBySymbol])
+    const dateMap = new Map<string, Record<string, unknown>>()
+    for (const sym of activeSymbols) {
+      const bars = ohlcCache.get(sym) ?? []
+      for (const b of bars) {
+        if (b.date < visibleFrom || b.date > visibleTo) continue
+        let row = dateMap.get(b.date)
+        if (!row) { row = { date: b.date }; dateMap.set(b.date, row) }
+        row[sym] = b.close
+      }
+    }
+
+    const data = Array.from(dateMap.values()).sort(
+      (a, b) => String(a.date).localeCompare(String(b.date)),
+    )
+
+    const series = activeSymbols.map(sym => ({
+      dataKey: sym,
+      name: allSeries.find(s => s.symbol === sym)?.label ?? sym,
+      color: colorBySymbol.get(sym),
+      strokeWidth: 2,
+    }))
+
+    return { lineChartData: data, lineChartSeries: series }
+  }, [visibleSymbols, ohlcCache, visibleFrom, visibleTo, allSeries, colorBySymbol])
+
+  // Candlestick mode: single symbol, filtered
+  const candlestickBars = useMemo(() => {
+    if (!candlestickSymbol) return []
+    const bars = ohlcCache.get(candlestickSymbol) ?? []
+    return bars.filter(b => b.date >= visibleFrom && b.date <= visibleTo)
+  }, [candlestickSymbol, ohlcCache, visibleFrom, visibleTo])
 
   const handlePreset = useCallback((tf: Timeframe) => {
     setActivePreset(tf)
@@ -193,7 +256,20 @@ export function HoldingsHistoryChart() {
     setVisibleTo(to)
   }, [])
 
-  const showChart = !loading && !error && allSeries.length > 0
+  const toggleSymbol = useCallback((symbol: string) => {
+    setVisibleSymbols(prev => {
+      const next = new Set(prev)
+      if (next.has(symbol)) {
+        if (next.size > 1) next.delete(symbol) // keep at least one
+      } else {
+        next.add(symbol)
+      }
+      return next
+    })
+  }, [])
+
+  const allDataLoaded = !loading && !error && allSeries.length > 0
+  const isStillFetching = ohlcLoading && ohlcCache.size === 0
 
   return (
     <Card>
@@ -209,7 +285,7 @@ export function HoldingsHistoryChart() {
                   <p className="font-semibold mb-1">How to read this chart</p>
                   <p className="text-muted-foreground leading-relaxed">
                     {viewMode === 'line'
-                      ? 'Daily closing price from market data. Select a symbol below.'
+                      ? 'Daily closing prices. Click symbols below to show/hide.'
                       : 'OHLC candlestick chart with daily open, high, low, close and volume.'}
                   </p>
                 </div>
@@ -220,7 +296,7 @@ export function HoldingsHistoryChart() {
             <div className="flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5">
               <button
                 onClick={() => setViewMode('line')}
-                title="Price line"
+                title="Price line (multi-symbol)"
                 className={cn(
                   'rounded-md p-1.5 transition-colors',
                   viewMode === 'line'
@@ -244,11 +320,11 @@ export function HoldingsHistoryChart() {
               </button>
             </div>
 
-            {/* Symbol selector — always visible */}
-            {allSeries.length > 0 && (
+            {/* Candlestick: single symbol selector */}
+            {viewMode === 'candlestick' && allSeries.length > 0 && (
               <select
-                value={selectedSymbol ?? ''}
-                onChange={e => setSelectedSymbol(e.target.value)}
+                value={candlestickSymbol ?? ''}
+                onChange={e => setCandlestickSymbol(e.target.value)}
                 className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/30"
               >
                 {allSeries.map(s => (
@@ -272,7 +348,7 @@ export function HoldingsHistoryChart() {
                 </button>
               ))}
             </div>
-            {showChart && !ohlcLoading && allOhlcBars.length > 0 && (
+            {allDataLoaded && ohlcCache.size > 0 && (
               <DateRangePicker from={visibleFrom} to={visibleTo}
                 minDate={ohlcMinDate} maxDate={ohlcMaxDate} onApply={handleCustomRange} />
             )}
@@ -284,53 +360,75 @@ export function HoldingsHistoryChart() {
           <div className="flex h-[340px] items-center justify-center">
             <p className="text-sm text-destructive">{error}</p>
           </div>
-        ) : loading || ohlcLoading ? (
+        ) : loading || isStillFetching ? (
           <div className="h-[340px] animate-pulse rounded-xl bg-muted" />
         ) : allSeries.length === 0 ? (
           <div className="flex h-[340px] items-center justify-center">
             <p className="text-sm text-muted-foreground">No holdings data available.</p>
           </div>
-        ) : visibleBars.length === 0 ? (
-          <div className="flex h-[340px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">No data for {selectedSymbol} in the selected range.</p>
-          </div>
         ) : viewMode === 'candlestick' ? (
-          <CandlestickChart
-            data={visibleBars}
-            height={340}
-            priceFormatter={v => formatMoney(v, ohlcCurrency)}
-          />
-        ) : (
+          candlestickBars.length > 0 ? (
+            <CandlestickChart
+              data={candlestickBars}
+              height={340}
+              priceFormatter={v => formatMoney(v, ohlcCurrencyMap.get(candlestickSymbol ?? '') ?? 'USD')}
+            />
+          ) : (
+            <div className="flex h-[340px] items-center justify-center">
+              <p className="text-sm text-muted-foreground">
+                {ohlcLoading ? 'Loading…' : `No data for ${candlestickSymbol} in the selected range.`}
+              </p>
+            </div>
+          )
+        ) : lineChartData.length > 0 ? (
           <UniversalChart
             chartId="dashboard-holdings-performance"
             timeSeries={{
-              data: lineData,
+              data: lineChartData,
               xDataKey: 'date',
-              series: lineSeries,
+              series: lineChartSeries,
               xTickFormatter: d => d.slice(5),
-              yTickFormatter: v => formatMoney(v, ohlcCurrency),
+              yTickFormatter: v => formatMoney(v, displayCurrency),
               showLegend: false,
             }}
             defaultType="line"
             allowedTypes={['line', 'area']}
             height={340}
           />
+        ) : (
+          <div className="flex h-[340px] items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              {ohlcLoading ? 'Loading…' : 'No data in the selected range.'}
+            </p>
+          </div>
         )}
 
-        {/* Symbol legend — quick-switch between holdings */}
-        {showChart && (
+        {/* Legend */}
+        {allDataLoaded && (
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
             {allSeries.map(s => {
-              const active = s.symbol === selectedSymbol
               const pct = s.periodReturnPct
+              const isVisible = viewMode === 'line'
+                ? visibleSymbols.has(s.symbol)
+                : s.symbol === candlestickSymbol
+
               return (
-                <button key={s.symbol} onClick={() => setSelectedSymbol(s.symbol)}
+                <button
+                  key={s.symbol}
+                  onClick={() => {
+                    if (viewMode === 'line') {
+                      toggleSymbol(s.symbol)
+                    } else {
+                      setCandlestickSymbol(s.symbol)
+                    }
+                  }}
                   className={cn(
                     'flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all border',
-                    active
-                      ? 'border-primary bg-primary/10 opacity-100'
-                      : 'border-border hover:bg-muted/50 opacity-60',
-                  )}>
+                    isVisible
+                      ? 'border-primary bg-primary/5 opacity-100'
+                      : 'border-border hover:bg-muted/50 opacity-40',
+                  )}
+                >
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: colorBySymbol.get(s.symbol) }}

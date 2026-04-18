@@ -70,6 +70,9 @@
   "api/symbol-aliases.ts": [
     "api/client.ts"
   ],
+  "api/telegramSchedules.ts": [
+    "api/client.ts"
+  ],
   "api/transactions.ts": [
     "api/client.ts",
     "types/index.ts"
@@ -78,17 +81,56 @@
     "api/client.ts",
     "types/index.ts"
   ],
-  "api/whatsappSchedules.ts": [
-    "api/client.ts"
+  "components/charts/AreaChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/CandlestickChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/DonutChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/HBarChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/LineChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/RadarChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/UniversalChart.tsx": [
+    "components/charts/AreaChart.tsx",
+    "components/charts/DonutChart.tsx",
+    "components/charts/HBarChart.tsx",
+    "components/charts/LineChart.tsx",
+    "components/charts/RadarChart.tsx",
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
+  "components/charts/index.ts": [
+    "components/charts/AreaChart.tsx",
+    "components/charts/CandlestickChart.tsx",
+    "components/charts/DonutChart.tsx",
+    "components/charts/HBarChart.tsx",
+    "components/charts/LineChart.tsx",
+    "components/charts/RadarChart.tsx",
+    "components/charts/UniversalChart.tsx"
   ],
   "components/onboarding/profile-setup.tsx": [
     "components/onboarding/step-budget.tsx",
     "components/onboarding/step-currency-goal.tsx",
     "components/onboarding/step-horizon.tsx",
     "components/onboarding/step-identity.tsx",
+    "components/onboarding/step-telegram.tsx",
     "components/onboarding/step-timezone.tsx",
     "components/onboarding/step-tracks.tsx",
-    "components/onboarding/step-whatsapp.tsx",
     "components/shared/step-dots.tsx",
     "features/onboarding/useOnboarding.ts",
     "lib/motion.ts"
@@ -127,6 +169,11 @@
     "data/onboarding.ts",
     "features/onboarding/useOnboarding.ts"
   ],
+  "components/onboarding/step-telegram.tsx": [
+    "api/profile.ts",
+    "components/onboarding/step-footer.tsx",
+    "components/shared/section-header.tsx"
+  ],
   "components/onboarding/step-timezone.tsx": [
     "components/onboarding/step-footer.tsx",
     "components/shared/section-header.tsx"
@@ -136,11 +183,6 @@
     "components/shared/section-header.tsx",
     "components/shared/selectable-tile.tsx",
     "data/onboarding.ts"
-  ],
-  "components/onboarding/step-whatsapp.tsx": [
-    "components/onboarding/step-footer.tsx",
-    "components/shared/section-header.tsx",
-    "components/ui/input.tsx"
   ],
   "components/shared/empty-state.tsx": [
     "lib/utils.ts"
@@ -184,6 +226,14 @@
   "features/chat/useChatPanel.ts": [
     "api/chat.ts"
   ],
+  "features/dashboard/HoldingsHistoryChart.tsx": [
+    "api/portfolio.ts",
+    "components/charts/index.ts",
+    "components/ui/card.tsx",
+    "lib/chart-theme.ts",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
   "features/dashboard/HoldingsTable.tsx": [
     "api/portfolio.ts",
     "components/ui/badge.tsx",
@@ -194,8 +244,11 @@
   ],
   "features/dashboard/PortfolioHistoryChart.tsx": [
     "api/portfolio.ts",
-    "components/ui/button.tsx",
-    "components/ui/card.tsx"
+    "components/charts/index.ts",
+    "components/ui/card.tsx",
+    "contexts/currency-context.tsx",
+    "lib/chart-theme.ts",
+    "lib/currency.ts"
   ],
   "features/dashboard/PortfolioSummaryCard.tsx": [
     "api/portfolio.ts",
@@ -217,11 +270,6 @@
   "features/import/useImport.ts": [
     "api/import.ts"
   ],
-  "features/monthly-flow/AllocationSummaryFooter.tsx": [
-    "contexts/currency-context.tsx",
-    "lib/currency.ts",
-    "lib/utils.ts"
-  ],
   "features/monthly-flow/ConfirmInvestmentDialog.tsx": [
     "contexts/currency-context.tsx",
     "lib/currency.ts",
@@ -229,10 +277,6 @@
   ],
   "features/monthly-flow/MetricBadge.tsx": [
     "lib/utils.ts"
-  ],
-  "features/monthly-flow/MonthlyBudgetInput.tsx": [
-    "contexts/currency-context.tsx",
-    "lib/currency.ts"
   ],
   "features/monthly-flow/PositionAllocationCard.tsx": [
     "contexts/currency-context.tsx",
@@ -298,10 +342,27 @@
   ],
   "features/risk/RiskScoreHistory.tsx": [
     "api/riskProfile.ts",
+    "components/charts/index.ts",
     "lib/utils.ts"
   ],
   "features/risk/useRiskProfile.ts": [
     "api/riskProfile.ts"
+  ],
+  "features/telegram/ScheduleForm.tsx": [
+    "api/telegramSchedules.ts"
+  ],
+  "features/telegram/ScheduleSendHistory.tsx": [
+    "api/telegramSchedules.ts"
+  ],
+  "features/telegram/ScheduledMessagesList.tsx": [
+    "api/telegramSchedules.ts",
+    "components/ui/card.tsx",
+    "features/telegram/ScheduleForm.tsx",
+    "features/telegram/ScheduleSendHistory.tsx",
+    "features/telegram/useTelegramSchedules.ts"
+  ],
+  "features/telegram/useTelegramSchedules.ts": [
+    "api/telegramSchedules.ts"
   ],
   "features/transactions/SymbolAutocomplete.tsx": [
     "types/index.ts"
@@ -319,23 +380,8 @@
     "lib/utils.ts",
     "types/index.ts"
   ],
-  "features/whatsapp/ScheduleForm.tsx": [
-    "api/whatsappSchedules.ts"
-  ],
-  "features/whatsapp/ScheduleSendHistory.tsx": [
-    "api/whatsappSchedules.ts"
-  ],
-  "features/whatsapp/ScheduledMessagesList.tsx": [
-    "api/whatsappSchedules.ts",
-    "components/ui/card.tsx",
-    "features/whatsapp/ScheduleForm.tsx",
-    "features/whatsapp/ScheduleSendHistory.tsx",
-    "features/whatsapp/useWhatsAppSchedules.ts"
-  ],
-  "features/whatsapp/useWhatsAppSchedules.ts": [
-    "api/whatsappSchedules.ts"
-  ],
   "layouts/app-layout.tsx": [
+    "components/shared/AllocaLogo.tsx",
     "features/alerts/useAlertBadge.ts",
     "features/chat/ChatPanel.tsx",
     "features/chat/useChatPanel.ts",
@@ -359,6 +405,7 @@
   "pages/AllocationPage.tsx": [
     "api/allocations.ts",
     "api/symbol-aliases.ts",
+    "components/charts/index.ts",
     "components/ui/card.tsx",
     "data/onboarding.ts",
     "lib/utils.ts",
@@ -367,17 +414,23 @@
   "pages/AnalyticsPage.tsx": [
     "api/analytics.ts",
     "api/export.ts",
+    "components/charts/index.ts",
     "features/export/ExportButton.tsx",
+    "lib/chart-theme.ts",
     "lib/motion.ts",
     "lib/utils.ts"
   ],
   "pages/DashboardPage.tsx": [
     "api/export.ts",
+    "components/charts/index.ts",
+    "contexts/currency-context.tsx",
+    "features/dashboard/HoldingsHistoryChart.tsx",
     "features/dashboard/HoldingsTable.tsx",
     "features/dashboard/PortfolioHistoryChart.tsx",
     "features/dashboard/PortfolioSummaryCard.tsx",
     "features/dashboard/useDashboard.ts",
     "features/export/ExportButton.tsx",
+    "lib/currency.ts",
     "lib/motion.ts"
   ],
   "pages/ImportPage.tsx": [
@@ -387,13 +440,13 @@
     "features/import/useImport.ts"
   ],
   "pages/MonthlyFlowPage.tsx": [
+    "components/charts/index.ts",
     "contexts/currency-context.tsx",
-    "features/monthly-flow/AllocationSummaryFooter.tsx",
     "features/monthly-flow/ConfirmInvestmentDialog.tsx",
-    "features/monthly-flow/MonthlyBudgetInput.tsx",
     "features/monthly-flow/PositionAllocationCard.tsx",
     "features/monthly-flow/useMonthlyFlow.ts",
-    "lib/currency.ts"
+    "lib/currency.ts",
+    "lib/utils.ts"
   ],
   "pages/OnboardingPage.tsx": [
     "components/onboarding/profile-setup.tsx",
@@ -423,7 +476,7 @@
     "components/ui/card.tsx",
     "contexts/currency-context.tsx",
     "data/onboarding.ts",
-    "features/whatsapp/ScheduledMessagesList.tsx",
+    "features/telegram/ScheduledMessagesList.tsx",
     "lib/currency.ts",
     "types/index.ts"
   ],
@@ -437,6 +490,7 @@
   ],
   "pages/RiskPage.tsx": [
     "api/risk.ts",
+    "components/charts/index.ts",
     "features/risk/RiskProfileCard.tsx",
     "features/risk/RiskReasoningPanel.tsx",
     "features/risk/RiskScoreHistory.tsx",

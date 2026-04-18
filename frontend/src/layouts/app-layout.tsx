@@ -126,9 +126,9 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
 
   return (
     <>
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-full">
 
           {/* Logo */}
           <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
@@ -185,7 +185,7 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
           </div>
         </aside>
 
-        {/* Main content */}
+        {/* Main content — scrolls independently */}
         <main className="flex-1 overflow-y-auto bg-background">
           <Outlet />
         </main>
