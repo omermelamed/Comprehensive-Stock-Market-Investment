@@ -10,11 +10,14 @@ import com.investment.api.dto.PortfolioSummaryResponse
 import com.investment.application.HoldingsHistoryService
 import com.investment.application.MarketDataService
 import com.investment.application.PortfolioSummaryService
+import com.investment.application.UserProfileService
 import com.investment.infrastructure.SnapshotRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
 
@@ -24,6 +27,7 @@ class PortfolioController(
     private val portfolioSummaryService: PortfolioSummaryService,
     private val holdingsHistoryService: HoldingsHistoryService,
     private val marketDataService: MarketDataService,
+    private val userProfileService: UserProfileService,
     private val snapshotRepository: SnapshotRepository,
     private val clock: Clock,
 ) {
@@ -50,11 +54,20 @@ class PortfolioController(
             "ALL" -> snapshotRepository.findAllOrderedByDate()
             else -> snapshotRepository.findByDateRange(today.minusDays(30), today)
         }
+
+        // Snapshots are stored in USD (native currency). Convert to user's preferred currency
+        // at read time so that changing the currency setting auto-applies to all history.
+        val preferredCurrency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
+        val fxRate = if (preferredCurrency == "USD") BigDecimal.ONE
+        else try {
+            marketDataService.getExchangeRate("USD", preferredCurrency)
+        } catch (_: Exception) { BigDecimal.ONE }
+
         val points = records.map { r ->
             PortfolioDataPoint(
                 date = r.date.toString(),
-                totalValue = r.totalValue,
-                dailyPnl = r.dailyPnl,
+                totalValue = r.totalValue.multiply(fxRate).setScale(2, RoundingMode.HALF_UP),
+                dailyPnl = r.dailyPnl.multiply(fxRate).setScale(2, RoundingMode.HALF_UP),
             )
         }
         return PortfolioHistoryResponse(range = range, points = points)

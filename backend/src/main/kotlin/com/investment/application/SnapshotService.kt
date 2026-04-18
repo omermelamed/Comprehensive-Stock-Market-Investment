@@ -2,159 +2,232 @@ package com.investment.application
 
 import com.investment.domain.MarketDataUnavailableException
 import com.investment.domain.PortfolioCalculator
+import com.investment.api.dto.HoldingResponse
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
 import com.investment.infrastructure.SnapshotRepository
+import com.investment.infrastructure.TransactionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class SnapshotService(
     private val snapshotRepository: SnapshotRepository,
     private val holdingsRepository: HoldingsProjectionRepository,
     private val allocationRepository: AllocationRepository,
+    private val transactionRepository: TransactionRepository,
     private val marketDataService: MarketDataService,
-    private val clock: Clock
+    private val clock: Clock,
 ) {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
-        private const val DEFAULT_CURRENCY = "USD"
+        private const val SNAPSHOT_CURRENCY = "USD"
     }
 
     /**
-     * Creates a snapshot for [date] using the provided [pricesForDate] map.
-     * If a symbol has no price in the map (non-trading day), uses the [fallbackPrices] map
-     * (typically the most-recently-seen prices from a prior trading day).
+     * Minimal holdings view needed for snapshot math — derived from the transaction ledger
+     * so it can represent portfolio state at any past date, not just today.
+     */
+    private data class HoldingState(
+        val symbol: String,
+        val track: String,
+        val netQuantity: BigDecimal,
+        val avgBuyPrice: BigDecimal,
+        val totalCostBasis: BigDecimal,
+    )
+
+    /**
+     * Computes what holdings looked like on [date] by replaying all transactions
+     * up to and including that date. Only symbols with positive net quantity are returned.
+     */
+    private fun computeHoldingsAsOf(
+        allTransactions: List<com.investment.infrastructure.TransactionLedgerRow>,
+        date: LocalDate,
+    ): List<HoldingState> {
+        val txsUpToDate = allTransactions.filter {
+            it.executedAt.atZone(ZoneOffset.UTC).toLocalDate() <= date
+        }
+
+        return txsUpToDate.groupBy { it.symbol.uppercase() }.mapNotNull { (symbol, txs) ->
+            var totalBuyCost = BigDecimal.ZERO
+            var totalBuyQty = BigDecimal.ZERO
+            var netQty = BigDecimal.ZERO
+            var track = "LONG"
+
+            for (tx in txs) {
+                track = tx.track
+                when (tx.type.uppercase()) {
+                    "BUY"   -> { totalBuyCost += tx.quantity * tx.pricePerUnit; totalBuyQty += tx.quantity; netQty += tx.quantity }
+                    "SELL"  -> netQty -= tx.quantity
+                    "SHORT" -> netQty -= tx.quantity
+                    "COVER" -> netQty += tx.quantity
+                }
+            }
+
+            if (netQty.compareTo(BigDecimal.ZERO) <= 0) return@mapNotNull null
+
+            val avgBuyPrice = if (totalBuyQty.compareTo(BigDecimal.ZERO) > 0)
+                totalBuyCost.divide(totalBuyQty, 8, RoundingMode.HALF_UP)
+            else BigDecimal.ZERO
+
+            HoldingState(symbol, track, netQty, avgBuyPrice, totalBuyCost)
+        }
+    }
+
+    /**
+     * Creates a snapshot for [date] using [holdings] as the portfolio state and [pricesForDate]
+     * as closing prices. Falls back to [fallbackPrices] for symbols missing from [pricesForDate].
      */
     private fun createSnapshotWithPrices(
         date: LocalDate,
         source: String,
+        holdings: List<HoldingState>,
         pricesForDate: Map<String, BigDecimal>,
-        fallbackPrices: Map<String, BigDecimal>
+        fallbackPrices: Map<String, BigDecimal>,
     ) {
         if (snapshotRepository.existsForDate(date)) {
             log.debug("Snapshot already exists for date {} — skipping", date)
             return
         }
-
-        val holdings = holdingsRepository.findAll()
         if (holdings.isEmpty()) {
-            log.debug("No holdings found — skipping snapshot for date {}", date)
+            log.debug("No holdings as of {} — skipping snapshot", date)
             return
         }
 
         val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
 
-        val resolvedPrices = holdings.associate { holding ->
-            val upper = holding.symbol.uppercase()
-            upper to (pricesForDate[upper] ?: fallbackPrices[upper] ?: BigDecimal.ZERO)
+        val resolvedPrices = holdings.associate { h ->
+            h.symbol to (pricesForDate[h.symbol] ?: fallbackPrices[h.symbol] ?: BigDecimal.ZERO)
         }
 
-        val totalPortfolioValue = holdings.sumOf { it.netQuantity * (resolvedPrices[it.symbol.uppercase()] ?: BigDecimal.ZERO) }
+        val totalPortfolioValue = holdings.sumOf { h ->
+            h.netQuantity * (resolvedPrices[h.symbol] ?: BigDecimal.ZERO)
+        }
 
-        val holdingMetrics = holdings.map { holding ->
-            val upperSymbol = holding.symbol.uppercase()
-            val allocation = allocationsBySymbol[upperSymbol]
+        val holdingMetrics = holdings.map { h ->
+            val allocation = allocationsBySymbol[h.symbol]
             PortfolioCalculator.computeHoldingMetrics(
-                holding = holding,
-                currentPrice = resolvedPrices[upperSymbol] ?: BigDecimal.ZERO,
+                holding = h.toHoldingResponse(),
+                currentPrice = resolvedPrices[h.symbol] ?: BigDecimal.ZERO,
                 totalPortfolioValue = totalPortfolioValue,
                 targetPercent = allocation?.targetPercentage,
-                label = allocation?.label
+                label = allocation?.label,
             )
         }
 
-        val summary = PortfolioCalculator.computePortfolioSummary(holdingMetrics, DEFAULT_CURRENCY)
+        val summary = PortfolioCalculator.computePortfolioSummary(holdingMetrics, SNAPSHOT_CURRENCY)
 
         snapshotRepository.save(
             date = date,
             totalValue = summary.totalValue,
             dailyPnl = summary.totalPnlAbsolute,
-            source = source
+            source = source,
         )
 
-        log.info("Snapshot created for date {} with total_value={} source={}", date, summary.totalValue, source)
+        log.info("Snapshot created: date={} totalValue={} source={}", date, summary.totalValue, source)
     }
 
+    /** Bridge from [HoldingState] to [HoldingResponse] for [PortfolioCalculator]. */
+    private fun HoldingState.toHoldingResponse() = HoldingResponse(
+        symbol = symbol,
+        track = track,
+        netQuantity = netQuantity,
+        avgBuyPrice = avgBuyPrice,
+        totalCostBasis = totalCostBasis,
+        transactionCount = 0,
+        firstBoughtAt = java.time.Instant.EPOCH,
+        lastTransactionAt = java.time.Instant.EPOCH,
+    )
+
+    // ─── Public API ───────────────────────────────────────────────────────────
+
+    /**
+     * Creates a single snapshot for [date] using current holdings (from the live view).
+     * For today this is exact; for past dates use [regenerateSnapshotsFrom] instead so
+     * that each past snapshot only counts transactions that existed on that date.
+     */
     fun createSnapshotForDate(date: LocalDate, source: String) {
+        val today = LocalDate.now(clock)
+
+        // Convert live HoldingResponse → HoldingState
         val holdings = holdingsRepository.findAll()
+            .filter { it.netQuantity.compareTo(BigDecimal.ZERO) > 0 }
+            .map { h -> HoldingState(h.symbol.uppercase(), h.track, h.netQuantity, h.avgBuyPrice, h.totalCostBasis) }
+
         if (holdings.isEmpty()) return
 
-        val today = LocalDate.now(clock)
         val pricesForDate: Map<String, BigDecimal> = if (date.isBefore(today)) {
-            // Historical date: fetch closing prices from that specific day
-            holdings.associate { holding ->
-                val upper = holding.symbol.uppercase()
-                val historicalMap = marketDataService.getHistoricalPrices(holding.symbol, date, date)
-                upper to (historicalMap[date] ?: BigDecimal.ZERO)
+            holdings.associate { h ->
+                val historicalMap = marketDataService.getHistoricalPrices(h.symbol, date, date)
+                h.symbol to (historicalMap[date] ?: BigDecimal.ZERO)
             }
         } else {
-            // Today: use live quotes
-            holdings.associate { holding ->
-                val price = try {
-                    marketDataService.getQuote(holding.symbol).price
-                } catch (e: MarketDataUnavailableException) {
-                    log.warn("Market data unavailable for {} on {} — using zero", holding.symbol, date)
-                    BigDecimal.ZERO
-                }
-                holding.symbol.uppercase() to price
+            holdings.associate { h ->
+                val price = try { marketDataService.getQuote(h.symbol).price }
+                catch (e: MarketDataUnavailableException) { BigDecimal.ZERO }
+                h.symbol to price
             }
         }
 
-        createSnapshotWithPrices(date, source, pricesForDate, emptyMap())
+        createSnapshotWithPrices(date, source, holdings, pricesForDate, emptyMap())
     }
 
     /**
      * Deletes all snapshots from [fromDate] through today and recreates them using
-     * historically accurate closing prices for each date. Non-trading days use the
-     * most-recently-seen price (carry-forward).
+     * historically accurate per-date holdings (only transactions that existed on each date)
+     * and historical closing prices with carry-forward for non-trading days.
      */
     fun regenerateSnapshotsFrom(fromDate: LocalDate) {
         val today = LocalDate.now(clock)
         if (fromDate.isAfter(today)) return
 
-        val holdings = holdingsRepository.findAll()
-        if (holdings.isEmpty()) return
-
         val deleted = snapshotRepository.deleteByDateRange(fromDate, today)
-        log.info("Regenerating snapshots: deleted {} existing snapshot(s) from {} to {}", deleted, fromDate, today)
+        log.info("Regenerating snapshots: deleted {} snapshot(s) from {} to {}", deleted, fromDate, today)
 
-        // Batch-fetch historical prices for all symbols over the full range (one HTTP call per symbol)
-        val historicalBySymbol: Map<String, Map<LocalDate, BigDecimal>> = holdings.associate { holding ->
-            holding.symbol.uppercase() to marketDataService.getHistoricalPrices(holding.symbol, fromDate, today)
+        // Load all transactions once — we'll filter per date inside the loop
+        val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc()
+
+        // Determine all symbols that ever appear in the ledger
+        val allSymbols = allTransactions.map { it.symbol.uppercase() }.distinct()
+
+        // Batch-fetch historical prices for each symbol over the full range (one call per symbol)
+        val historicalBySymbol: Map<String, Map<LocalDate, BigDecimal>> = allSymbols.associateWith { symbol ->
+            try { marketDataService.getHistoricalPrices(symbol, fromDate, today) }
+            catch (e: Exception) { log.warn("No history for {}: {}", symbol, e.message); emptyMap() }
         }
 
-        // Carry-forward: fill non-trading days with the last known price
         val fallback = mutableMapOf<String, BigDecimal>()
         var date = fromDate
         var created = 0
+
         while (!date.isAfter(today)) {
+            // Holdings as they existed on this specific date
+            val holdingsOnDate = computeHoldingsAsOf(allTransactions, date)
+
             val pricesForDate: Map<String, BigDecimal> = if (date.isBefore(today)) {
-                historicalBySymbol.mapValues { (_, dateMap) -> dateMap[date] ?: BigDecimal.ZERO }
+                holdingsOnDate.associate { h ->
+                    h.symbol to (historicalBySymbol[h.symbol]?.get(date) ?: BigDecimal.ZERO)
+                }
             } else {
-                // Today: use live quotes for the most accurate current value
-                holdings.associate { holding ->
-                    val price = try {
-                        marketDataService.getQuote(holding.symbol).price
-                    } catch (e: MarketDataUnavailableException) {
-                        log.warn("Market data unavailable for {} — using zero", holding.symbol)
-                        BigDecimal.ZERO
-                    }
-                    holding.symbol.uppercase() to price
+                holdingsOnDate.associate { h ->
+                    val price = try { marketDataService.getQuote(h.symbol).price }
+                    catch (e: MarketDataUnavailableException) { BigDecimal.ZERO }
+                    h.symbol to price
                 }
             }
 
-            createSnapshotWithPrices(date, "REGENERATED", pricesForDate, fallback)
+            if (holdingsOnDate.isNotEmpty()) {
+                createSnapshotWithPrices(date, "REGENERATED", holdingsOnDate, pricesForDate, fallback)
+                created++
+            }
 
-            // Update carry-forward with prices seen on this date
             pricesForDate.forEach { (sym, price) -> if (price > BigDecimal.ZERO) fallback[sym] = price }
-
-            created++
             date = date.plusDays(1)
         }
 

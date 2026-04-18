@@ -16,6 +16,7 @@ interface DonutChartProps {
   centerLabel?: string
   centerValue?: string
   formatValue?: (value: number) => string
+  showLegend?: boolean
   className?: string
 }
 
@@ -27,6 +28,7 @@ export function DonutChart({
   centerLabel,
   centerValue,
   formatValue = (v) => `${v.toFixed(1)}%`,
+  showLegend = true,
   className,
 }: DonutChartProps) {
   const total = data.reduce((s, d) => s + d.value, 0)
@@ -78,21 +80,22 @@ export function DonutChart({
         </div>
       )}
 
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-        {data.map((entry, i) => (
-          <div key={entry.name} className="flex items-center gap-1.5 text-xs">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: entry.color ?? seriesColor(i) }}
-            />
-            <span className="text-muted-foreground">{entry.name}</span>
-            <span className="tabular-nums font-mono font-medium text-foreground">
-              {formatValue(entry.value)}
-            </span>
-          </div>
-        ))}
-      </div>
+      {showLegend && (
+        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+          {data.map((entry, i) => (
+            <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: entry.color ?? seriesColor(i) }}
+              />
+              <span className="text-muted-foreground">{entry.name}</span>
+              <span className="tabular-nums font-mono font-medium text-foreground">
+                {formatValue(entry.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

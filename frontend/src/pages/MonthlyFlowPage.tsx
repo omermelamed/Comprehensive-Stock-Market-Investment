@@ -196,7 +196,7 @@ export default function MonthlyFlowPage() {
                     defaultType="donut"
                     allowedTypes={['donut', 'bar']}
                     height={240}
-                    centerValue={fmt(totalAllocated)}
+                    formatCenterValue={(t) => fmt(t)}
                     centerLabel="Allocated"
                     formatValue={v => fmt(v)}
                   />

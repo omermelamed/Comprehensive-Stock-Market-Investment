@@ -80,6 +80,7 @@ class TelegramBotService(
             is ClassifiedIntent.ConceptQuestion  -> readHandlers.conceptQuestion(intent.question)
 
             is ClassifiedIntent.LogTransaction   -> confirmationService.requestConfirmation(sessionId, intent)
+            is ClassifiedIntent.SellHolding      -> confirmationService.requestConfirmation(sessionId, intent)
             is ClassifiedIntent.StartMonthlyFlow -> confirmationService.requestConfirmation(sessionId, intent)
             is ClassifiedIntent.SetAlert         -> confirmationService.requestConfirmation(sessionId, intent)
             is ClassifiedIntent.AddWatchlist     -> confirmationService.requestConfirmation(sessionId, intent)

@@ -17,6 +17,7 @@ import java.util.UUID
 data class TransactionLedgerRow(
     val symbol: String,
     val type: String,
+    val track: String,
     val quantity: BigDecimal,
     val pricePerUnit: BigDecimal,
     val executedAt: Instant
@@ -30,7 +31,7 @@ class TransactionRepository(
     fun findAllOrderedByExecutedAtAsc(): List<TransactionLedgerRow> {
         return dsl.fetch(
             """
-            SELECT symbol, type, quantity, price_per_unit, executed_at
+            SELECT symbol, type, track, quantity, price_per_unit, executed_at
             FROM transactions
             ORDER BY executed_at ASC
             """.trimIndent()
@@ -38,6 +39,7 @@ class TransactionRepository(
             TransactionLedgerRow(
                 symbol = row.get("symbol", String::class.java),
                 type = row.get("type", String::class.java),
+                track = row.get("track", String::class.java),
                 quantity = row.get("quantity", BigDecimal::class.java),
                 pricePerUnit = row.get("price_per_unit", BigDecimal::class.java),
                 executedAt = row.get("executed_at", Timestamp::class.java).toInstant()

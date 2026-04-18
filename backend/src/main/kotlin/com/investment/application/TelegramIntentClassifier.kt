@@ -51,6 +51,10 @@ class TelegramIntentClassifier(
 
             Write intents (require user confirmation before executing):
             {"intent": "LOG_TRANSACTION", "symbol": "VOO", "type": "BUY", "quantity": 5, "price": 221.40}
+            {"intent": "SELL_HOLDING", "symbol": "VOO", "quantity": 5, "quantityMode": "EXACT", "price": null, "date": null}
+            {"intent": "SELL_HOLDING", "symbol": "VOO", "quantity": null, "quantityMode": "HALF", "price": null, "date": null}
+            {"intent": "SELL_HOLDING", "symbol": "VOO", "quantity": null, "quantityMode": "ALL", "price": null, "date": null}
+            {"intent": "SELL_HOLDING", "symbol": "VOO", "quantity": 5, "quantityMode": "EXACT", "price": 220.00, "date": "2026-03-01"}
             {"intent": "START_MONTHLY_FLOW", "amount": 2000}
             {"intent": "SET_ALERT", "symbol": "AAPL", "condition": "ABOVE", "threshold": 200.00}
             {"intent": "ADD_WATCHLIST", "symbol": "MSFT"}
@@ -61,6 +65,14 @@ class TelegramIntentClassifier(
             {"intent": "UNKNOWN"}
 
             Rules:
+            - For selling shares, use SELL_HOLDING (not LOG_TRANSACTION with type=SELL)
+            - "Sell 5 shares of VOO" → SELL_HOLDING, quantity=5, quantityMode=EXACT
+            - "Sell half my VOO" → SELL_HOLDING, quantityMode=HALF
+            - "Sell all my VOO" / "Close my VOO position" → SELL_HOLDING, quantityMode=ALL
+            - "Sell ₪2000 worth of VOO" → SELL_HOLDING, quantityMode=AMOUNT, quantity=2000
+            - "Sell 5 VOO on March 1" → SELL_HOLDING, date=2026-03-01 (ISO format)
+            - quantityMode must be one of: EXACT, HALF, ALL, AMOUNT
+            - date must be ISO format (yyyy-MM-dd) or null for today
             - type must be BUY, SELL, SHORT, or COVER
             - condition must be ABOVE or BELOW
             - all numeric fields must be numbers (not strings)
@@ -123,6 +135,13 @@ class TelegramIntentClassifier(
                 )
                 "REMOVE_WATCHLIST"  -> ClassifiedIntent.RemoveWatchlist(
                     symbol = map["symbol"]?.toString() ?: return ClassifiedIntent.Unknown
+                )
+                "SELL_HOLDING"      -> ClassifiedIntent.SellHolding(
+                    symbol       = map["symbol"]?.toString() ?: return ClassifiedIntent.Unknown,
+                    quantity     = parseBigDecimal(map["quantity"]),
+                    quantityMode = map["quantityMode"]?.toString()?.uppercase() ?: "EXACT",
+                    price        = parseBigDecimal(map["price"]),
+                    date         = map["date"]?.toString()
                 )
                 "SCHEDULE_MESSAGE"  -> ClassifiedIntent.ScheduleMessage(
                     messageType  = map["messageType"]?.toString()?.uppercase() ?: return ClassifiedIntent.Unknown,

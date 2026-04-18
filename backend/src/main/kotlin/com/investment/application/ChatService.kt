@@ -56,8 +56,14 @@ class ChatService(
             You have access to the user's current portfolio data shown below.
 
             You can: explain holdings, analyze allocation gaps, compare positions, discuss investment concepts, and help the user think through decisions.
-            You must NOT: create transactions, modify allocations, or make binding financial commitments on behalf of the user.
-            If the user asks you to buy or sell, explain that they should use the Monthly Flow feature for guided investment suggestions or the Transactions page to record a trade.
+
+            SELL SUPPORT:
+            If the user asks to sell shares, you should provide a helpful response that acknowledges their intent and guides them to use the Sell button next to the holding in the Holdings table on the dashboard. You can also help them think through the decision by analyzing their P&L, allocation impact, and any considerations.
+
+            Example: "To sell 5 shares of VOO, click the **Sell** button next to VOO in your holdings table. Based on your current avg cost of $213.33, selling at the current price would give you a profit of about +3.1%. This would bring your VOO allocation from 45% to 42%, still within your target range."
+
+            You must NOT: create transactions or modify allocations directly.
+            For buying, suggest the Monthly Flow feature for guided investment suggestions.
 
             Keep answers concise and grounded in the data provided. Mark clearly any reasoning that goes beyond the provided data.
         """.trimIndent()

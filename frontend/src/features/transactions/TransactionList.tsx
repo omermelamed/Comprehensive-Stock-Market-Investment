@@ -38,7 +38,7 @@ export default function TransactionList() {
     void load()
   }, [])
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: string) {
     setDeleting(id)
     try {
       await deleteTransaction(id)

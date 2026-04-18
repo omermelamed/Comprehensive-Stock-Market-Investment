@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { HoldingDashboard } from '@/api/portfolio'
 
@@ -54,9 +55,10 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 interface Props {
   holdings: HoldingDashboard[]
+  onSell?: (symbol: string) => void
 }
 
-export function HoldingsTable({ holdings }: Props) {
+export function HoldingsTable({ holdings, onSell }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('currentValue')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const portfolioCurrency = useCurrency()
@@ -159,8 +161,12 @@ export function HoldingsTable({ holdings }: Props) {
                   </button>
                 </th>
                 {/* Status */}
-                <th className="px-6 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Status
+                </th>
+                {/* Actions */}
+                <th className="px-6 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Action
                 </th>
               </tr>
             </thead>
@@ -232,10 +238,21 @@ export function HoldingsTable({ holdings }: Props) {
                       )}
                     </td>
                     {/* Status */}
-                    <td className="px-6 py-3.5 text-right">
+                    <td className="px-3 py-3.5 text-right">
                       <Badge variant={statusBadgeVariant(h.allocationStatus)}>
                         {statusLabel(h.allocationStatus)}
                       </Badge>
+                    </td>
+                    {/* Sell button */}
+                    <td className="px-6 py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onSell?.(h.symbol)}
+                      >
+                        Sell
+                      </Button>
                     </td>
                   </tr>
                 )

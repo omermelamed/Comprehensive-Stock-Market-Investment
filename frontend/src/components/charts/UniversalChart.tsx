@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   PieChart as PieIcon,
   BarChart3,
@@ -54,6 +54,8 @@ interface CategoryProps extends BaseProps {
   formatValue?: (value: number) => string
   centerLabel?: string
   centerValue?: string
+  /** Optional: recomputes the donut center text from the active-data total and count. */
+  formatCenterValue?: (activeTotal: number, activeCount: number) => string
 }
 
 interface TimeSeriesProps extends BaseProps {
@@ -62,6 +64,7 @@ interface TimeSeriesProps extends BaseProps {
   formatValue?: never
   centerLabel?: never
   centerValue?: never
+  formatCenterValue?: never
 }
 
 type UniversalChartProps = CategoryProps | TimeSeriesProps
@@ -89,17 +92,72 @@ const CHART_LABELS: Record<ChartType, string> = {
 /* ── persistence ─────────────────────────────────────────── */
 
 function readPref(chartId: string): ChartType | null {
-  try {
-    return localStorage.getItem(STORAGE_PREFIX + chartId) as ChartType | null
-  } catch {
-    return null
-  }
+  try { return localStorage.getItem(STORAGE_PREFIX + chartId) as ChartType | null }
+  catch { return null }
 }
 
 function writePref(chartId: string, type: ChartType) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + chartId, type)
-  } catch { /* quota */ }
+  try { localStorage.setItem(STORAGE_PREFIX + chartId, type) }
+  catch { /* quota */ }
+}
+
+/* ── shared legend row ───────────────────────────────────── */
+
+interface LegendItem {
+  name: string
+  color: string
+  label?: string | null
+}
+
+function LegendRow({
+  items, activeKeys, onToggle,
+}: {
+  items: LegendItem[]
+  activeKeys: Set<string>
+  onToggle: (name: string) => void
+}) {
+  if (items.length === 0) return null
+  return (
+    <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1.5">
+      {items.map(({ name, color, label }) => {
+        const isActive = activeKeys.has(name)
+        return (
+          <button
+            key={name}
+            onClick={() => onToggle(name)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium',
+              'cursor-pointer select-none transition-all duration-200 hover:bg-muted/60',
+              !isActive && 'opacity-40',
+            )}
+          >
+            <span
+              className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full transition-colors duration-200"
+              style={{ backgroundColor: color }}
+            />
+            <span
+              className={cn(
+                'transition-all duration-200 text-muted-foreground',
+                !isActive && 'line-through decoration-muted-foreground',
+              )}
+            >
+              {name}
+            </span>
+            {label != null && (
+              <span
+                className={cn(
+                  'tabular-nums font-mono font-medium transition-colors duration-200',
+                  isActive ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {label}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 /* ── component ───────────────────────────────────────────── */
@@ -123,12 +181,47 @@ export function UniversalChart(props: UniversalChartProps) {
   )
 
   const activeType = allowedTypes.includes(chartType) ? chartType : defaultType
-
   const isTimeSeries = !!props.timeSeries
+
+  // ── Toggle state (survives chart-type switches) ───────────
+  const allNames = useMemo((): string[] => {
+    if (isTimeSeries) return props.timeSeries!.series.map(s => s.name)
+    return (props.data ?? []).map(d => d.name)
+  }, [isTimeSeries, props.timeSeries, props.data])
+
+  const [activeKeys, setActiveKeys] = useState<Set<string>>(() => new Set(allNames))
+
+  // When the available names change (data reload / prop update), preserve existing
+  // deselections for names that still exist; add new names as active.
+  const namesFingerprint = allNames.join('\0')
+  useEffect(() => {
+    setActiveKeys(prev => {
+      const result = new Set<string>()
+      for (const n of allNames) {
+        // Include if: first render (prev empty) OR was previously active
+        if (prev.size === 0 || prev.has(n)) result.add(n)
+      }
+      // Guarantee at least one active
+      if (result.size === 0 && allNames.length > 0) result.add(allNames[0])
+      return result
+    })
+  }, [namesFingerprint]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = useCallback((name: string) => {
+    setActiveKeys(prev => {
+      if (prev.has(name)) {
+        if (prev.size <= 1) return prev  // keep at least one active
+        const next = new Set(prev)
+        next.delete(name)
+        return next
+      }
+      return new Set([...prev, name])
+    })
+  }, [])
 
   return (
     <div className={cn(className)}>
-      {/* Toggle row */}
+      {/* Type switcher */}
       {allowedTypes.length > 1 && (
         <div className="mb-3 flex items-center justify-end gap-0.5">
           {allowedTypes.map((type) => {
@@ -152,9 +245,14 @@ export function UniversalChart(props: UniversalChartProps) {
         </div>
       )}
 
-      {/* Render */}
       {isTimeSeries ? (
-        <TimeSeriesRender type={activeType} ts={props.timeSeries!} height={height} />
+        <TimeSeriesRender
+          type={activeType}
+          ts={props.timeSeries!}
+          height={height}
+          activeKeys={activeKeys}
+          onToggle={toggle}
+        />
       ) : (
         <CategoryRender
           type={activeType}
@@ -163,6 +261,9 @@ export function UniversalChart(props: UniversalChartProps) {
           formatValue={props.formatValue ?? ((v) => `${v.toFixed(1)}%`)}
           centerLabel={props.centerLabel}
           centerValue={props.centerValue}
+          formatCenterValue={props.formatCenterValue}
+          activeKeys={activeKeys}
+          onToggle={toggle}
         />
       )}
     </div>
@@ -172,7 +273,7 @@ export function UniversalChart(props: UniversalChartProps) {
 /* ── category renderer ───────────────────────────────────── */
 
 function CategoryRender({
-  type, data, height, formatValue, centerLabel, centerValue,
+  type, data, height, formatValue, centerLabel, centerValue, formatCenterValue, activeKeys, onToggle,
 }: {
   type: ChartType
   data: ChartDataPoint[]
@@ -180,58 +281,78 @@ function CategoryRender({
   formatValue: (v: number) => string
   centerLabel?: string
   centerValue?: string
+  formatCenterValue?: (activeTotal: number, activeCount: number) => string
+  activeKeys: Set<string>
+  onToggle: (name: string) => void
 }) {
-  const cartesian = useMemo(() => data.map(d => ({ name: d.name, value: d.value })), [data])
-  const series = useMemo(() => [{ dataKey: 'value', name: 'Value' }], [])
-  const radarData = useMemo(() => data.map(d => ({ axis: d.name, value: d.value })), [data])
+  const activeData = useMemo(
+    () => data.filter(d => activeKeys.has(d.name)),
+    [data, activeKeys],
+  )
+  const activeTotal = useMemo(
+    () => activeData.reduce((s, d) => s + d.value, 0),
+    [activeData],
+  )
+
+  const computedCenterValue = formatCenterValue
+    ? formatCenterValue(activeTotal, activeData.length)
+    : centerValue
+
+  const cartesian = useMemo(
+    () => activeData.map(d => ({ name: d.name, value: d.value })),
+    [activeData],
+  )
+  const singleSeries = useMemo(() => [{ dataKey: 'value', name: 'Value' }], [])
+  const radarData = useMemo(
+    () => activeData.map(d => ({ axis: d.name, value: d.value })),
+    [activeData],
+  )
+  const radarDomain = useMemo<[number, number]>(
+    () => [0, Math.max(...activeData.map(d => d.value), 100)],
+    [activeData],
+  )
+
+  const legendItems: LegendItem[] = useMemo(
+    () => data.map((entry, i) => ({
+      name: entry.name,
+      color: entry.color ?? seriesColor(i),
+      label: formatValue(entry.value),
+    })),
+    [data, formatValue],
+  )
 
   return (
     <>
       {type === 'donut' && (
         <DonutChart
-          data={data} height={height} formatValue={formatValue}
-          centerLabel={centerLabel} centerValue={centerValue}
+          data={activeData} height={height} formatValue={formatValue}
+          centerLabel={centerLabel} centerValue={computedCenterValue}
+          showLegend={false}
         />
       )}
       {type === 'bar' && (
-        <HBarChart data={data} height={height} formatValue={formatValue} />
+        <HBarChart data={activeData} height={height} formatValue={formatValue} />
       )}
       {type === 'line' && (
         <LineChartComponent
-          data={cartesian} series={series} xDataKey="name"
+          data={cartesian} series={singleSeries} xDataKey="name"
           height={height} yTickFormatter={formatValue} showLegend={false}
         />
       )}
       {type === 'area' && (
         <AreaChartComponent
-          data={cartesian} series={series} xDataKey="name"
+          data={cartesian} series={singleSeries} xDataKey="name"
           height={height} yTickFormatter={formatValue} showLegend={false}
         />
       )}
       {type === 'radar' && (
         <RadarChartComponent
           data={radarData} series={[{ dataKey: 'value', name: 'Value' }]}
-          height={height} domain={[0, Math.max(...data.map(d => d.value), 100)]}
+          height={height} domain={radarDomain}
         />
       )}
 
-      {/* Legend for non-donut (donut draws its own) */}
-      {type !== 'donut' && (
-        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
-          {data.map((entry, i) => (
-            <div key={entry.name} className="flex items-center gap-1.5 text-xs">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: entry.color ?? seriesColor(i) }}
-              />
-              <span className="text-muted-foreground">{entry.name}</span>
-              <span className="tabular-nums font-mono font-medium text-foreground">
-                {formatValue(entry.value)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      <LegendRow items={legendItems} activeKeys={activeKeys} onToggle={onToggle} />
     </>
   )
 }
@@ -239,52 +360,68 @@ function CategoryRender({
 /* ── time-series renderer ────────────────────────────────── */
 
 function TimeSeriesRender({
-  type, ts, height,
+  type, ts, height, activeKeys, onToggle,
 }: {
   type: ChartType
   ts: TimeSeriesConfig
   height: number
+  activeKeys: Set<string>
+  onToggle: (name: string) => void
 }) {
+  const activeTsSeries = useMemo(
+    () => ts.series.filter(s => activeKeys.has(s.name)),
+    [ts.series, activeKeys],
+  )
+
   const lineSeries: LineSeries[] = useMemo(
-    () => ts.series.map(s => ({
+    () => activeTsSeries.map(s => ({
       dataKey: s.dataKey,
       name: s.name,
       color: s.color,
       strokeWidth: s.strokeWidth,
       strokeDasharray: s.strokeDasharray,
     })),
-    [ts.series],
+    [activeTsSeries],
   )
 
   const areaSeries: AreaSeries[] = useMemo(
-    () => ts.series.map(s => ({
+    () => activeTsSeries.map(s => ({
       dataKey: s.dataKey,
       name: s.name,
       color: s.color,
       strokeDasharray: s.strokeDasharray,
     })),
-    [ts.series],
+    [activeTsSeries],
   )
 
+  // Bar / donut / radar use the first active series only
+  const firstActive = activeTsSeries[0]
   const barData = useMemo(() => {
-    if (ts.series.length !== 1) return []
-    const key = ts.series[0].dataKey
+    if (!firstActive) return []
     return ts.data.map((d, i) => ({
       name: String(d[ts.xDataKey] ?? i),
-      value: Number(d[key] ?? 0),
+      value: Number(d[firstActive.dataKey] ?? 0),
     }))
-  }, [ts])
+  }, [ts, firstActive])
 
   const donutData = useMemo(() => {
-    if (ts.series.length !== 1) return []
-    const key = ts.series[0].dataKey
+    if (!firstActive) return []
     return ts.data.map((d, i) => ({
       name: String(d[ts.xDataKey] ?? i),
-      value: Math.abs(Number(d[key] ?? 0)),
+      value: Math.abs(Number(d[firstActive.dataKey] ?? 0)),
     }))
-  }, [ts])
+  }, [ts, firstActive])
 
-  const showLegend = ts.showLegend ?? ts.series.length > 1
+  const showLegend = (ts.showLegend ?? ts.series.length > 1) && ts.series.length > 1
+
+  const legendItems: LegendItem[] = useMemo(
+    () => ts.series.map((s, i) => ({
+      name: s.name,
+      color: s.color ?? seriesColor(i),
+      label: null,
+    })),
+    [ts.series],
+  )
 
   return (
     <>
@@ -293,7 +430,7 @@ function TimeSeriesRender({
           data={ts.data} series={lineSeries} xDataKey={ts.xDataKey}
           height={height} xTickFormatter={ts.xTickFormatter}
           yTickFormatter={ts.yTickFormatter} yDomain={ts.yDomain}
-          showLegend={showLegend}
+          showLegend={false}
         />
       )}
       {type === 'area' && (
@@ -301,7 +438,7 @@ function TimeSeriesRender({
           data={ts.data} series={areaSeries} xDataKey={ts.xDataKey}
           height={height} xTickFormatter={ts.xTickFormatter}
           yTickFormatter={ts.yTickFormatter} yDomain={ts.yDomain}
-          showLegend={showLegend}
+          showLegend={false}
         />
       )}
       {type === 'bar' && (
@@ -314,14 +451,19 @@ function TimeSeriesRender({
         <DonutChart
           data={donutData} height={height}
           formatValue={ts.yTickFormatter ?? ((v) => `${v}`)}
+          showLegend={false}
         />
       )}
-      {type === 'radar' && ts.series.length === 1 && (
+      {type === 'radar' && firstActive && (
         <RadarChartComponent
           data={barData.map(d => ({ axis: d.name, value: d.value }))}
-          series={[{ dataKey: 'value', name: ts.series[0].name }]}
+          series={[{ dataKey: 'value', name: firstActive.name }]}
           height={height}
         />
+      )}
+
+      {showLegend && (
+        <LegendRow items={legendItems} activeKeys={activeKeys} onToggle={onToggle} />
       )}
     </>
   )

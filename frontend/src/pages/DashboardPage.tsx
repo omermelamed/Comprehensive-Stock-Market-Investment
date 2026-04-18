@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { stagger, staggerItem } from '@/lib/motion'
 import { useDashboard } from '@/features/dashboard/useDashboard'
@@ -8,8 +9,12 @@ import { HoldingsHistoryChart } from '@/features/dashboard/HoldingsHistoryChart'
 import { ExportButton } from '@/features/export/ExportButton'
 import { downloadHoldings } from '@/api/export'
 import { UniversalChart } from '@/components/charts'
-import { useCurrency } from '@/contexts/currency-context'
-import { formatMoney } from '@/lib/currency'
+import { SellPanel } from '@/features/sell/SellPanel'
+import { SellToast } from '@/features/sell/SellToast'
+import { RecalculationBanner } from '@/features/sell/RecalculationBanner'
+import { StaleDataOverlay } from '@/features/sell/StaleDataOverlay'
+import { useRecalculation } from '@/features/sell/useRecalculation'
+import type { SellResult } from '@/api/sell'
 
 function DashboardSkeleton() {
   return (
@@ -22,8 +27,25 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { summary, holdings, history, historyRange, setHistoryRange, loading, error } = useDashboard()
-  const portfolioCurrency = useCurrency()
+  const { summary, holdings, history, historyRange, setHistoryRange, loading, error, refresh } = useDashboard()
+  const [sellSymbol, setSellSymbol] = useState<string | null>(null)
+  const [sellResult, setSellResult] = useState<SellResult | null>(null)
+  const { status: recalcStatus, isRunning, isFailed, justCompleted, startPolling, retry } = useRecalculation()
+
+  const handleSell = useCallback((symbol: string) => {
+    setSellSymbol(symbol)
+  }, [])
+
+  const handleSellComplete = useCallback((result: SellResult) => {
+    setSellResult(result)
+    setSellSymbol(null)
+    refresh()
+    startPolling()
+  }, [refresh, startPolling])
+
+  const handleSellClose = useCallback(() => {
+    setSellSymbol(null)
+  }, [])
 
   if (loading && !summary) {
     return (
@@ -49,6 +71,13 @@ export default function DashboardPage() {
           <ExportButton label="Export Holdings" onDownload={downloadHoldings} />
         </div>
       </div>
+      <RecalculationBanner
+        status={recalcStatus}
+        isRunning={isRunning}
+        isFailed={isFailed}
+        justCompleted={justCompleted}
+        onRetry={retry}
+      />
       <div className="p-6 space-y-5">
       <motion.div
         variants={stagger}
@@ -67,7 +96,7 @@ export default function DashboardPage() {
 
         {/* Holdings table */}
         <motion.div variants={staggerItem}>
-          <HoldingsTable holdings={holdings} />
+          <HoldingsTable holdings={holdings} onSell={handleSell} />
         </motion.div>
 
         {/* Portfolio composition donut */}
@@ -80,8 +109,8 @@ export default function DashboardPage() {
                 data={holdings.map(h => ({ name: h.symbol, value: h.currentPercent }))}
                 defaultType="donut"
                 allowedTypes={['donut', 'bar', 'radar']}
-                centerValue={formatMoney(summary?.totalValue ?? 0, portfolioCurrency)}
-                centerLabel="Total value"
+                formatCenterValue={(t) => `${t.toFixed(1)}%`}
+                centerLabel="Of portfolio"
                 formatValue={(v) => `${v.toFixed(1)}%`}
               />
             </div>
@@ -97,8 +126,8 @@ export default function DashboardPage() {
                 ).map(([track, pct]) => ({ name: track, value: pct }))}
                 defaultType="donut"
                 allowedTypes={['donut', 'bar', 'radar']}
-                centerValue={`${holdings.length}`}
-                centerLabel="Positions"
+                formatCenterValue={(_, count) => `${count}`}
+                centerLabel="Tracks"
                 formatValue={(v) => `${v.toFixed(1)}%`}
               />
             </div>
@@ -106,21 +135,33 @@ export default function DashboardPage() {
         )}
 
         {/* History chart */}
-        <motion.div variants={staggerItem}>
+        <motion.div variants={staggerItem} className="relative">
           <PortfolioHistoryChart
             history={history}
             historyRange={historyRange}
             onRangeChange={setHistoryRange}
             loading={loading && !history}
           />
+          <StaleDataOverlay visible={isRunning} sellDate={recalcStatus?.sellDate} />
         </motion.div>
 
         {/* Per-holding price history overlay */}
-        <motion.div variants={staggerItem}>
+        <motion.div variants={staggerItem} className="relative">
           <HoldingsHistoryChart />
+          <StaleDataOverlay visible={isRunning} sellDate={recalcStatus?.sellDate} />
         </motion.div>
       </motion.div>
       </div>
+
+      {/* Sell panel */}
+      <SellPanel
+        symbol={sellSymbol}
+        onClose={handleSellClose}
+        onComplete={handleSellComplete}
+      />
+
+      {/* Sell toast */}
+      <SellToast result={sellResult} onDismiss={() => setSellResult(null)} />
     </div>
   )
 }

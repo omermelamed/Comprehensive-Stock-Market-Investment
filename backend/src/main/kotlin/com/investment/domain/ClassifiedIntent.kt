@@ -41,6 +41,14 @@ sealed class ClassifiedIntent {
         val label: String
     ) : ClassifiedIntent()
 
+    data class SellHolding(
+        val symbol: String,
+        val quantity: BigDecimal?,
+        val quantityMode: String,
+        val price: BigDecimal?,
+        val date: String?
+    ) : ClassifiedIntent()
+
     // Unrecognised
     object Unknown : ClassifiedIntent()
 }

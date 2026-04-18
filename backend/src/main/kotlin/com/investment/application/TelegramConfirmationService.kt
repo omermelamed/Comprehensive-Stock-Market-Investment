@@ -7,26 +7,38 @@ import com.investment.api.dto.CreateAlertRequest
 import com.investment.api.dto.MonthlyFlowConfirmRequest
 import com.investment.api.dto.MonthlyFlowPreviewRequest
 import com.investment.api.dto.ScheduledMessageRequest
+import com.investment.api.dto.SellRequest
 import com.investment.api.dto.TransactionRequest
 import com.investment.domain.ClassifiedIntent
 import com.investment.domain.TelegramMessageFormatter
+import com.investment.infrastructure.HoldingsProjectionRepository
 import com.investment.infrastructure.PendingConfirmation
 import com.investment.infrastructure.TelegramPendingConfirmationRepository
+import com.investment.infrastructure.TelegramNotificationService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 
 @Service
 class TelegramConfirmationService(
     private val pendingRepository: TelegramPendingConfirmationRepository,
     private val transactionService: TransactionService,
+    private val sellService: SellService,
     private val monthlyInvestmentService: MonthlyInvestmentService,
     private val alertService: AlertService,
     private val watchlistService: WatchlistService,
     private val scheduledMessageService: TelegramScheduledMessageService,
+    private val holdingsRepository: HoldingsProjectionRepository,
+    private val marketDataService: MarketDataService,
+    private val telegramNotificationService: TelegramNotificationService,
+    private val userProfileService: UserProfileService,
+    private val recalculationJobRepository: com.investment.infrastructure.RecalculationJobRepository,
     private val objectMapper: ObjectMapper
 ) {
 
@@ -70,6 +82,7 @@ class TelegramConfirmationService(
             val data: Map<String, Any> = objectMapper.readValue(pending.intentData)
             when (pending.intent) {
                 "LOG_TRANSACTION" -> executeLogTransaction(data)
+                "SELL_HOLDING" -> executeSellHolding(data)
                 "START_MONTHLY_FLOW" -> executeMonthlyFlow(data)
                 "SET_ALERT" -> executeSetAlert(data)
                 "ADD_WATCHLIST" -> executeAddWatchlist(data)
@@ -81,6 +94,102 @@ class TelegramConfirmationService(
             log.error("Failed to execute confirmed intent {}: {}", pending.intent, e.message)
             TelegramMessageFormatter.error(e.message ?: "execution failed")
         }
+    }
+
+    private fun executeSellHolding(data: Map<String, Any>): String {
+        val symbol   = data["symbol"]?.toString() ?: return TelegramMessageFormatter.error("missing symbol")
+        val quantity = parseBigDecimal(data["quantity"]) ?: return TelegramMessageFormatter.error("missing quantity")
+        val price    = parseBigDecimal(data["price"]) ?: return TelegramMessageFormatter.error("missing price")
+        val dateStr  = data["date"]?.toString()
+
+        val executedAt = if (dateStr != null) {
+            LocalDate.parse(dateStr).atStartOfDay(ZoneOffset.UTC).toInstant()
+        } else Instant.now()
+
+        return try {
+            val result = sellService.executeSell(SellRequest(
+                symbol = symbol.uppercase(),
+                quantity = quantity,
+                pricePerUnit = price,
+                executedAt = executedAt,
+                source = "TELEGRAM"
+            ))
+
+            val profile = userProfileService.getProfile()
+            val preferredCurrency = profile?.preferredCurrency ?: "USD"
+            val pnlSign = if (result.pnlUsd >= BigDecimal.ZERO) "+" else ""
+            val pnlEmoji = if (result.pnlUsd >= BigDecimal.ZERO) "\uD83D\uDCC8" else "\uD83D\uDCC9"
+
+            val msg = buildString {
+                appendLine("✅ Sold ${result.quantitySold} ${result.symbol}${if (dateStr != null) " on ${formatDateShort(dateStr)}" else ""} at \$${result.pricePerUnit}")
+                appendLine("P&L: ${pnlSign}${preferredCurrency} ${result.pnlDisplay} (${pnlSign}${result.pnlPercent}%) $pnlEmoji")
+                if (result.positionClosed) {
+                    appendLine("Position fully closed.")
+                } else {
+                    appendLine("Remaining: ${result.remainingShares} shares")
+                }
+                if (result.isRetroactive) {
+                    appendLine()
+                    appendLine("\uD83D\uDD04 Recalculating history from ${formatDateShort(dateStr ?: "")}...")
+                    appendLine("I'll notify you when it's complete.")
+                }
+            }
+
+            if (result.isRetroactive && result.recalculationJobId != null) {
+                scheduleRecalcNotification(result.recalculationJobId)
+            }
+
+            msg
+        } catch (e: SellValidationException) {
+            when (e.errorCode) {
+                "INSUFFICIENT_SHARES" -> {
+                    val held = e.sharesHeldAtDate?.toPlainString() ?: "?"
+                    "You only held $held ${symbol.uppercase()}${if (dateStr != null) " on ${formatDateShort(dateStr)}" else ""}. Would you like to sell all $held? (yes / no)"
+                }
+                else -> TelegramMessageFormatter.error(e.message)
+            }
+        }
+    }
+
+    private fun formatDateShort(dateStr: String): String {
+        return try {
+            val date = LocalDate.parse(dateStr)
+            "${date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }} ${date.dayOfMonth}"
+        } catch (_: Exception) { dateStr }
+    }
+
+    private fun scheduleRecalcNotification(jobId: UUID) {
+        val profile = userProfileService.getProfile() ?: return
+        val chatId = profile.telegramChatId ?: return
+        if (!profile.telegramEnabled) return
+
+        Thread {
+            var attempts = 0
+            while (attempts < 1800) {
+                Thread.sleep(2000)
+                attempts++
+                try {
+                    val job = recalculationJobRepository.findById(jobId)
+                    if (job?.status == "COMPLETED") {
+                        val dateStr = job.sellDate.toString()
+                        telegramNotificationService.sendMessage(
+                            chatId,
+                            "✅ Historical data updated from ${formatDateShort(dateStr)}.\nYour portfolio charts and analytics are now accurate."
+                        )
+                        break
+                    }
+                    if (job?.status == "FAILED") {
+                        telegramNotificationService.sendMessage(
+                            chatId,
+                            "❌ Historical data recalculation failed. Please retry from the app."
+                        )
+                        break
+                    }
+                } catch (_: Exception) {
+                    break
+                }
+            }
+        }.also { it.isDaemon = true }.start()
     }
 
     private fun executeLogTransaction(data: Map<String, Any>): String {
@@ -244,6 +353,74 @@ class TelegramConfirmationService(
                     action        = "Remove from Watchlist",
                     details       = listOf("Symbol" to intent.symbol.uppercase()),
                     intentName    = "REMOVE_WATCHLIST",
+                    intentDataJson = objectMapper.writeValueAsString(data)
+                )
+            }
+            is ClassifiedIntent.SellHolding -> {
+                val symbol = intent.symbol.uppercase()
+                val holding = holdingsRepository.findAll()
+                    .firstOrNull { it.symbol.equals(symbol, ignoreCase = true) }
+                val sharesHeld = holding?.netQuantity ?: BigDecimal.ZERO
+                val quantity = when (intent.quantityMode) {
+                    "ALL" -> sharesHeld
+                    "HALF" -> sharesHeld.divide(BigDecimal(2), 8, RoundingMode.FLOOR)
+                    "AMOUNT" -> {
+                        val price = intent.price ?: try {
+                            marketDataService.getQuote(symbol).price
+                        } catch (_: Exception) { BigDecimal.ONE }
+                        val fxRate = try {
+                            val profile = userProfileService.getProfile()
+                            val preferredCurrency = profile?.preferredCurrency ?: "USD"
+                            if (preferredCurrency == "USD") BigDecimal.ONE
+                            else marketDataService.getExchangeRate(preferredCurrency, "USD")
+                        } catch (_: Exception) { BigDecimal.ONE }
+                        val amountUsd = (intent.quantity ?: BigDecimal.ZERO) * fxRate
+                        amountUsd.divide(price, 8, RoundingMode.FLOOR)
+                    }
+                    else -> intent.quantity ?: BigDecimal.ZERO
+                }
+
+                val price = intent.price ?: try {
+                    marketDataService.getQuote(symbol).price
+                } catch (_: Exception) { BigDecimal.ZERO }
+
+                val preview = try {
+                    sellService.getSellPreview(symbol, quantity, price, intent.date)
+                } catch (_: Exception) { null }
+
+                val dateLabel = intent.date?.let { formatDateShort(it) } ?: "Today"
+                val pnlInfo = preview?.preview?.let { p ->
+                    val sign = if (p.pnlUsd >= BigDecimal.ZERO) "+" else ""
+                    val pnlEmoji = if (p.pnlUsd >= BigDecimal.ZERO) "\uD83D\uDCC8" else "\uD83D\uDCC9"
+                    "P&L: ${sign}\$${p.pnlUsd} ($pnlEmoji ${sign}${p.pnlPercent}%)"
+                } ?: ""
+
+                val data = mapOf(
+                    "symbol" to symbol,
+                    "quantity" to quantity,
+                    "price" to price,
+                    "date" to intent.date
+                )
+
+                val isRetro = intent.date != null
+                val details = mutableListOf(
+                    "Symbol" to symbol,
+                    "Quantity" to quantity.toPlainString(),
+                    "Price" to "\$${price.toPlainString()}",
+                    "Date" to dateLabel
+                )
+                if (pnlInfo.isNotBlank()) details.add("P&L" to pnlInfo)
+                if (preview?.preview != null) {
+                    details.add("Remaining" to "${preview.preview.remainingShares} shares")
+                }
+                if (isRetro) {
+                    details.add("⚠️" to "Historical data will be recalculated from $dateLabel onward")
+                }
+
+                ConfirmationPayload(
+                    action = "\uD83D\uDCC9 SELL $symbol",
+                    details = details,
+                    intentName = "SELL_HOLDING",
                     intentDataJson = objectMapper.writeValueAsString(data)
                 )
             }

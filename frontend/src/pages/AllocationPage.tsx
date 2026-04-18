@@ -338,7 +338,7 @@ export default function AllocationPage() {
                     }))}
                   defaultType="donut"
                   allowedTypes={['donut', 'bar', 'radar']}
-                  centerValue={`${topTotal.toFixed(0)}%`}
+                  formatCenterValue={(t) => `${t.toFixed(1)}%`}
                   centerLabel="Allocated"
                   formatValue={(v) => `${v.toFixed(1)}%`}
                   height={240}
@@ -360,8 +360,8 @@ export default function AllocationPage() {
                   ).map(([type, pct]) => ({ name: type, value: pct }))}
                   defaultType="donut"
                   allowedTypes={['donut', 'bar', 'radar']}
-                  centerValue={`${topLevelRows.filter(r => r.targetPercentage > 0).length}`}
-                  centerLabel="Positions"
+                  formatCenterValue={(_, count) => `${count}`}
+                  centerLabel="Asset types"
                   formatValue={(v) => `${v.toFixed(1)}%`}
                   height={240}
                 />
