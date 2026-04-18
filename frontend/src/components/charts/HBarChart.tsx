@@ -28,6 +28,30 @@ interface HBarChartProps {
   className?: string
 }
 
+function SmartLabel({
+  x, y, width, height: h, value, formatter,
+}: {
+  x?: number; y?: number; width?: number; height?: number
+  value?: number; formatter: (v: number) => string
+}) {
+  if (x == null || y == null || width == null || h == null || value == null) return null
+  const label = formatter(value)
+  const isNegative = value < 0
+  const offset = 6
+  const tx = isNegative ? x - offset : x + width + offset
+  const anchor = isNegative ? 'end' : 'start'
+  return (
+    <text
+      x={tx} y={y + h / 2}
+      textAnchor={anchor}
+      dominantBaseline="central"
+      style={{ fontSize: 11, fontWeight: 600, fontFamily: 'monospace', fill: 'var(--color-foreground)' }}
+    >
+      {label}
+    </text>
+  )
+}
+
 export function HBarChart({
   data,
   height,
@@ -39,6 +63,7 @@ export function HBarChart({
 }: HBarChartProps) {
   const longestLabel = data.reduce((max, d) => Math.max(max, d.name.length), 0)
   const yAxisWidth = Math.max(56, Math.min(longestLabel * 8 + 12, 120))
+  const hasNegative = data.some(d => d.value < 0)
   const computedHeight = height ?? Math.max(200, data.length * 44 + 40)
 
   return (
@@ -47,7 +72,7 @@ export function HBarChart({
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: showLabels ? 72 : 16, bottom: 0, left: 0 }}
+          margin={{ top: 0, right: showLabels ? 72 : 16, bottom: 0, left: hasNegative && showLabels ? 56 : 0 }}
           barCategoryGap="20%"
         >
           <CartesianGrid horizontal={false} {...recharts.grid} />
@@ -81,14 +106,7 @@ export function HBarChart({
             {showLabels && (
               <LabelList
                 dataKey="value"
-                position="right"
-                formatter={(v: number) => formatValue(v)}
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  fontFamily: 'monospace',
-                  fill: 'var(--color-foreground)',
-                }}
+                content={<SmartLabel formatter={formatValue} />}
               />
             )}
           </Bar>
