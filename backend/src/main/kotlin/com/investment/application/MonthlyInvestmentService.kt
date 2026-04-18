@@ -8,7 +8,7 @@ import com.investment.api.dto.TransactionRequest
 import com.investment.domain.MonthlyAllocationCalculator
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
-import com.investment.infrastructure.WhatsAppNotificationService
+import com.investment.infrastructure.TelegramNotificationService
 import com.investment.infrastructure.market.AlphaVantageAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -25,7 +25,8 @@ class MonthlyInvestmentService(
     private val transactionService: TransactionService,
     private val userProfileService: UserProfileService,
     private val alphaVantageAdapter: AlphaVantageAdapter,
-    private val whatsAppNotificationService: WhatsAppNotificationService
+    private val telegramNotificationService: TelegramNotificationService,
+    private val portfolioSummaryService: PortfolioSummaryService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -124,11 +125,19 @@ class MonthlyInvestmentService(
             transactionsCreated = transactionsCreated
         )
 
-        whatsAppNotificationService.sendInvestmentSummary(
-            toWhatsAppNumber = userProfileService.getProfile()?.whatsappNumber,
+        val holdings = try {
+            portfolioSummaryService.getHoldingsDashboard()
+        } catch (e: Exception) {
+            log.warn("Failed to load holdings for Telegram summary: {}", e.message)
+            emptyList()
+        }
+
+        telegramNotificationService.sendInvestmentSummary(
+            chatId = userProfileService.getProfile()?.telegramChatId,
             totalInvested = response.totalInvested,
             currency = userCurrency,
-            allocations = investable
+            allocations = investable,
+            holdings = holdings
         )
 
         return response

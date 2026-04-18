@@ -7,7 +7,7 @@ import { StepHorizon } from './step-horizon'
 import { StepBudget } from './step-budget'
 import { StepTracks } from './step-tracks'
 import { StepTimezone } from './step-timezone'
-import { StepWhatsApp } from './step-whatsapp'
+import { StepTelegram } from './step-telegram'
 import { slideStep, stepTransition } from '@/lib/motion'
 import type { OnboardingData } from '@/features/onboarding/useOnboarding'
 
@@ -29,8 +29,8 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
   const [amount, setAmount]     = useState(data.monthlyInvestmentMin ?? 4000)
   const [tracks, setTracks]         = useState<string[]>(data.tracksEnabled ?? ['LONG_EQUITY'])
   const [timezone, setTimezone]     = useState(data.timezone ?? '')
-  const [whatsapp, setWhatsapp]     = useState(data.whatsappNumber ?? '')
-  const [waEnabled, setWaEnabled]   = useState(data.whatsappEnabled ?? false)
+  const [telegramChatId, setTelegramChatId] = useState(data.telegramChatId ?? '')
+  const [tgEnabled, setTgEnabled]           = useState(data.telegramEnabled ?? false)
 
   function fwd() { setDir(1); setSub(s => s + 1) }
   function bck() { setDir(-1); setSub(s => Math.max(s - 1, 1)) }
@@ -44,8 +44,8 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
       monthlyInvestmentMax: amount,
       tracksEnabled: tracks,
       timezone,
-      whatsappNumber: whatsapp,
-      whatsappEnabled: waEnabled,
+      telegramChatId,
+      telegramEnabled: tgEnabled,
     })
     onNext()
   }
@@ -103,11 +103,11 @@ export function ProfileSetup({ data, onUpdate, onNext }: ProfileSetupProps) {
             <StepTimezone value={timezone} onValueChange={setTimezone} onContinue={fwd} onBack={bck} />
           )}
           {sub === 7 && (
-            <StepWhatsApp
-              value={whatsapp}
-              onValueChange={setWhatsapp}
-              enabled={waEnabled}
-              onEnabledChange={setWaEnabled}
+            <StepTelegram
+              value={telegramChatId}
+              onValueChange={setTelegramChatId}
+              enabled={tgEnabled}
+              onEnabledChange={setTgEnabled}
               onContinue={finish}
               onBack={bck}
             />

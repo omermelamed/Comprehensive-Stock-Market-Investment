@@ -43,8 +43,12 @@ export function useTransactionForm(onSuccess: () => void) {
     setError(null)
     try {
       await createTransaction({
-        ...formData,
-        totalAmount: formData.quantity * formData.pricePerUnit,
+        symbol: formData.symbol,
+        type: formData.transactionType,
+        track: formData.track,
+        quantity: formData.quantity,
+        pricePerUnit: formData.pricePerUnit,
+        notes: formData.notes || undefined,
       })
       setFormData(DEFAULT_FORM)
       onSuccess()

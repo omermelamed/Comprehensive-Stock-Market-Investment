@@ -2,21 +2,22 @@ import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { RiskHistoryEntry } from '@/api/riskProfile'
+import { UniversalChart } from '@/components/charts'
 
 interface RiskScoreHistoryProps {
   history: RiskHistoryEntry[]
 }
 
 const RISK_LEVEL_STYLES: Record<RiskHistoryEntry['riskLevel'], string> = {
-  CONSERVATIVE: 'bg-green-500/15 text-green-400',
-  MODERATE: 'bg-yellow-500/15 text-yellow-400',
-  AGGRESSIVE: 'bg-red-500/15 text-red-400',
+  CONSERVATIVE: 'bg-success/15 text-success',
+  MODERATE: 'bg-warning/15 text-warning',
+  AGGRESSIVE: 'bg-destructive/15 text-destructive',
 }
 
 const RISK_BAR_COLORS: Record<RiskHistoryEntry['riskLevel'], string> = {
-  CONSERVATIVE: 'bg-green-500',
-  MODERATE: 'bg-yellow-500',
-  AGGRESSIVE: 'bg-red-500',
+  CONSERVATIVE: 'bg-success',
+  MODERATE: 'bg-warning',
+  AGGRESSIVE: 'bg-destructive',
 }
 
 const TRIGGER_LABELS: Record<RiskHistoryEntry['trigger'], string> = {
@@ -53,9 +54,31 @@ export function RiskScoreHistory({ history }: RiskScoreHistoryProps) {
     setExpandedId(prev => (prev === id ? null : id))
   }
 
+  const chartData = history
+    .filter(e => e.aiInferredScore !== null)
+    .map(e => ({
+      date: formatDate(e.createdAt),
+      score: Number((e.aiInferredScore! * 100).toFixed(1)),
+    }))
+    .reverse()
+
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <h2 className="mb-4 text-sm font-semibold text-foreground">Score History</h2>
+
+      {/* Trend chart */}
+      {chartData.length >= 2 && (
+        <div className="mb-4">
+          <UniversalChart
+            chartId="risk-score-history"
+            data={chartData.map(d => ({ name: d.date, value: d.score }))}
+            defaultType="area"
+            allowedTypes={['area', 'line', 'bar']}
+            height={160}
+            formatValue={(v) => `${v.toFixed(0)}`}
+          />
+        </div>
+      )}
 
       <div className="space-y-0 overflow-hidden rounded-lg border border-border">
         {visible.map((entry, idx) => (
@@ -88,7 +111,7 @@ export function RiskScoreHistory({ history }: RiskScoreHistoryProps) {
                       style={{ width: `${entry.aiInferredScore * 100}%` }}
                     />
                   </div>
-                  <span className="w-12 shrink-0 text-right font-mono text-xs text-muted-foreground">
+                  <span className="w-12 shrink-0 text-right tabular-nums font-mono text-xs text-muted-foreground">
                     {entry.aiInferredScore.toFixed(3)}
                   </span>
                 </div>

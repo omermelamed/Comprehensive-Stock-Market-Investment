@@ -32,7 +32,7 @@ class UserProfileRepository(
                 id, display_name, preferred_currency, risk_level,
                 time_horizon_years, monthly_investment_min, monthly_investment_max,
                 investment_goal, tracks_enabled, questionnaire_answers, theme,
-                whatsapp_number, whatsapp_enabled, timezone, onboarding_completed, created_at, last_updated
+                telegram_chat_id, telegram_enabled, timezone, onboarding_completed, created_at, last_updated
             ) VALUES (
                 ?::uuid, ?, ?, ?::risk_level_enum,
                 ?, ?, ?,
@@ -50,8 +50,8 @@ class UserProfileRepository(
                 tracks_enabled = EXCLUDED.tracks_enabled,
                 questionnaire_answers = EXCLUDED.questionnaire_answers,
                 theme = EXCLUDED.theme,
-                whatsapp_number = EXCLUDED.whatsapp_number,
-                whatsapp_enabled = EXCLUDED.whatsapp_enabled,
+                telegram_chat_id = EXCLUDED.telegram_chat_id,
+                telegram_enabled = EXCLUDED.telegram_enabled,
                 timezone = EXCLUDED.timezone,
                 last_updated = NOW()
             RETURNING *
@@ -67,8 +67,8 @@ class UserProfileRepository(
             tracksJson,
             answersJson,
             request.theme,
-            request.whatsappNumber,
-            request.whatsappEnabled,
+            request.telegramChatId,
+            request.telegramEnabled,
             request.timezone
         ) ?: throw IllegalStateException("Upsert into user_profile returned no record")
 
@@ -92,8 +92,8 @@ class UserProfileRepository(
                 tracks_enabled = ?::jsonb,
                 questionnaire_answers = ?::jsonb,
                 theme = ?,
-                whatsapp_number = ?,
-                whatsapp_enabled = ?,
+                telegram_chat_id = ?,
+                telegram_enabled = ?,
                 timezone = ?
             RETURNING *
             """.trimIndent(),
@@ -107,8 +107,8 @@ class UserProfileRepository(
             tracksJson,
             answersJson,
             request.theme,
-            request.whatsappNumber,
-            request.whatsappEnabled,
+            request.telegramChatId,
+            request.telegramEnabled,
             request.timezone
         ) ?: throw NoSuchElementException("No user profile found to update")
 
@@ -130,6 +130,13 @@ class UserProfileRepository(
 
     /** Alias for findOne() with a name that matches scheduler usage. */
     fun findProfile() = findOne()
+
+    fun linkTelegramChat(chatId: String) {
+        dsl.execute(
+            "UPDATE user_profile SET telegram_chat_id = ?, telegram_enabled = true, last_updated = NOW()",
+            chatId
+        )
+    }
 
     fun updateRiskScore(riskLevel: String, aiInferredScore: BigDecimal) {
         dsl.execute(
@@ -160,8 +167,8 @@ class UserProfileRepository(
             aiInferredScore = get("ai_inferred_score", BigDecimal::class.java),
             theme = get("theme", String::class.java),
             onboardingCompleted = get("onboarding_completed", Boolean::class.java),
-            whatsappNumber  = get("whatsapp_number", String::class.java),
-            whatsappEnabled = get("whatsapp_enabled", Boolean::class.java) ?: false,
+            telegramChatId  = get("telegram_chat_id", String::class.java),
+            telegramEnabled = get("telegram_enabled", Boolean::class.java) ?: false,
             timezone = get("timezone", String::class.java) ?: "UTC",
             createdAt = get("created_at", java.sql.Timestamp::class.java).toInstant(),
             lastUpdated = get("last_updated", java.sql.Timestamp::class.java).toInstant()

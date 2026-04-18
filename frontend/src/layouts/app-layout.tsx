@@ -13,29 +13,81 @@ import {
   ShieldAlert,
   Layers,
   Bell,
+  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import { useChatPanel } from '@/features/chat/useChatPanel'
 import { useAlertBadge } from '@/features/alerts/useAlertBadge'
+import { AllocaLogo } from '@/components/shared/AllocaLogo'
 
 interface AppLayoutProps {
   tracksEnabled?: string[]
 }
 
-const STATIC_NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/monthly-flow', label: 'Monthly Flow', icon: TrendingUp, end: false },
-  { to: '/recommendations', label: 'Recommendations', icon: Lightbulb, end: false },
-  { to: '/transactions/new', label: 'Transactions', icon: ArrowLeftRight, end: false },
-  { to: '/allocations', label: 'Allocations', icon: PieChart, end: false },
-  { to: '/watchlist', label: 'Watchlist', icon: Star, end: false },
-  { to: '/analytics', label: 'Analytics', icon: BarChart2, end: false },
-  { to: '/risk', label: 'Risk', icon: ShieldAlert, end: false },
-  { to: '/alerts', label: 'Alerts', icon: Bell, end: false },
-  { to: '/profile', label: 'Profile', icon: User, end: false },
-]
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ElementType
+  end?: boolean
+  badge?: number
+}
+
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+function NavSection({ group, alertCount }: { group: NavGroup; alertCount: number }) {
+  return (
+    <div className="mb-1">
+      <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
+        {group.label}
+      </p>
+      {group.items.map(({ to, label, icon: Icon, end, badge }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={({ isActive }) =>
+            cn(
+              'group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+              isActive
+                ? 'bg-primary/12 text-primary'
+                : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+            )
+          }
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+              )}
+              <Icon
+                className={cn(
+                  'h-4 w-4 shrink-0 transition-colors',
+                  isActive ? 'text-primary' : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70',
+                )}
+              />
+              <span className="flex-1 truncate">{label}</span>
+              {to === '/alerts' && alertCount > 0 && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
+                  {alertCount > 99 ? '99+' : alertCount}
+                </span>
+              )}
+              {badge != null && badge > 0 && to !== '/alerts' && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold leading-none text-primary">
+                  {badge}
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
+      ))}
+    </div>
+  )
+}
 
 export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
   const { theme, toggle } = useTheme()
@@ -44,60 +96,90 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
 
   const optionsEnabled = tracksEnabled.includes('OPTIONS')
 
-  const navItems = optionsEnabled
-    ? [
-        ...STATIC_NAV_ITEMS.slice(0, 8),
-        { to: '/options', label: 'Options', icon: Layers, end: false },
-        STATIC_NAV_ITEMS[8],
-      ]
-    : STATIC_NAV_ITEMS
+  const navGroups: NavGroup[] = [
+    {
+      label: 'Portfolio',
+      items: [
+        { to: '/',               label: 'Dashboard',    icon: LayoutDashboard, end: true },
+        { to: '/monthly-flow',   label: 'Monthly Flow', icon: TrendingUp },
+        { to: '/allocations',    label: 'Allocations',  icon: PieChart },
+        { to: '/transactions/new', label: 'Transactions', icon: ArrowLeftRight },
+      ],
+    },
+    {
+      label: 'Research',
+      items: [
+        { to: '/watchlist',       label: 'Watchlist',       icon: Star },
+        { to: '/recommendations', label: 'Recommendations', icon: Lightbulb },
+        { to: '/analytics',       label: 'Analytics',       icon: BarChart2 },
+        ...(optionsEnabled ? [{ to: '/options', label: 'Options', icon: Layers }] : []),
+      ],
+    },
+    {
+      label: 'Monitoring',
+      items: [
+        { to: '/risk',   label: 'Risk',   icon: ShieldAlert },
+        { to: '/alerts', label: 'Alerts', icon: Bell },
+      ],
+    },
+  ]
 
   return (
     <>
       <div className="flex min-h-screen">
         {/* Sidebar */}
-        <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+
           {/* Logo */}
-          <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-            <span className="text-lg font-bold tracking-tight text-sidebar-foreground">
-              Portfolio
-            </span>
+          <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
+            <AllocaLogo className="h-6 w-auto text-sidebar-foreground" />
           </div>
 
-          {/* Nav */}
-          <nav className="flex flex-col gap-1 p-3 overflow-y-auto">
-            {navItems.map(({ to, label, icon: Icon, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                  )
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{label}</span>
-                {to === '/alerts' && alertBadgeCount > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
-                    {alertBadgeCount > 99 ? '99+' : alertBadgeCount}
-                  </span>
-                )}
-              </NavLink>
+          {/* Nav groups */}
+          <nav className="flex flex-col gap-3 overflow-y-auto p-3 pt-4">
+            {navGroups.map(group => (
+              <NavSection key={group.label} group={group} alertCount={alertBadgeCount} />
             ))}
           </nav>
 
-          {/* Theme toggle */}
-          <div className="mt-auto p-3 border-t border-sidebar-border">
+          {/* Bottom actions */}
+          <div className="mt-auto border-t border-sidebar-border p-3 space-y-0.5">
+            <NavLink
+              to="/import"
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                  isActive
+                    ? 'bg-primary/12 text-primary'
+                    : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                )
+              }
+            >
+              <Upload className="h-4 w-4 shrink-0 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70" />
+              <span>Import</span>
+            </NavLink>
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                  isActive
+                    ? 'bg-primary/12 text-primary'
+                    : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                )
+              }
+            >
+              <User className="h-4 w-4 shrink-0 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70" />
+              <span>Profile</span>
+            </NavLink>
             <button
               onClick={toggle}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+              {theme === 'dark'
+                ? <Sun className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+                : <Moon className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+              }
               {theme === 'dark' ? 'Light mode' : 'Dark mode'}
             </button>
           </div>
@@ -109,7 +191,7 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
         </main>
       </div>
 
-      {/* Chat panel — rendered outside the page flow, persists across routes */}
+      {/* Chat panel — persists across routes */}
       <ChatPanel {...chatPanel} />
     </>
   )

@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:investment_db}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:investment_db}
     username: ${DB_USER:investment_user}
     password: ${DB_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
@@ -20,7 +20,7 @@ logging:
 
 app:
   cors:
-    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:3000}
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:3000,http://localhost:3001}
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
     model: claude-sonnet-4-6
@@ -30,7 +30,5 @@ app:
   scheduler:
     snapshot-cron: "0 0 0 * * *"
     alert-check-cron: "0 */5 * * * *"
-  twilio:
-    account-sid: ${TWILIO_ACCOUNT_SID:}
-    auth-token: ${TWILIO_AUTH_TOKEN:}
-    from-number: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+  telegram:
+    bot-token: ${TELEGRAM_BOT_TOKEN:}

@@ -11,8 +11,8 @@ export interface UserProfile {
   questionnaireAnswers: Record<string, number>
   theme: string
   onboardingCompleted: boolean
-  whatsappNumber?: string
-  whatsappEnabled?: boolean
+  telegramChatId?: string
+  telegramEnabled?: boolean
   timezone?: string
 }
 
@@ -28,17 +28,16 @@ export interface TargetAllocation {
 }
 
 export interface Transaction {
-  id: number
+  id: string
   symbol: string
-  transactionType: 'BUY' | 'SELL' | 'SHORT' | 'COVER' | 'DIVIDEND' | 'DEPOSIT' | 'WITHDRAWAL'
+  type: 'BUY' | 'SELL' | 'SHORT' | 'COVER' | 'DIVIDEND' | 'DEPOSIT' | 'WITHDRAWAL'
+  track: string
   quantity: number
   pricePerUnit: number
-  totalAmount: number
-  fees: number
-  currency: string
-  transactionDate: string
+  totalValue: number
   notes: string | null
-  track: string
+  executedAt: string
+  createdAt: string
 }
 
 export interface Holding {

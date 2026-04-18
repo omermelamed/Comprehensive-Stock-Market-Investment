@@ -12,7 +12,7 @@ data class UserProfileRequest(
     val investmentGoal: String,
     val timeHorizonYears: Int,
     val theme: String = "LIGHT",
-    val whatsappNumber: String? = null,
-    val whatsappEnabled: Boolean = false,
+    val telegramChatId: String? = null,
+    val telegramEnabled: Boolean = false,
     val timezone: String = "UTC"
 )

@@ -16,6 +16,7 @@ import { useRiskProfile } from '@/features/risk/useRiskProfile'
 import { RiskProfileCard } from '@/features/risk/RiskProfileCard'
 import { RiskReasoningPanel } from '@/features/risk/RiskReasoningPanel'
 import { RiskScoreHistory } from '@/features/risk/RiskScoreHistory'
+import { RadarChartComponent, UniversalChart } from '@/components/charts'
 
 function fmtPct(v: number | null): string {
   if (v === null) return '—'
@@ -38,9 +39,9 @@ function RiskSkeleton() {
 }
 
 const STATUS_COLORS = {
-  ON_TARGET: 'bg-green-500/15 text-green-400',
-  UNDERWEIGHT: 'bg-yellow-500/15 text-yellow-400',
-  OVERWEIGHT: 'bg-red-500/15 text-red-400',
+  ON_TARGET: 'bg-success/15 text-success',
+  UNDERWEIGHT: 'bg-warning/15 text-warning',
+  OVERWEIGHT: 'bg-destructive/15 text-destructive',
 }
 
 export default function RiskPage() {
@@ -111,7 +112,7 @@ export default function RiskPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-6">
         <RiskSkeleton />
       </div>
     )
@@ -119,7 +120,7 @@ export default function RiskPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-6">
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
           {error}
         </div>
@@ -128,13 +129,15 @@ export default function RiskPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center gap-3">
-        <ShieldAlert className="h-6 w-6 text-foreground" />
-        <h1 className="text-2xl font-bold text-foreground">Risk Dashboard</h1>
+    <div>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+          <h1 className="text-lg font-semibold text-foreground">Risk Dashboard</h1>
+        </div>
       </div>
-
-      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
+      <div className="p-6">
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-5">
         {/* Risk Profile */}
         <motion.div variants={staggerItem} className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Risk Profile</h2>
@@ -159,8 +162,8 @@ export default function RiskPage() {
                   key={i}
                   className={cn(
                     'flex items-start gap-3 rounded-xl border px-4 py-3 text-sm',
-                    w.severity === 'ERROR' && 'border-red-500/30 bg-red-500/10 text-red-400',
-                    w.severity === 'WARNING' && 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+                    w.severity === 'ERROR' && 'border-destructive/30 bg-destructive/10 text-destructive',
+                    w.severity === 'WARNING' && 'border-warning/30 bg-warning/10 text-warning',
                     w.severity === 'INFO' && 'border-border bg-muted text-muted-foreground',
                   )}
                 >
@@ -186,26 +189,57 @@ export default function RiskPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+            <div className="rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
               No active risk warnings.
             </div>
           )}
         </motion.div>
 
-        {/* Risk stats row */}
+        {/* Risk stats row + radar */}
         {metrics && (
-          <motion.div variants={staggerItem} className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[
-              { label: 'Portfolio Beta', value: fmtDecimal(metrics.portfolioBeta) },
-              { label: 'Volatility (Ann.)', value: fmtPct(metrics.volatilityAnnualizedPct) },
-              { label: 'Max Drawdown', value: fmtPct(metrics.maxDrawdownPct) },
-              { label: 'Sharpe Ratio', value: fmtDecimal(metrics.sharpeRatio) },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-border bg-card p-4">
-                <p className="text-xs text-muted-foreground">{label}</p>
-                <p className="mt-1 font-mono text-xl font-bold text-foreground">{value}</p>
-              </div>
-            ))}
+          <motion.div variants={staggerItem} className="grid gap-5 md:grid-cols-[1fr_280px]">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Portfolio Beta', value: fmtDecimal(metrics.portfolioBeta) },
+                { label: 'Volatility (Ann.)', value: fmtPct(metrics.volatilityAnnualizedPct) },
+                { label: 'Max Drawdown', value: fmtPct(metrics.maxDrawdownPct) },
+                { label: 'Sharpe Ratio', value: fmtDecimal(metrics.sharpeRatio) },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-border bg-card p-4">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-1 tabular-nums font-mono text-xl font-bold text-foreground">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Radar: normalized 0–100 for each metric */}
+            {(() => {
+              const beta = metrics.portfolioBeta
+              const vol = metrics.volatilityAnnualizedPct
+              const dd = metrics.maxDrawdownPct
+              const sharpe = metrics.sharpeRatio
+              if (beta === null && vol === null && dd === null && sharpe === null) return null
+
+              const normalize = (v: number | null, min: number, max: number) =>
+                v === null ? 0 : Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100))
+
+              return (
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <h3 className="mb-1 text-center text-xs font-semibold text-foreground">Risk Profile</h3>
+                  <RadarChartComponent
+                    height={220}
+                    data={[
+                      { axis: 'Beta', score: normalize(beta, 0, 2) },
+                      { axis: 'Volatility', score: normalize(vol, 0, 50) },
+                      { axis: 'Drawdown', score: normalize(dd !== null ? Math.abs(dd) : null, 0, 40) },
+                      { axis: 'Sharpe', score: normalize(sharpe, -1, 3) },
+                    ]}
+                    series={[{ dataKey: 'score', name: 'Portfolio' }]}
+                    domain={[0, 100]}
+                  />
+                </div>
+              )
+            })()}
           </motion.div>
         )}
 
@@ -228,12 +262,12 @@ export default function RiskPage() {
                     <tr key={item.symbol} className="border-b border-border last:border-0">
                       <td className="py-2 font-mono font-semibold text-foreground">{item.symbol}</td>
                       <td className="py-2 text-muted-foreground">{item.label ?? '—'}</td>
-                      <td className={cn('py-2 text-right font-mono', item.exceedsThreshold ? 'text-red-400 font-bold' : 'text-foreground')}>
+                      <td className={cn('py-2 text-right font-mono', item.exceedsThreshold ? 'text-destructive font-bold' : 'text-foreground')}>
                         {fmtPct(item.weightPct)}
                       </td>
                       <td className="py-2 text-center">
                         {item.exceedsThreshold && (
-                          <span className="inline-flex rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-400">
+                          <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-xs font-semibold text-destructive">
                             Over Limit
                           </span>
                         )}
@@ -246,11 +280,24 @@ export default function RiskPage() {
           </motion.div>
         )}
 
-        {/* Allocation drift */}
+        {/* Allocation drift - chart + table */}
         {metrics && metrics.allocationDrift.length > 0 && (
           <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 text-sm font-semibold text-foreground">Allocation Drift</h2>
-            <div className="overflow-x-auto">
+            <UniversalChart
+              chartId="risk-allocation-drift"
+              data={metrics.allocationDrift.map(item => ({
+                name: item.symbol,
+                value: item.driftPct,
+                color: item.driftPct > 0
+                  ? '#16a34a'
+                  : Math.abs(item.driftPct) > 5 ? '#dc2626' : '#f59e0b',
+              }))}
+              defaultType="bar"
+              allowedTypes={['bar', 'donut', 'radar']}
+              formatValue={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
+            />
+            <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-xs text-muted-foreground">
@@ -276,7 +323,7 @@ export default function RiskPage() {
                       <td className="py-2 text-right font-mono">{fmtPct(item.currentPct)}</td>
                       <td className={cn(
                         'py-2 text-right font-mono',
-                        Math.abs(item.driftPct) > 5 ? 'text-red-400' : Math.abs(item.driftPct) > 2 ? 'text-yellow-400' : 'text-foreground',
+                        Math.abs(item.driftPct) > 5 ? 'text-destructive' : Math.abs(item.driftPct) > 2 ? 'text-warning' : 'text-foreground',
                       )}>
                         {item.driftPct >= 0 ? '+' : ''}{fmtPct(item.driftPct)}
                       </td>
@@ -303,26 +350,17 @@ export default function RiskPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="mb-4 text-sm font-semibold text-foreground">Sector Exposure</h2>
               {metrics.sectorExposure.length > 0 ? (
-                <div className="space-y-2">
-                  {metrics.sectorExposure.map(s => (
-                    <div key={s.sector}>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={cn('text-foreground', s.exceedsThreshold && 'text-red-400 font-semibold')}>
-                          {s.sector}
-                        </span>
-                        <span className={cn('font-mono', s.exceedsThreshold ? 'text-red-400 font-bold' : 'text-muted-foreground')}>
-                          {fmtPct(s.weightPct)}
-                        </span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className={cn('h-full rounded-full', s.exceedsThreshold ? 'bg-red-500' : 'bg-primary')}
-                          style={{ width: `${Math.min(s.weightPct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <UniversalChart
+                  chartId="risk-sector"
+                  data={metrics.sectorExposure.map(s => ({
+                    name: s.sector,
+                    value: s.weightPct,
+                  }))}
+                  defaultType="donut"
+                  allowedTypes={['donut', 'bar', 'radar']}
+                  height={220}
+                  formatValue={(v) => `${v.toFixed(1)}%`}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">No sector data.</p>
               )}
@@ -332,22 +370,17 @@ export default function RiskPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="mb-4 text-sm font-semibold text-foreground">Geographic Exposure</h2>
               {metrics.geographicExposure.length > 0 ? (
-                <div className="space-y-2">
-                  {metrics.geographicExposure.map(g => (
-                    <div key={g.region}>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-foreground">{g.region}</span>
-                        <span className="font-mono text-muted-foreground">{fmtPct(g.weightPct)}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.min(g.weightPct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <UniversalChart
+                  chartId="risk-geographic"
+                  data={metrics.geographicExposure.map(g => ({
+                    name: g.region,
+                    value: g.weightPct,
+                  }))}
+                  defaultType="donut"
+                  allowedTypes={['donut', 'bar', 'radar']}
+                  height={220}
+                  formatValue={(v) => `${v.toFixed(1)}%`}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">No geographic data.</p>
               )}
@@ -395,12 +428,13 @@ export default function RiskPage() {
               >
                 {savingThresholds ? 'Saving...' : 'Save Thresholds'}
               </button>
-              {thresholdSaved && <span className="text-sm text-green-400">Saved.</span>}
+              {thresholdSaved && <span className="text-sm text-success">Saved.</span>}
               {thresholdSaveError && <span className="text-sm text-destructive">{thresholdSaveError}</span>}
             </div>
           </motion.div>
         )}
       </motion.div>
+      </div>
     </div>
   )
 }

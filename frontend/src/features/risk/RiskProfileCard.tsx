@@ -10,15 +10,15 @@ interface RiskProfileCardProps {
 }
 
 const RISK_LEVEL_STYLES: Record<RiskHistoryEntry['riskLevel'], string> = {
-  CONSERVATIVE: 'bg-green-500/15 text-green-400 border-green-500/30',
-  MODERATE: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  AGGRESSIVE: 'bg-red-500/15 text-red-400 border-red-500/30',
+  CONSERVATIVE: 'bg-success/15 text-success border-success/30',
+  MODERATE: 'bg-warning/15 text-warning border-warning/30',
+  AGGRESSIVE: 'bg-destructive/15 text-destructive border-destructive/30',
 }
 
 const RISK_BAR_COLORS: Record<RiskHistoryEntry['riskLevel'], string> = {
-  CONSERVATIVE: 'bg-green-500',
-  MODERATE: 'bg-yellow-500',
-  AGGRESSIVE: 'bg-red-500',
+  CONSERVATIVE: 'bg-success',
+  MODERATE: 'bg-warning',
+  AGGRESSIVE: 'bg-destructive',
 }
 
 function RiskLevelBadge({ level }: { level: RiskHistoryEntry['riskLevel'] }) {
@@ -53,7 +53,7 @@ export function RiskProfileCard({ current, evaluating, onEvaluate }: RiskProfile
         <h2 className="text-sm font-semibold text-foreground">Risk Profile</h2>
         <div className="flex items-center gap-3">
           {showUpdated && (
-            <span className="text-xs text-green-400">Updated</span>
+            <span className="text-xs text-success">Updated</span>
           )}
           <button
             onClick={onEvaluate}
@@ -91,7 +91,7 @@ export function RiskProfileCard({ current, evaluating, onEvaluate }: RiskProfile
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">AI Risk Score</span>
-                <span className="font-mono text-foreground">
+                <span className="tabular-nums font-mono text-foreground">
                   {current.aiInferredScore.toFixed(3)}
                 </span>
               </div>

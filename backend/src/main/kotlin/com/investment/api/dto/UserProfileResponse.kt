@@ -18,8 +18,8 @@ data class UserProfileResponse(
     val aiInferredScore: BigDecimal?,
     val theme: String,
     val onboardingCompleted: Boolean,
-    val whatsappNumber: String?,
-    val whatsappEnabled: Boolean = false,
+    val telegramChatId: String?,
+    val telegramEnabled: Boolean = false,
     val timezone: String = "UTC",
     val createdAt: Instant,
     val lastUpdated: Instant

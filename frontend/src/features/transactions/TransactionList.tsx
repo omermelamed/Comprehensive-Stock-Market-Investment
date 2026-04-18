@@ -21,7 +21,7 @@ export default function TransactionList() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [deleting, setDeleting] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -69,44 +69,44 @@ export default function TransactionList() {
   return (
     <Card className="mt-8">
       <div className="flex items-center justify-between px-6 pt-5 pb-3">
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           Recent Transactions
         </h2>
         {total > 20 && (
-          <span className="text-xs text-muted-foreground">{total} total</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{total} total</span>
         )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="px-6 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Date</th>
-              <th className="px-3 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Symbol</th>
-              <th className="px-3 pb-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</th>
-              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Qty</th>
-              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Price</th>
-              <th className="px-3 pb-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</th>
-              <th className="px-6 pb-3" />
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Symbol</th>
+              <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Type</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Qty</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Price</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total</th>
+              <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {transactions.map(tx => (
-              <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors">
-                <td className="px-6 py-3 font-mono text-xs text-muted-foreground">{tx.transactionDate}</td>
+              <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
+                <td className="px-6 py-3 tabular-nums font-mono text-xs text-muted-foreground">{tx.executedAt?.slice(0, 10)}</td>
                 <td className="px-3 py-3 font-mono font-semibold text-foreground">{tx.symbol}</td>
                 <td className="px-3 py-3">
-                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_STYLES[tx.transactionType] ?? 'bg-muted text-muted-foreground'}`}>
-                    {tx.transactionType}
+                  <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${TYPE_STYLES[tx.type] ?? 'bg-muted text-muted-foreground'}`}>
+                    {tx.type}
                   </span>
                 </td>
-                <td className="px-3 py-3 text-right font-mono text-xs text-foreground">{tx.quantity}</td>
-                <td className="px-3 py-3 text-right font-mono text-xs text-foreground">{fmt(tx.pricePerUnit)}</td>
-                <td className="px-3 py-3 text-right font-mono text-sm font-semibold text-foreground">{fmt(tx.totalAmount)}</td>
+                <td className="px-3 py-3 text-right tabular-nums font-mono text-xs text-foreground">{tx.quantity}</td>
+                <td className="px-3 py-3 text-right tabular-nums font-mono text-xs text-foreground">{fmt(tx.pricePerUnit)}</td>
+                <td className="px-3 py-3 text-right tabular-nums font-mono text-sm font-semibold text-foreground">{fmt(tx.totalValue)}</td>
                 <td className="px-6 py-3 text-right">
                   <button
                     onClick={() => void handleDelete(tx.id)}
                     disabled={deleting === tx.id}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors duration-150 disabled:opacity-40"
                   >
                     {deleting === tx.id ? '…' : 'Delete'}
                   </button>

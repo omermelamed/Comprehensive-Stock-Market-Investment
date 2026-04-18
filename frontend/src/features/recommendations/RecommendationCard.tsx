@@ -119,7 +119,7 @@ export function RecommendationCard({ card, currency }: Props) {
               <p className="font-mono text-lg font-bold text-card-foreground">{card.symbol}</p>
             )}
             {card.currentPrice !== null && (
-              <span className="font-mono text-xs text-muted-foreground">
+              <span className="tabular-nums font-mono text-xs text-muted-foreground">
                 {formatMoney(card.currentPrice, currency)}
                 {card.targetPrice != null && (
                   <span className="ml-2">
@@ -184,7 +184,7 @@ export function RecommendationCard({ card, currency }: Props) {
       {card.suggestedAmount !== null && (
         <div className="flex items-center justify-between border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">Suggested</span>
-          <span className="font-mono text-sm font-semibold text-foreground">
+          <span className="tabular-nums font-mono text-sm font-semibold text-foreground">
             {formatMoney(card.suggestedAmount, currency)}
           </span>
         </div>

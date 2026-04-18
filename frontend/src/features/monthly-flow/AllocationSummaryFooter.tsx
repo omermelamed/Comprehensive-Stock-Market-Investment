@@ -29,7 +29,7 @@ export function AllocationSummaryFooter({
         <div className="flex items-center gap-8">
           <div>
             <p className="text-xs text-muted-foreground">Budget</p>
-            <p className="font-mono text-sm font-semibold text-card-foreground">{fmt(budget)}</p>
+            <p className="tabular-nums font-mono text-sm font-semibold text-card-foreground">{fmt(budget)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Allocated</p>
@@ -37,7 +37,7 @@ export function AllocationSummaryFooter({
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Remaining</p>
-            <p className={cn('font-mono text-sm font-semibold', isOverBudget ? 'text-destructive' : 'text-success')}>
+            <p className={cn('tabular-nums font-mono text-sm font-semibold', isOverBudget ? 'text-destructive' : 'text-success')}>
               {fmt(remaining)}
             </p>
           </div>

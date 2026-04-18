@@ -18,8 +18,8 @@ export function StepReview({ data, onSubmit, onBack, submitting, error }: StepRe
     .map(v => ASSET_TRACKS.find(t => t.value === v)?.label ?? v)
     .join(', ')
 
-  const whatsappStatus = data.whatsappNumber
-    ? (data.whatsappEnabled ? `${data.whatsappNumber} (enabled)` : `${data.whatsappNumber} (disabled)`)
+  const telegramStatus = data.telegramChatId
+    ? (data.telegramEnabled ? `Chat ${data.telegramChatId} (enabled)` : `Chat ${data.telegramChatId} (disabled)`)
     : 'Not configured'
 
   const rows = [
@@ -29,7 +29,7 @@ export function StepReview({ data, onSubmit, onBack, submitting, error }: StepRe
     ...(data.monthlyInvestmentMin ? [{ icon: '💰', label: `$${data.monthlyInvestmentMin.toLocaleString()}/mo` }] : []),
     ...(trackLabels ? [{ icon: '📊', label: trackLabels }] : []),
     ...(data.timezone ? [{ icon: '🌐', label: data.timezone.replace(/_/g, ' ') }] : []),
-    { icon: '💬', label: whatsappStatus },
+    { icon: '💬', label: telegramStatus },
   ]
 
   return (

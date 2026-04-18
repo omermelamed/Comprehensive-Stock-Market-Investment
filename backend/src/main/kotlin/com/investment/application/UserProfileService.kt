@@ -32,4 +32,11 @@ class UserProfileService(
     fun completeOnboarding(): UserProfileResponse {
         return userProfileRepository.setOnboardingCompleted()
     }
+
+    @Transactional
+    fun linkTelegramChatIfNeeded(chatId: String) {
+        val profile = getProfile() ?: return
+        if (profile.telegramChatId == chatId) return
+        userProfileRepository.linkTelegramChat(chatId)
+    }
 }

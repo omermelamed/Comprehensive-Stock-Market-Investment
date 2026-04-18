@@ -82,18 +82,14 @@ export default function RecommendationsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Page header */}
-      <div className="border-b border-border px-6 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Recommendations</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              AI-powered investment recommendations based on your portfolio gaps and watchlist signals.
-            </p>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-foreground">Recommendations</h1>
             {data && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Generated {formatMinutesAgo(data.generatedAt)} · expires in{' '}
-                {formatMinutesUntil(data.expiresAt)}
-              </p>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Generated {formatMinutesAgo(data.generatedAt)} · expires in {formatMinutesUntil(data.expiresAt)}
+              </span>
             )}
           </div>
           <button
@@ -102,7 +98,7 @@ export default function RecommendationsPage() {
             className="flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh Analysis'}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -141,7 +137,7 @@ export default function RecommendationsPage() {
 
       {/* Main content */}
       <div className="flex-1 px-6 py-6">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl space-y-5">
           {/* Error state */}
           {error && (
             <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">

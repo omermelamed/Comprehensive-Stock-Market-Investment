@@ -67,7 +67,7 @@ export function OptionsStrategyPanel({ symbol }: OptionsStrategyPanelProps) {
 
       {/* Earnings warning */}
       {strategy.earningsWarning && (
-        <div className="flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5 text-sm text-yellow-400">
+        <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{strategy.earningsWarning}</span>
         </div>

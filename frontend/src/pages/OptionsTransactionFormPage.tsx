@@ -21,22 +21,25 @@ export default function OptionsTransactionFormPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          to="/options"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Options
-        </Link>
+    <div>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-foreground">New Options Position</h1>
+          <Link
+            to="/options"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to Options
+          </Link>
+        </div>
       </div>
 
-      <h1 className="mb-6 text-2xl font-bold text-foreground">New Options Position</h1>
-
-      <div className="max-w-xl">
-        <div className="rounded-xl border border-border bg-card p-6">
-          <OptionsTransactionForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      <div className="p-6">
+        <div className="max-w-xl">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <OptionsTransactionForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          </div>
         </div>
       </div>
     </div>

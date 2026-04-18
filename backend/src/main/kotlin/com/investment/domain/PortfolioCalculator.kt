@@ -108,14 +108,15 @@ object PortfolioCalculator {
         )
     }
 
-    fun toDto(metrics: HoldingMetrics): HoldingDashboardResponse {
+    fun toDto(metrics: HoldingMetrics, nativePrice: BigDecimal, nativeCurrency: String): HoldingDashboardResponse {
         return HoldingDashboardResponse(
             symbol = metrics.symbol,
             label = metrics.label,
             track = metrics.track,
             quantity = metrics.quantity,
             avgBuyPrice = metrics.avgBuyPrice,
-            currentPrice = metrics.currentPrice,
+            currentPrice = nativePrice.setScale(SCALE, ROUNDING),
+            nativeCurrency = nativeCurrency,
             currentValue = metrics.currentValue,
             costBasis = metrics.costBasis,
             pnlAbsolute = metrics.pnlAbsolute,

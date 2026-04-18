@@ -9,7 +9,7 @@ import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
 
 /**
- * Pure domain calculator for the next scheduled WhatsApp message send time.
+ * Pure domain calculator for the next scheduled message send time.
  * No Spring dependencies, no I/O.
  */
 object NextSendAtCalculator {

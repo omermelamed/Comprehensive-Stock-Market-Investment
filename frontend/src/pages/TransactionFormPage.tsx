@@ -51,12 +51,9 @@ export default function TransactionFormPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Page header */}
-      <div className="border-b border-border px-6 py-5">
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Log Transaction</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">Record a buy, sell, or other portfolio event.</p>
-          </div>
+          <h1 className="text-lg font-semibold text-foreground">Log Transaction</h1>
           <div className="flex items-center gap-2">
             <Link
               to="/import"
@@ -71,7 +68,7 @@ export default function TransactionFormPage() {
 
       {/* Content */}
       <div className="flex-1 px-6 py-6">
-        <div className="mx-auto max-w-2xl space-y-6">
+        <div className="mx-auto max-w-2xl space-y-5">
           <Card>
             <CardContent className="p-6">
               <form onSubmit={e => void handleSubmit(e)} className="space-y-5">

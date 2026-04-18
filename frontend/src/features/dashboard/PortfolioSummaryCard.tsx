@@ -58,18 +58,21 @@ export function PortfolioSummaryCard({ summary }: Props) {
   const isPnlPositive = summary.totalPnlAbsolute >= 0
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+    <Card className="overflow-hidden">
+      {/* Hero section — gradient accent for the main number */}
+      <div className="bg-gradient-to-br from-primary/8 via-primary/4 to-transparent px-6 pt-6 pb-5 border-b border-border/60">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           {/* Total value block */}
           <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Total Portfolio Value</p>
-            <p className="font-mono text-4xl font-bold tracking-tight">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Total Portfolio Value
+            </p>
+            <p className="tabular-nums font-mono text-4xl font-bold tracking-tight">
               {formatCurrency(summary.totalValue, summary.currency)}
             </p>
 
             {/* P&L row */}
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2 pt-0.5">
               {isPnlPositive ? (
                 <TrendingUp className="h-4 w-4 text-success" />
               ) : (
@@ -77,7 +80,7 @@ export function PortfolioSummaryCard({ summary }: Props) {
               )}
               <span
                 className={cn(
-                  'font-mono text-sm font-semibold',
+                  'tabular-nums font-mono text-sm font-semibold',
                   isPnlPositive ? 'text-success' : 'text-destructive',
                 )}
               >
@@ -85,7 +88,7 @@ export function PortfolioSummaryCard({ summary }: Props) {
               </span>
               <span
                 className={cn(
-                  'text-sm',
+                  'tabular-nums text-sm',
                   isPnlPositive ? 'text-success' : 'text-destructive',
                 )}
               >
@@ -94,33 +97,34 @@ export function PortfolioSummaryCard({ summary }: Props) {
             </div>
           </div>
 
-          {/* Right block: stats + CTA */}
-          <div className="flex flex-col items-start gap-4 sm:items-end">
-            <div className="flex flex-wrap gap-3">
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Positions</p>
-                <p className="font-mono text-sm font-semibold">{summary.holdingCount}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Cost Basis</p>
-                <p className="font-mono text-sm font-semibold">
-                  {formatCurrency(summary.totalCostBasis, summary.currency)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Allocation Health</p>
-                <div className="mt-0.5 flex justify-end">
-                  <AllocationHealthBadge score={summary.allocationHealthScore} />
-                </div>
-              </div>
-            </div>
+          {/* CTA — aligned to bottom of hero */}
+          <Link
+            to="/monthly-flow"
+            className={cn(buttonVariants({ variant: 'default' }), 'shrink-0')}
+          >
+            Invest This Month
+          </Link>
+        </div>
+      </div>
 
-            <Link
-              to="/monthly-flow"
-              className={cn(buttonVariants({ variant: 'default' }), 'w-full sm:w-auto')}
-            >
-              Invest This Month
-            </Link>
+      {/* Stats row */}
+      <CardContent className="p-6">
+        <div className="flex flex-wrap items-center gap-8">
+          <div>
+            <p className="text-xs text-muted-foreground">Positions</p>
+            <p className="tabular-nums font-mono text-sm font-semibold">{summary.holdingCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Cost Basis</p>
+            <p className="tabular-nums font-mono text-sm font-semibold">
+              {formatCurrency(summary.totalCostBasis, summary.currency)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Allocation Health</p>
+            <div className="mt-0.5">
+              <AllocationHealthBadge score={summary.allocationHealthScore} />
+            </div>
           </div>
         </div>
       </CardContent>

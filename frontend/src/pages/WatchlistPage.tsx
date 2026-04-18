@@ -97,18 +97,17 @@ export default function WatchlistPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Page header */}
-      <div className="border-b border-border px-6 py-5">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-xl font-bold text-foreground">Watchlist</h1>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-muted-foreground" />
+            <h1 className="text-lg font-semibold text-foreground">Watchlist</h1>
+          </div>
         </div>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Track symbols and run AI analysis to help inform investment decisions.
-        </p>
       </div>
 
       <div className="flex-1 px-6 py-6">
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-5">
           {/* Add item form */}
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="mb-3 text-sm font-semibold text-foreground">Add to watchlist</p>
@@ -192,10 +191,10 @@ export default function WatchlistPage() {
 
           {/* Empty state */}
           {!isLoading && items.length === 0 && !loadError && (
-            <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
-              <Star className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm font-medium text-foreground">No items in your watchlist</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Star className="mb-3 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-muted-foreground">No items in your watchlist</p>
+              <p className="mt-1 text-xs text-muted-foreground/60">
                 Add a symbol above to start tracking and analyzing.
               </p>
             </div>

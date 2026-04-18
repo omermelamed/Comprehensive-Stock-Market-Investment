@@ -1,0 +1,1 @@
+ALTER TYPE snapshot_source_enum ADD VALUE IF NOT EXISTS 'REGENERATED';

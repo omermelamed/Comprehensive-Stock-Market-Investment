@@ -59,8 +59,9 @@ interface Props {
 export function HoldingsTable({ holdings }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('currentValue')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const currency = useCurrency()
-  const formatCurrency = (v: number) => formatMoney(v, currency)
+  const portfolioCurrency = useCurrency()
+  const formatCurrency = (v: number) => formatMoney(v, portfolioCurrency)
+  const formatNative = (v: number, nativeCurrency: string) => formatMoney(v, nativeCurrency)
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -84,10 +85,10 @@ export function HoldingsTable({ holdings }: Props) {
 
   return (
     <Card>
-      <div className="flex items-center justify-between px-6 pt-6 pb-4">
+      <div className="flex items-center justify-between px-6 pt-5 pb-4">
         <div>
-          <h2 className="text-lg font-bold tracking-tight">Holdings</h2>
-          <p className="text-sm text-muted-foreground">{holdings.length} position{holdings.length !== 1 ? 's' : ''}</p>
+          <h2 className="text-sm font-semibold text-foreground">Holdings</h2>
+          <p className="text-xs text-muted-foreground">{holdings.length} position{holdings.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
@@ -180,26 +181,31 @@ export function HoldingsTable({ holdings }: Props) {
                       <Badge variant="secondary" className="text-xs">{h.track}</Badge>
                     </td>
                     {/* Qty */}
-                    <td className="px-3 py-3.5 text-right font-mono text-xs">
+                    <td className="px-3 py-3.5 text-right tabular-nums font-mono text-xs">
                       {formatQty(h.quantity)}
                     </td>
                     {/* Avg Buy */}
-                    <td className="px-3 py-3.5 text-right font-mono text-xs">
-                      {formatCurrency(h.avgBuyPrice)}
+                    <td className="px-3 py-3.5 text-right tabular-nums font-mono text-xs">
+                      {formatNative(h.avgBuyPrice, h.nativeCurrency)}
                     </td>
                     {/* Current Price */}
-                    <td className="px-3 py-3.5 text-right font-mono text-xs">
-                      {formatCurrency(h.currentPrice)}
+                    <td className="px-3 py-3.5 text-right tabular-nums font-mono text-xs">
+                      {formatNative(h.currentPrice, h.nativeCurrency)}
                     </td>
                     {/* Current Value */}
-                    <td className="px-3 py-3.5 text-right font-mono text-sm font-semibold">
+                    <td className="px-3 py-3.5 text-right tabular-nums font-mono text-sm font-semibold">
                       {formatCurrency(h.currentValue)}
+                      {h.nativeCurrency !== portfolioCurrency && (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          ({formatNative(h.quantity * h.currentPrice, h.nativeCurrency)})
+                        </div>
+                      )}
                     </td>
                     {/* P&L */}
                     <td className="px-3 py-3.5 text-right">
                       <div
                         className={cn(
-                          'font-mono text-xs font-semibold',
+                          'tabular-nums font-mono text-xs font-semibold',
                           pnlPositive ? 'text-success' : 'text-destructive',
                         )}
                       >
@@ -207,7 +213,7 @@ export function HoldingsTable({ holdings }: Props) {
                       </div>
                       <div
                         className={cn(
-                          'text-xs',
+                          'tabular-nums text-xs',
                           pnlPositive ? 'text-success' : 'text-destructive',
                         )}
                       >
@@ -216,11 +222,11 @@ export function HoldingsTable({ holdings }: Props) {
                     </td>
                     {/* Target / Current % */}
                     <td className="px-3 py-3.5 text-right">
-                      <div className="font-mono text-xs font-semibold">
+                      <div className="tabular-nums font-mono text-xs font-semibold">
                         {formatPercent(h.currentPercent)}
                       </div>
                       {h.targetPercent !== null && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="tabular-nums text-xs text-muted-foreground">
                           target {formatPercent(h.targetPercent)}
                         </div>
                       )}

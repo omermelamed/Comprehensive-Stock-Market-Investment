@@ -24,5 +24,5 @@ data class ScheduledMessageLogEntry(
     val sentAt: Instant,
     val status: String,
     val errorMessage: String?,
-    val twilioSid: String?
+    val telegramMessageId: String?
 )

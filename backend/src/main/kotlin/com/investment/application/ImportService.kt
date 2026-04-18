@@ -9,14 +9,24 @@ import com.investment.domain.ImportParser
 import com.investment.domain.ImportRowStatus
 import com.investment.domain.ImportValidator
 import com.investment.infrastructure.TransactionRepository
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class ImportService(
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    @Lazy @Autowired private val snapshotService: SnapshotService
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * Parses [file], applies [columnMapping], and validates every row.
@@ -60,6 +70,31 @@ class ImportService(
         }
         val inserted = transactionRepository.insertImport(request.rows)
         val skipped = request.rows.size - inserted
+
+        val earliestDate = request.rows
+            .mapNotNull { row ->
+                try {
+                    LocalDate.parse(row.transactionDate)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            .minOrNull()
+
+        if (earliestDate != null) {
+            TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                override fun afterCommit() {
+                    Thread {
+                        try {
+                            snapshotService.regenerateSnapshotsFrom(earliestDate)
+                        } catch (e: Exception) {
+                            log.warn("Snapshot regeneration after import failed from {}: {}", earliestDate, e.message)
+                        }
+                    }.also { it.isDaemon = true }.start()
+                }
+            })
+        }
+
         return ImportSummaryResponse(imported = inserted, skipped = skipped)
     }
 }

@@ -49,43 +49,40 @@ export function ImportPreviewTable({ rows, validCount, errorCount }: ImportPrevi
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="pb-2 text-left text-xs font-medium text-muted-foreground w-10">#</th>
-              <th className="pb-2 text-left text-xs font-medium text-muted-foreground">Symbol</th>
-              <th className="pb-2 text-left text-xs font-medium text-muted-foreground">Type</th>
-              <th className="pb-2 text-left text-xs font-medium text-muted-foreground">Date</th>
-              <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Qty</th>
-              <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Price</th>
-              <th className="pb-2 text-center text-xs font-medium text-muted-foreground">Status</th>
-              <th className="pb-2 text-left text-xs font-medium text-muted-foreground pl-4">Error</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground w-10">#</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Symbol</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Type</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Qty</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Price</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Error</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {shown.map(row => (
               <tr
                 key={row.rowIndex}
-                className={[
-                  'border-b border-border/50 last:border-0',
-                  row.status === 'ERROR' ? 'bg-destructive/5' : '',
-                ].join(' ')}
+                className={row.status === 'ERROR' ? 'bg-destructive/5' : 'hover:bg-muted/50'}
               >
-                <td className="py-2 font-mono text-xs text-muted-foreground">{row.rowIndex}</td>
-                <td className="py-2 font-mono font-semibold text-foreground">
+                <td className="px-4 py-3 tabular-nums font-mono text-xs text-muted-foreground">{row.rowIndex}</td>
+                <td className="px-4 py-3 font-mono font-semibold text-foreground">
                   {row.parsedRow?.symbol ?? '—'}
                 </td>
-                <td className="py-2 text-foreground">{row.parsedRow?.transactionType ?? '—'}</td>
-                <td className="py-2 font-mono text-xs text-muted-foreground">
+                <td className="px-4 py-3 text-sm text-foreground">{row.parsedRow?.transactionType ?? '—'}</td>
+                <td className="px-4 py-3 tabular-nums font-mono text-xs text-muted-foreground">
                   {row.parsedRow?.transactionDate ?? '—'}
                 </td>
-                <td className="py-2 text-right font-mono text-xs text-foreground">
+                <td className="px-4 py-3 text-right tabular-nums font-mono text-xs text-foreground">
                   {row.parsedRow?.quantity ?? '—'}
                 </td>
-                <td className="py-2 text-right font-mono text-xs text-foreground">
+                <td className="px-4 py-3 text-right tabular-nums font-mono text-xs text-foreground">
                   {row.parsedRow?.pricePerUnit ?? '—'}
                 </td>
-                <td className="py-2 text-center">
+                <td className="px-4 py-3 text-center">
                   <StatusBadge status={row.status} />
                 </td>
-                <td className="py-2 pl-4 text-xs text-destructive max-w-[260px]">
+                <td className="px-4 py-3 text-xs text-destructive max-w-[260px]">
                   {row.errors.length > 0 ? row.errors.join('; ') : null}
                 </td>
               </tr>

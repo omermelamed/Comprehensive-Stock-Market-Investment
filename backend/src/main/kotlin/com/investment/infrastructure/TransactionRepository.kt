@@ -131,6 +131,14 @@ class TransactionRepository(
         return date?.toLocalDate()
     }
 
+    fun findExecutedAtById(id: UUID): Instant? {
+        val record = dsl.fetchOne(
+            "SELECT executed_at FROM transactions WHERE id = ?::uuid",
+            id.toString()
+        )
+        return record?.get("executed_at", Timestamp::class.java)?.toInstant()
+    }
+
     fun delete(id: UUID) {
         val deleted = dsl.execute(
             "DELETE FROM transactions WHERE id = ?::uuid",

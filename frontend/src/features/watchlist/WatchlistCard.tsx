@@ -135,7 +135,7 @@ export function WatchlistCard({ item, onAnalyze, onRemove, isAnalyzing, isOverwe
           <button
             onClick={() => onAnalyze(item.id)}
             disabled={isAnalyzing}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isAnalyzing ? 'Analyzing...' : 'Analyze'}
           </button>
@@ -195,7 +195,7 @@ export function WatchlistCard({ item, onAnalyze, onRemove, isAnalyzing, isOverwe
                   <div>
                     <p className="text-muted-foreground">Price</p>
                     <p className="font-mono font-semibold text-foreground">
-                      {metrics.currentPrice != null ? `${metrics.currentPrice.toFixed(2)} ${metrics.currency}` : 'N/A'}
+                      {metrics.currentPrice != null ? <span className="tabular-nums">{metrics.currentPrice.toFixed(2)} {metrics.currency}</span> : 'N/A'}
                     </p>
                   </div>
                   {metrics.fundamentals?.peRatio != null && (

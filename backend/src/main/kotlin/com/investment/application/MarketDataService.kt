@@ -1,6 +1,7 @@
 package com.investment.application
 
 import com.investment.domain.MarketDataUnavailableException
+import com.investment.domain.OhlcBar
 import com.investment.domain.PriceQuote
 import com.investment.infrastructure.market.MarketDataProvider
 import org.slf4j.LoggerFactory
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -58,6 +60,41 @@ class MarketDataService(
         }
 
         throw MarketDataUnavailableException(upperSymbol)
+    }
+
+    /**
+     * Fetches closing prices for [symbol] for each trading day in [[from], [to]].
+     * Tries providers in order; returns the first non-empty result.
+     * Non-trading days (weekends, holidays) are simply absent from the returned map.
+     */
+    fun getHistoricalPrices(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal> {
+        val resolvedSymbol = symbolResolverService.resolve(symbol.uppercase())
+        for (provider in providers) {
+            val prices = try {
+                provider.fetchHistoricalPrices(resolvedSymbol, from, to)
+            } catch (e: Exception) {
+                log.warn("Provider {} historical fetch failed for {}: {}", provider.sourceName, symbol, e.message)
+                emptyMap()
+            }
+            if (prices.isNotEmpty()) return prices
+        }
+        log.warn("No historical prices found for {} from {} to {}", symbol, from, to)
+        return emptyMap()
+    }
+
+    fun getOhlcBars(symbol: String, from: LocalDate, to: LocalDate): List<OhlcBar> {
+        val resolvedSymbol = symbolResolverService.resolve(symbol.uppercase())
+        for (provider in providers) {
+            val bars = try {
+                provider.fetchOhlcBars(resolvedSymbol, from, to)
+            } catch (e: Exception) {
+                log.warn("Provider {} OHLC fetch failed for {}: {}", provider.sourceName, symbol, e.message)
+                emptyList()
+            }
+            if (bars.isNotEmpty()) return bars
+        }
+        log.warn("No OHLC data found for {} from {} to {}", symbol, from, to)
+        return emptyList()
     }
 
     /**

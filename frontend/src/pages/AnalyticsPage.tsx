@@ -1,27 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
 import { stagger, staggerItem } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import {
   getAnalytics,
   type AnalyticsResponse,
   type PerformanceMetrics,
+  type PositionPnl,
 } from '@/api/analytics'
 import { ExportButton } from '@/features/export/ExportButton'
 import { downloadPerformance } from '@/api/export'
+import { chart, seriesColor, pnlClass } from '@/lib/chart-theme'
+import { UniversalChart } from '@/components/charts'
 
 const RANGES = ['1M', '3M', '6M', '1Y', 'ALL'] as const
 type Range = (typeof RANGES)[number]
@@ -51,13 +41,13 @@ function MetricCard({ label, value, positive }: MetricCardProps) {
     positive === null || positive === undefined
       ? 'text-foreground'
       : positive
-      ? 'text-green-400'
-      : 'text-red-400'
+      ? 'text-success'
+      : 'text-destructive'
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn('mt-1 font-mono text-xl font-bold', colorClass)}>{value}</p>
+      <p className={cn('mt-1 tabular-nums font-mono text-xl font-bold', colorClass)}>{value}</p>
     </div>
   )
 }
@@ -111,32 +101,33 @@ export default function AnalyticsPage() {
   }, [range])
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-
-        <div className="flex items-center gap-3">
-          <ExportButton label="Export P&L" onDownload={downloadPerformance} />
-          {/* Range tabs */}
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-          {RANGES.map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                range === r
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {r}
-            </button>
-          ))}
+    <div>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-foreground">Analytics</h1>
+          <div className="flex items-center gap-3">
+            <ExportButton label="Export P&L" onDownload={downloadPerformance} />
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+              {RANGES.map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    range === r
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
+      <div className="p-6 space-y-5">
       {loading && !data && <AnalyticsSkeleton />}
 
       {error && !data && (
@@ -146,7 +137,7 @@ export default function AnalyticsPage() {
       )}
 
       {data && (
-        <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
+        <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-5">
           {/* Metric cards */}
           <motion.div variants={staggerItem} className="grid grid-cols-2 gap-4 md:grid-cols-5">
             <MetricCard
@@ -186,94 +177,15 @@ export default function AnalyticsPage() {
           {/* Portfolio vs benchmark chart */}
           {data.chartPoints.length > 0 && (
             <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Portfolio Index vs Benchmark</h2>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={(() => {
-                  const benchmarkByDate = new Map(
-                    (data.benchmark?.points ?? []).map(p => [p.date, p.benchmarkIndex])
-                  )
-                  return data.chartPoints.map(p => ({
-                    date: p.date,
-                    portfolio: Number(p.portfolioIndex.toFixed(2)),
-                    benchmark: benchmarkByDate.has(p.date)
-                      ? Number(benchmarkByDate.get(p.date)!.toFixed(2))
-                      : undefined,
-                  }))
-                })()}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                    tickFormatter={d => d.slice(5)}
-                    minTickGap={40}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                    tickFormatter={v => `${v}`}
-                    domain={['auto', 'auto']}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: 12,
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="portfolio"
-                    name="Portfolio"
-                    stroke="hsl(var(--primary))"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                  {data.benchmark && (
-                    <Line
-                      type="monotone"
-                      dataKey="benchmark"
-                      name={data.benchmark.symbol}
-                      stroke="hsl(var(--muted-foreground))"
-                      dot={false}
-                      strokeWidth={1.5}
-                      strokeDasharray="4 2"
-                    />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
+              <h2 className="mb-2 text-sm font-semibold text-foreground">Portfolio Index vs Benchmark</h2>
+              <BenchmarkChart data={data} />
             </motion.div>
           )}
 
-          {/* Position P&L bar chart */}
+          {/* Position P&L */}
           {data.positions.length > 0 && (
             <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">Position P&L</h2>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data.positions.map(p => ({ symbol: p.symbol, pnl: Number(p.pnlAbsolute.toFixed(0)), positive: p.pnlAbsolute >= 0 }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="symbol" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={v => fmtCurrency(v, data.currency)} />
-                  <Tooltip
-                    contentStyle={{
-                      background: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number) => [fmtCurrency(v, data.currency), 'P&L']}
-                  />
-                  <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
-                    {data.positions.map((p, i) => (
-                      <Cell
-                        key={i}
-                        fill={p.pnlAbsolute >= 0 ? 'hsl(var(--chart-2, 142 76% 36%))' : 'hsl(var(--chart-1, 0 72% 51%))'}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <PositionPnlChart positions={data.positions} currency={data.currency} />
             </motion.div>
           )}
 
@@ -285,8 +197,8 @@ export default function AnalyticsPage() {
                 <div className="mb-4 flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Total Realized:</span>
                   <span className={cn(
-                    'font-mono text-lg font-bold',
-                    data.realizedPnl.totalRealizedPnl >= 0 ? 'text-green-400' : 'text-red-400',
+                    'tabular-nums font-mono text-lg font-bold',
+                    data.realizedPnl.totalRealizedPnl >= 0 ? 'text-success' : 'text-destructive',
                   )}>
                     {fmtCurrency(data.realizedPnl.totalRealizedPnl, data.currency)}
                   </span>
@@ -294,30 +206,30 @@ export default function AnalyticsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border text-xs text-muted-foreground">
-                        <th className="pb-2 text-left font-medium">Symbol</th>
-                        <th className="pb-2 text-right font-medium">Qty</th>
-                        <th className="pb-2 text-right font-medium">Buy Price</th>
-                        <th className="pb-2 text-right font-medium">Sell Price</th>
-                        <th className="pb-2 text-right font-medium">P&L</th>
-                        <th className="pb-2 text-right font-medium">%</th>
-                        <th className="pb-2 text-right font-medium">Closed</th>
+                      <tr className="border-b border-border">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Symbol</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Qty</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Buy Price</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sell Price</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">P&L</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">%</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Closed</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.realizedPnl.trades.map((t, i) => (
-                        <tr key={i} className="border-b border-border last:border-0">
-                          <td className="py-2 font-mono font-semibold text-foreground">{t.symbol}</td>
-                          <td className="py-2 text-right font-mono">{t.quantity}</td>
-                          <td className="py-2 text-right font-mono">{fmtCurrency(t.buyPrice, data.currency)}</td>
-                          <td className="py-2 text-right font-mono">{fmtCurrency(t.sellPrice, data.currency)}</td>
-                          <td className={cn('py-2 text-right font-mono', t.pnl >= 0 ? 'text-green-400' : 'text-red-400')}>
+                        <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+                          <td className="px-4 py-3 font-mono font-semibold text-foreground">{t.symbol}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-mono text-sm">{t.quantity}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-mono text-sm">{fmtCurrency(t.buyPrice, data.currency)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-mono text-sm">{fmtCurrency(t.sellPrice, data.currency)}</td>
+                          <td className={cn('px-4 py-3 text-right tabular-nums font-mono text-sm', t.pnl >= 0 ? 'text-success' : 'text-destructive')}>
                             {fmtCurrency(t.pnl, data.currency)}
                           </td>
-                          <td className={cn('py-2 text-right font-mono', t.pnlPercent >= 0 ? 'text-green-400' : 'text-red-400')}>
+                          <td className={cn('px-4 py-3 text-right tabular-nums font-mono text-sm', t.pnlPercent >= 0 ? 'text-success' : 'text-destructive')}>
                             {fmtPct(t.pnlPercent)}
                           </td>
-                          <td className="py-2 text-right text-muted-foreground">{t.closedAt.slice(0, 10)}</td>
+                          <td className="px-4 py-3 text-right text-xs text-muted-foreground">{t.closedAt.slice(0, 10)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -330,6 +242,99 @@ export default function AnalyticsPage() {
           </motion.div>
         </motion.div>
       )}
+      </div>
     </div>
+  )
+}
+
+/* ── Benchmark chart (extracted for UniversalChart) ──────── */
+
+function BenchmarkChart({ data }: { data: AnalyticsResponse }) {
+  const chartData = useMemo(() => {
+    const benchmarkByDate = new Map(
+      (data.benchmark?.points ?? []).map(p => [p.date, p.benchmarkIndex]),
+    )
+    return data.chartPoints.map(p => ({
+      date: p.date,
+      portfolio: Number(p.portfolioIndex.toFixed(2)),
+      ...(benchmarkByDate.has(p.date)
+        ? { benchmark: Number(benchmarkByDate.get(p.date)!.toFixed(2)) }
+        : {}),
+    }))
+  }, [data])
+
+  const series = useMemo(() => {
+    const s: Array<{ dataKey: string; name: string; color?: string; strokeWidth?: number; strokeDasharray?: string }> = [
+      { dataKey: 'portfolio', name: 'Portfolio', color: chart.primary, strokeWidth: 2.5 },
+    ]
+    if (data.benchmark) {
+      s.push({
+        dataKey: 'benchmark',
+        name: data.benchmark.symbol,
+        color: chart.muted,
+        strokeWidth: 1.5,
+        strokeDasharray: '6 3',
+      })
+    }
+    return s
+  }, [data.benchmark])
+
+  return (
+    <UniversalChart
+      chartId="analytics-benchmark"
+      timeSeries={{
+        data: chartData,
+        xDataKey: 'date',
+        series,
+        xTickFormatter: (d) => d.slice(5),
+        yTickFormatter: (v) => `${v}`,
+        yDomain: ['auto', 'auto'],
+        showLegend: true,
+      }}
+      defaultType="line"
+      allowedTypes={['line', 'area']}
+      height={280}
+    />
+  )
+}
+
+/* ── Position P&L chart (extracted for UniversalChart) ───── */
+
+function PositionPnlChart({ positions, currency }: { positions: PositionPnl[]; currency: string }) {
+  const sorted = useMemo(
+    () => [...positions].sort((a, b) => b.pnlAbsolute - a.pnlAbsolute),
+    [positions],
+  )
+  const totalPnl = sorted.reduce((s, p) => s + p.pnlAbsolute, 0)
+
+  const chartData = useMemo(
+    () => sorted.map((p, i) => ({
+      name: p.symbol,
+      value: Number(p.pnlAbsolute.toFixed(0)),
+      color: seriesColor(i),
+    })),
+    [sorted],
+  )
+
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-foreground">Position P&L</h2>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs text-muted-foreground">Total:</span>
+          <span className={cn('tabular-nums font-mono text-sm font-bold', pnlClass(totalPnl))}>
+            {totalPnl >= 0 ? '+' : ''}{fmtCurrency(totalPnl, currency)}
+          </span>
+        </div>
+      </div>
+      <UniversalChart
+        chartId="analytics-position-pnl"
+        data={chartData}
+        defaultType="bar"
+        allowedTypes={['bar', 'donut', 'radar']}
+        height={Math.max(240, sorted.length * 48 + 40)}
+        formatValue={(v) => `${v >= 0 ? '+' : ''}${fmtCurrency(v, currency)}`}
+      />
+    </>
   )
 }

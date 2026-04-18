@@ -6,6 +6,7 @@ import { ASSET_TYPES } from '@/data/onboarding'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronRight, Plus, Trash2, Settings2, Pencil, Check, X } from 'lucide-react'
 import type { TargetAllocation } from '@/types'
+import { UniversalChart } from '@/components/charts'
 
 const inputClass =
   'rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
@@ -278,7 +279,7 @@ export default function AllocationPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-3">
+      <div className="p-6 space-y-3">
         {[1, 2, 3].map(i => (
           <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
         ))}
@@ -289,30 +290,27 @@ export default function AllocationPage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-8 py-5">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Target Allocations</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Define how your portfolio should be distributed across positions.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span
-            className={`text-sm font-mono font-semibold ${totalOk ? 'text-success' : 'text-destructive'}`}
-          >
-            {topTotal.toFixed(2)}% / 100%
-          </span>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
-          >
-            {saving ? 'Saving\u2026' : 'Save'}
-          </button>
+      <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-foreground">Target Allocations</h1>
+          <div className="flex items-center gap-3">
+            <span
+              className={`tabular-nums text-sm font-mono font-semibold ${totalOk ? 'text-success' : 'text-destructive'}`}
+            >
+              {topTotal.toFixed(2)}% / 100%
+            </span>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving\u2026' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 p-8 space-y-6">
+      <div className="flex-1 p-6 space-y-5">
         {error && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
@@ -324,22 +322,70 @@ export default function AllocationPage() {
           </p>
         )}
 
+        {/* Visual allocation breakdown */}
+        {topLevelRows.length > 0 && (
+          <div className="grid gap-5 md:grid-cols-2">
+            <Card>
+              <CardContent className="p-5">
+                <h2 className="mb-2 text-sm font-semibold text-foreground">Target Allocation</h2>
+                <UniversalChart
+                  chartId="allocation-target"
+                  data={topLevelRows
+                    .filter(r => r.targetPercentage > 0)
+                    .map(r => ({
+                      name: r.symbol || r.label || 'Unnamed',
+                      value: r.targetPercentage,
+                    }))}
+                  defaultType="donut"
+                  allowedTypes={['donut', 'bar', 'radar']}
+                  centerValue={`${topTotal.toFixed(0)}%`}
+                  centerLabel="Allocated"
+                  formatValue={(v) => `${v.toFixed(1)}%`}
+                  height={240}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <h2 className="mb-2 text-sm font-semibold text-foreground">By Asset Type</h2>
+                <UniversalChart
+                  chartId="allocation-by-asset"
+                  data={Object.entries(
+                    topLevelRows.reduce<Record<string, number>>((acc, r) => {
+                      if (r.targetPercentage > 0) {
+                        acc[r.assetType] = (acc[r.assetType] ?? 0) + r.targetPercentage
+                      }
+                      return acc
+                    }, {}),
+                  ).map(([type, pct]) => ({ name: type, value: pct }))}
+                  defaultType="donut"
+                  allowedTypes={['donut', 'bar', 'radar']}
+                  centerValue={`${topLevelRows.filter(r => r.targetPercentage > 0).length}`}
+                  centerLabel="Positions"
+                  formatValue={(v) => `${v.toFixed(1)}%`}
+                  height={240}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Allocations table */}
         <Card>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Symbol
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Label
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Asset Type
                   </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Target %
                   </th>
                   <th className="px-6 py-3" />

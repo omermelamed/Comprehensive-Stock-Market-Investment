@@ -67,7 +67,7 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
           onChange={e => setSymbol(e.target.value)}
           onBlur={e => setSymbol(e.target.value.trim().toUpperCase())}
           placeholder="e.g. VOO"
-          className="w-28 rounded-lg border border-input bg-background px-3 py-1.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-28 rounded-lg border border-input bg-background px-3 py-1.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
         />
       </div>
 
@@ -81,7 +81,7 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
             className={[
               'px-3 py-1.5 text-sm font-medium transition-colors',
               condition === 'ABOVE'
-                ? 'bg-[hsl(var(--chart-2))] text-white'
+                ? 'bg-emerald-500 text-white'
                 : 'bg-background text-muted-foreground hover:text-foreground',
             ].join(' ')}
           >
@@ -113,7 +113,7 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
           value={thresholdPrice}
           onChange={e => setThresholdPrice(e.target.value)}
           placeholder="100.00"
-          className="w-32 rounded-lg border border-input bg-background px-3 py-1.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-32 rounded-lg border border-input bg-background px-3 py-1.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
         />
       </div>
 
@@ -125,14 +125,14 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="e.g. Good entry point"
-          className="w-48 rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-48 rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
         />
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSubmitting ? 'Setting...' : 'Set Alert'}
       </button>

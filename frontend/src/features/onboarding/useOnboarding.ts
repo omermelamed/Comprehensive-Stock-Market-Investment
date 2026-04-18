@@ -15,8 +15,8 @@ export interface OnboardingData {
   investmentGoal: string
   timeHorizonYears: number
   timezone: string
-  whatsappNumber: string
-  whatsappEnabled: boolean
+  telegramChatId: string
+  telegramEnabled: boolean
   allocations: Array<{
     symbol: string
     assetType: string
@@ -47,8 +47,8 @@ function buildProfilePayload(data: Partial<OnboardingData>) {
     timeHorizonYears: data.timeHorizonYears ?? 10,
     theme,
     timezone: data.timezone ?? 'UTC',
-    whatsappNumber: data.whatsappNumber ?? null,
-    whatsappEnabled: data.whatsappEnabled ?? false,
+    telegramChatId: data.telegramChatId ?? null,
+    telegramEnabled: data.telegramEnabled ?? false,
   }
 }
 
@@ -88,8 +88,8 @@ export function useOnboarding(onComplete: (profile: UserProfile) => void) {
         tracksEnabled: profile.tracksEnabled,
         questionnaireAnswers: profile.questionnaireAnswers ?? {},
         timezone: profile.timezone ?? 'UTC',
-        whatsappNumber: profile.whatsappNumber ?? '',
-        whatsappEnabled: profile.whatsappEnabled ?? false,
+        telegramChatId: profile.telegramChatId ?? '',
+        telegramEnabled: profile.telegramEnabled ?? false,
       }
 
       const hasQuestionnaire = Object.keys(profile.questionnaireAnswers ?? {}).length > 0
@@ -159,20 +159,15 @@ export function useOnboarding(onComplete: (profile: UserProfile) => void) {
         }
       } else if (currentStep === 4) {
         // Only save holdings not already persisted
-        const currency = latestData.preferredCurrency ?? 'USD'
         const newHoldings = (latestData.initialHoldings ?? []).filter(
           h => h.symbol.trim() !== '' && !savedHoldingSymbols.current.has(h.symbol),
         )
         for (const holding of newHoldings) {
           await createTransaction({
             symbol: holding.symbol,
-            transactionType: 'BUY',
+            type: 'BUY',
             quantity: holding.quantity,
             pricePerUnit: holding.pricePerUnit,
-            totalAmount: holding.quantity * holding.pricePerUnit,
-            fees: 0,
-            currency,
-            transactionDate: holding.transactionDate,
             track: holding.track,
           })
           savedHoldingSymbols.current.add(holding.symbol)

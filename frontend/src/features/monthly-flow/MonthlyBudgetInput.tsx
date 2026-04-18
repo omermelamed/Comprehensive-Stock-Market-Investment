@@ -28,13 +28,13 @@ export function MonthlyBudgetInput({ budget, onChange, onPreview, isLoading }: P
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Monthly budget"
-          className="w-48 rounded-lg border border-input bg-background py-2 pl-7 pr-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-48 rounded-lg border border-input bg-background py-2 pl-7 pr-3 tabular-nums font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
         />
       </div>
       <button
         onClick={onPreview}
         disabled={isLoading || !budget}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? 'Loading…' : 'Preview'}
       </button>

@@ -45,6 +45,14 @@ class SnapshotRepository(
         )
     }
 
+    fun deleteByDateRange(from: LocalDate, to: LocalDate): Int {
+        return dsl.execute(
+            "DELETE FROM portfolio_snapshots WHERE date >= ? AND date <= ?",
+            Date.valueOf(from),
+            Date.valueOf(to)
+        )
+    }
+
     fun findAllOrderedByDate(): List<SnapshotRecord> {
         return dsl.fetch(
             "SELECT date, total_value, daily_pnl, snapshot_source FROM portfolio_snapshots ORDER BY date ASC"

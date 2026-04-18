@@ -37,7 +37,7 @@ export function ChatPanel(props: ChatPanelProps) {
         aria-label="Toggle AI chat"
         className={cn(
           'fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-colors',
-          'bg-purple-600 text-white hover:bg-purple-500',
+          'bg-violet-500 text-white hover:opacity-90',
         )}
       >
         {isOpen ? <X className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
@@ -118,7 +118,7 @@ export function ChatPanel(props: ChatPanelProps) {
                         </ReactMarkdown>
                       </div>
                     ) : (
-                      <div className="max-w-[85%] rounded-lg bg-purple-600 px-3 py-2 text-sm text-white">
+                      <div className="max-w-[85%] rounded-lg bg-violet-500 px-3 py-2 text-sm text-white">
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
                     )}
@@ -165,7 +165,7 @@ export function ChatPanel(props: ChatPanelProps) {
                   aria-label="Send message"
                   className={cn(
                     'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
-                    'bg-purple-600 text-white hover:bg-purple-500',
+                    'bg-violet-500 text-white hover:opacity-90',
                     'disabled:cursor-not-allowed disabled:opacity-40',
                   )}
                 >
