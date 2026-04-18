@@ -9,4 +9,5 @@ data class PriceQuote(
     val currency: String,
     val timestamp: Instant,
     val source: String, // "YAHOO", "POLYGON", "ALPHAVANTAGE"
+    val dayChangePercent: BigDecimal? = null,
 )

@@ -387,6 +387,7 @@
   ],
   "application.TelegramScheduledMessageContentGenerator": [
     "api.dto.MonthlyFlowPreviewRequest",
+    "domain.TelegramMessageFormatter",
     "infrastructure.TransactionRepository",
     "infrastructure.ai.ClaudeClient",
     "infrastructure.ai.ClaudeMessage"

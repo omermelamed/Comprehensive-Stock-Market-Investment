@@ -34,6 +34,36 @@ class YahooFinanceAdapter(
         }
     }
 
+    fun fetchSectorInfo(symbol: String): String? {
+        return try {
+            val url = "https://query1.finance.yahoo.com/v10/finance/quoteSummary/$symbol?modules=assetProfile"
+            val body = restClient.get().uri(url).retrieve().body(Map::class.java) ?: return null
+            @Suppress("UNCHECKED_CAST")
+            val result = (body["quoteSummary"] as? Map<*, *>)
+                ?.let { (it["result"] as? List<*>)?.firstOrNull() as? Map<*, *> }
+                ?.let { it["assetProfile"] as? Map<*, *> }
+                ?: return null
+            parseSectorInfo(result)
+        } catch (e: Exception) {
+            log.warn("YahooFinance sector fetch failed for {}: {}", symbol, e.message)
+            null
+        }
+    }
+
+    fun fetchNewsHeadlines(symbol: String): List<String> {
+        return try {
+            val url = "https://query1.finance.yahoo.com/v1/finance/search?q=$symbol&newsCount=3"
+            val body = restClient.get().uri(url).retrieve().body(Map::class.java) ?: return emptyList()
+            @Suppress("UNCHECKED_CAST")
+            val newsItems = body["news"] as? List<*> ?: return emptyList()
+            @Suppress("UNCHECKED_CAST")
+            parseNewsHeadlines(newsItems.filterIsInstance<Map<String, Any>>())
+        } catch (e: Exception) {
+            log.warn("YahooFinance news fetch failed for {}: {}", symbol, e.message)
+            emptyList()
+        }
+    }
+
     /**
      * Fetches adjusted daily closing prices for [symbol] covering [fromDate] to [toDate].
      * Returns a map of trading date → adjusted close price. Returns empty map on any failure.
@@ -96,7 +126,8 @@ class YahooFinanceAdapter(
             }
 
             PriceQuote(symbol = symbol.uppercase(), price = price, currency = currency,
-                timestamp = Instant.now(), source = sourceName)
+                timestamp = Instant.now(), source = sourceName,
+                dayChangePercent = parseDayChangePercent(meta))
         } catch (e: Exception) {
             log.warn("YahooFinance response parse failed for {}: {}", symbol, e.message)
             null
@@ -211,6 +242,28 @@ class YahooFinanceAdapter(
         } catch (e: Exception) {
             log.warn("YahooFinance OHLC parse failed: {}", e.message)
             emptyList()
+        }
+    }
+
+    companion object {
+        fun parseDayChangePercent(meta: Map<*, *>): BigDecimal? {
+            val raw = meta["regularMarketChangePercent"] ?: return null
+            return when (raw) {
+                is Number -> BigDecimal(raw.toString()).setScale(4, RoundingMode.HALF_UP)
+                else -> null
+            }
+        }
+
+        fun parseSectorInfo(assetProfile: Map<*, *>): String? {
+            val sector = assetProfile["sector"] as? String ?: return null
+            return sector.takeIf { it.isNotBlank() }
+        }
+
+        fun parseNewsHeadlines(newsItems: List<Map<String, Any>>): List<String> {
+            return newsItems
+                .mapNotNull { it["title"] as? String }
+                .filter { it.isNotBlank() }
+                .take(2)
         }
     }
 }
