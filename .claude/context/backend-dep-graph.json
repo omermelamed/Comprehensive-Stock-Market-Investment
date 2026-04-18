@@ -116,6 +116,15 @@
   "api.ExportController": [
     "application.ExportService"
   ],
+  "api.DailyBriefingController": [
+    "api.dto.DailyBriefingResponse",
+    "api.dto.HoldingMoverDto",
+    "api.dto.MarketIndexDto",
+    "api.dto.NewsHeadlineDto",
+    "api.dto.SectorBreakdownDto",
+    "application.DailyBriefingDataCollector",
+    "domain.DailyBriefingFormatter"
+  ],
   "api.TelegramWebhookController": [
     "application.TelegramBotService",
     "application.UserProfileService",
@@ -399,6 +408,7 @@
   ],
   "application.TelegramScheduledMessageContentGenerator": [
     "api.dto.MonthlyFlowPreviewRequest",
+    "domain.DailyBriefingFormatter",
     "domain.TelegramMessageFormatter",
     "infrastructure.TransactionRepository",
     "infrastructure.ai.ClaudeClient",
