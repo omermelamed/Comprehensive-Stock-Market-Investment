@@ -201,6 +201,18 @@
     "infrastructure.SnapshotRepository",
     "infrastructure.TransactionRepository"
   ],
+  "application.DailyBriefingDataCollector": [
+    "api.dto.TargetAllocationResponse",
+    "domain.DailyBriefingData",
+    "domain.HoldingMover",
+    "domain.MarketIndex",
+    "domain.NewsHeadline",
+    "domain.SectorAllocation",
+    "infrastructure.AllocationRepository",
+    "infrastructure.HoldingsProjectionRepository",
+    "infrastructure.SnapshotRepository",
+    "infrastructure.market.YahooFinanceAdapter"
+  ],
   "application.MarketDataService": [
     "domain.MarketDataUnavailableException",
     "domain.OhlcBar",
