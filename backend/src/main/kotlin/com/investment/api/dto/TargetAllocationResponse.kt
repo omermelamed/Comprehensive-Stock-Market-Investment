@@ -13,6 +13,7 @@ data class TargetAllocationResponse(
     val displayOrder: Int,
     val parentId: UUID? = null,
     val isCategory: Boolean = false,
+    val sector: String? = null,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
 )

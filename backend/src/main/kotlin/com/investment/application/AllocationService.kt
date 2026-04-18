@@ -14,7 +14,8 @@ private fun TargetAllocationResponse.toRequest() = TargetAllocationRequest(
     targetPercentage = targetPercentage,
     label = label,
     displayOrder = displayOrder,
-    parentId = parentId?.toString()
+    parentId = parentId?.toString(),
+    sector = sector,
 )
 
 @Service

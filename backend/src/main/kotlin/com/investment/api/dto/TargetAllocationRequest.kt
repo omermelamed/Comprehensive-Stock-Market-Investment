@@ -8,5 +8,6 @@ data class TargetAllocationRequest(
     val targetPercentage: BigDecimal,
     val label: String,
     val displayOrder: Int = 0,
-    val parentId: String? = null
+    val parentId: String? = null,
+    val sector: String? = null,
 )

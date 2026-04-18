@@ -32,14 +32,15 @@ class AllocationRepository(
         val id = UUID.randomUUID()
         val record = dsl.fetchOne(
             """
-            INSERT INTO target_allocations (id, symbol, asset_type, target_percentage, label, display_order, parent_id, created_at, updated_at)
-            VALUES (?::uuid, ?, ?::asset_type_enum, ?, ?, ?, ?::uuid, NOW(), NOW())
+            INSERT INTO target_allocations (id, symbol, asset_type, target_percentage, label, display_order, parent_id, sector, created_at, updated_at)
+            VALUES (?::uuid, ?, ?::asset_type_enum, ?, ?, ?, ?::uuid, ?, NOW(), NOW())
             ON CONFLICT (UPPER(symbol)) DO UPDATE SET
                 asset_type = EXCLUDED.asset_type,
                 target_percentage = EXCLUDED.target_percentage,
                 label = EXCLUDED.label,
                 display_order = EXCLUDED.display_order,
                 parent_id = EXCLUDED.parent_id,
+                sector = EXCLUDED.sector,
                 updated_at = NOW()
             RETURNING *
             """.trimIndent(),
@@ -49,7 +50,8 @@ class AllocationRepository(
             request.targetPercentage,
             request.label,
             request.displayOrder,
-            request.parentId
+            request.parentId,
+            request.sector
         ) ?: throw IllegalStateException("Upsert into target_allocations returned no record")
 
         return record.toResponse(emptySet())
@@ -64,7 +66,8 @@ class AllocationRepository(
                 target_percentage = ?,
                 label = ?,
                 display_order = ?,
-                parent_id = ?::uuid
+                parent_id = ?::uuid,
+                sector = ?
             WHERE id = ?::uuid
             RETURNING *
             """.trimIndent(),
@@ -74,6 +77,7 @@ class AllocationRepository(
             request.label,
             request.displayOrder,
             request.parentId,
+            request.sector,
             id.toString()
         ) ?: throw NoSuchElementException("No allocation found with id $id")
 
@@ -93,8 +97,6 @@ class AllocationRepository(
     @Transactional
     fun replaceAll(allocations: List<TargetAllocationRequest>) {
         dsl.execute("DELETE FROM target_allocations")
-        // Insert parents first (no parentId), then children.
-        // parentId in the request is the parent's SYMBOL (not UUID) during bulk replace.
         val parents = allocations.filter { it.parentId == null }
         parents.forEach { insert(it) }
 
@@ -122,8 +124,9 @@ class AllocationRepository(
             displayOrder = get("display_order", Int::class.java),
             parentId = parentIdRaw?.let { UUID.fromString(it) },
             isCategory = rowId.uppercase() in idsWithChildren,
+            sector = get("sector", String::class.java),
             createdAt = get("created_at", java.sql.Timestamp::class.java).toInstant(),
-            updatedAt = get("updated_at", java.sql.Timestamp::class.java).toInstant()
+            updatedAt = get("updated_at", java.sql.Timestamp::class.java).toInstant(),
         )
     }
 }
