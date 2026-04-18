@@ -285,9 +285,16 @@ function CategoryRender({
   activeKeys: Set<string>
   onToggle: (name: string) => void
 }) {
+  // Stamp each data point with a stable color based on its position in the
+  // full (unfiltered) array so toggling items off never shifts colors.
+  const coloredData = useMemo(
+    () => data.map((d, i) => ({ ...d, color: d.color ?? seriesColor(i) })),
+    [data],
+  )
+
   const activeData = useMemo(
-    () => data.filter(d => activeKeys.has(d.name)),
-    [data, activeKeys],
+    () => coloredData.filter(d => activeKeys.has(d.name)),
+    [coloredData, activeKeys],
   )
   const activeTotal = useMemo(
     () => activeData.reduce((s, d) => s + d.value, 0),
@@ -299,7 +306,7 @@ function CategoryRender({
     : centerValue
 
   const cartesian = useMemo(
-    () => activeData.map(d => ({ name: d.name, value: d.value })),
+    () => activeData.map(d => ({ name: d.name, value: d.value, color: d.color })),
     [activeData],
   )
   const singleSeries = useMemo(() => [{ dataKey: 'value', name: 'Value' }], [])
@@ -313,12 +320,12 @@ function CategoryRender({
   )
 
   const legendItems: LegendItem[] = useMemo(
-    () => data.map((entry, i) => ({
+    () => coloredData.map((entry) => ({
       name: entry.name,
-      color: entry.color ?? seriesColor(i),
+      color: entry.color,
       label: formatValue(entry.value),
     })),
-    [data, formatValue],
+    [coloredData, formatValue],
   )
 
   return (
@@ -368,9 +375,16 @@ function TimeSeriesRender({
   activeKeys: Set<string>
   onToggle: (name: string) => void
 }) {
+  // Stamp each series with a stable color based on its original index
+  // so toggling series off never shifts colors.
+  const coloredSeries = useMemo(
+    () => ts.series.map((s, i) => ({ ...s, color: s.color ?? seriesColor(i) })),
+    [ts.series],
+  )
+
   const activeTsSeries = useMemo(
-    () => ts.series.filter(s => activeKeys.has(s.name)),
-    [ts.series, activeKeys],
+    () => coloredSeries.filter(s => activeKeys.has(s.name)),
+    [coloredSeries, activeKeys],
   )
 
   const lineSeries: LineSeries[] = useMemo(
@@ -415,12 +429,12 @@ function TimeSeriesRender({
   const showLegend = (ts.showLegend ?? ts.series.length > 1) && ts.series.length > 1
 
   const legendItems: LegendItem[] = useMemo(
-    () => ts.series.map((s, i) => ({
+    () => coloredSeries.map((s) => ({
       name: s.name,
-      color: s.color ?? seriesColor(i),
+      color: s.color,
       label: null,
     })),
-    [ts.series],
+    [coloredSeries],
   )
 
   return (
