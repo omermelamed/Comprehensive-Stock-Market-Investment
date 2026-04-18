@@ -1,6 +1,7 @@
 package com.investment.application
 
 import com.investment.api.dto.MonthlyFlowPreviewRequest
+import com.investment.domain.TelegramMessageFormatter
 import com.investment.infrastructure.TransactionRepository
 import com.investment.infrastructure.ai.ClaudeClient
 import com.investment.infrastructure.ai.ClaudeMessage
@@ -45,14 +46,38 @@ class TelegramScheduledMessageContentGenerator(
     private fun generatePortfolioSummary(): String {
         val summary = portfolioSummaryService.getPortfolioSummary()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
+
+        val holdingSummaries = holdings.map { h ->
+            TelegramMessageFormatter.HoldingSummary(
+                symbol           = h.symbol,
+                quantity         = h.quantity,
+                avgCost          = h.avgBuyPrice,
+                currentPrice     = h.currentPrice,
+                nativeCurrency   = h.nativeCurrency,
+                currentValue     = h.currentValue,
+                pnlAbsolute      = h.pnlAbsolute,
+                pnlPercent       = h.pnlPercent,
+                portfolioPercent = h.currentPercent
+            )
+        }
+
+        val richFallback = TelegramMessageFormatter.portfolioSummary(
+            totalValue      = summary.totalValue,
+            totalPnl        = summary.totalPnlAbsolute,
+            totalPnlPercent = summary.totalPnlPercent,
+            currency        = summary.currency,
+            holdings        = holdingSummaries
+        )
+
         val context = contextBuilder.build()
 
         val holdingLines = holdings
             .sortedByDescending { it.currentValue }
             .take(8)
             .joinToString("\n") { h ->
-                "  ${h.symbol}: ${summary.currency} ${h.currentValue.setScale(2, RoundingMode.HALF_UP)}" +
-                    " (${h.pnlPercent.setScale(1, RoundingMode.HALF_UP)}%)"
+                "  ${h.symbol}: ${h.quantity.stripTrailingZeros().toPlainString()} shares, " +
+                    "${summary.currency} ${h.currentValue.setScale(2, RoundingMode.HALF_UP)} " +
+                    "(${h.pnlPercent.setScale(1, RoundingMode.HALF_UP)}%)"
             }
 
         val prompt = """
@@ -70,13 +95,13 @@ class TelegramScheduledMessageContentGenerator(
             PORTFOLIO CONTEXT:
             $context
 
-            Write a Telegram-friendly portfolio summary message. Include total value, overall performance, and a brief comment on portfolio health.
+            Write a Telegram-friendly portfolio summary message. Include:
+            - Total portfolio value and overall P&L
+            - Each holding with shares held, current value, and P&L percentage
+            - A brief comment on portfolio health
         """.trimIndent()
 
-        return callClaude(
-            prompt,
-            fallback = "*Portfolio Summary*\n\nTotal: ${summary.currency} ${summary.totalValue.setScale(2, RoundingMode.HALF_UP)}"
-        )
+        return callClaude(prompt, fallback = richFallback)
     }
 
     private fun generatePerformanceReport(): String {
