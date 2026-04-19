@@ -17,6 +17,7 @@ import OptionsPage from './pages/OptionsPage'
 import OptionsTransactionFormPage from './pages/OptionsTransactionFormPage'
 import AlertsPage from './pages/AlertsPage'
 import ImportPage from './pages/ImportPage'
+import BriefingPage from './pages/BriefingPage'
 import { AppLayout } from './layouts/app-layout'
 import { CurrencyProvider } from './contexts/currency-context'
 
@@ -91,6 +92,7 @@ function App() {
             }
           >
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/briefing" element={<BriefingPage />} />
             <Route path="/transactions/new" element={<TransactionFormPage />} />
             <Route path="/monthly-flow" element={<MonthlyFlowPage />} />
             <Route path="/profile" element={<ProfilePage />} />

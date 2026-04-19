@@ -14,6 +14,7 @@ import {
   Layers,
   Bell,
   Upload,
+  Newspaper,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
@@ -101,6 +102,7 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
       label: 'Portfolio',
       items: [
         { to: '/',               label: 'Dashboard',    icon: LayoutDashboard, end: true },
+        { to: '/briefing',       label: 'Briefing',     icon: Newspaper },
         { to: '/monthly-flow',   label: 'Monthly Flow', icon: TrendingUp },
         { to: '/allocations',    label: 'Allocations',  icon: PieChart },
         { to: '/transactions/new', label: 'Transactions', icon: ArrowLeftRight },

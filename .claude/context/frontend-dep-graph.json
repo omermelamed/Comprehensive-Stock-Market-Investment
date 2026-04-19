@@ -6,6 +6,7 @@
     "pages/AlertsPage.tsx",
     "pages/AllocationPage.tsx",
     "pages/AnalyticsPage.tsx",
+    "pages/BriefingPage.tsx",
     "pages/DashboardPage.tsx",
     "pages/ImportPage.tsx",
     "pages/MonthlyFlowPage.tsx",
@@ -224,6 +225,22 @@
   "features/alerts/useAlerts.ts": [
     "api/alerts.ts",
     "types/index.ts"
+  ],
+  "features/briefing/BriefingGrid.tsx": [
+    "api/briefing.ts",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/briefing/BriefingHero.tsx": [
+    "api/briefing.ts",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/briefing/BriefingNarrative.tsx": [
+    "api/briefing.ts"
+  ],
+  "features/briefing/BriefingNews.tsx": [
+    "api/briefing.ts"
   ],
   "features/briefing/BriefingWidget.tsx": [
     "components/ui/card.tsx",
@@ -461,6 +478,14 @@
     "lib/chart-theme.ts",
     "lib/motion.ts",
     "lib/utils.ts"
+  ],
+  "pages/BriefingPage.tsx": [
+    "features/briefing/BriefingGrid.tsx",
+    "features/briefing/BriefingHero.tsx",
+    "features/briefing/BriefingNarrative.tsx",
+    "features/briefing/BriefingNews.tsx",
+    "features/briefing/useBriefing.ts",
+    "lib/motion.ts"
   ],
   "pages/DashboardPage.tsx": [
     "api/export.ts",
