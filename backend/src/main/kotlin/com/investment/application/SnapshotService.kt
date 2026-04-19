@@ -110,6 +110,11 @@ class SnapshotService(
             h.netQuantity * (resolvedPrices[h.symbol] ?: BigDecimal.ZERO)
         }
 
+        if (totalPortfolioValue.compareTo(BigDecimal.ZERO) == 0) {
+            log.warn("Skipping snapshot for {} — all prices resolved to zero (market likely closed)", date)
+            return
+        }
+
         val holdingMetrics = holdings.map { h ->
             val allocation = allocationsBySymbol[h.symbol]
             PortfolioCalculator.computeHoldingMetrics(
