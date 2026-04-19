@@ -29,7 +29,9 @@ export default function BriefingPage() {
       <div className="border-b border-border bg-background px-6 py-4 sticky top-0 z-10">
         <h1 className="text-lg font-semibold text-foreground">Daily Briefing</h1>
         {data && (
-          <p className="text-xs text-muted-foreground mt-0.5">{data.date}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {new Date(data.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         )}
       </div>
 

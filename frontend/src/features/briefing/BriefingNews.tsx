@@ -13,7 +13,7 @@ export function BriefingNews({ data }: Props) {
       <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">News Headlines</h3>
       <ul className="space-y-2">
         {data.newsHeadlines.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm">
+          <li key={`${item.symbol}-${i}`} className="flex items-start gap-2 text-sm">
             <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
               {item.symbol}
             </span>

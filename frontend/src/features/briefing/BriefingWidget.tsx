@@ -23,10 +23,21 @@ function IndexPill({ symbol, dayChangePercent }: { symbol: string; dayChangePerc
 }
 
 export function BriefingWidget() {
-  const { data, loading } = useBriefing()
+  const { data, loading, error } = useBriefing()
 
   if (loading) {
     return <div className="h-16 animate-pulse rounded-xl bg-muted" />
+  }
+
+  if (error) {
+    return (
+      <Card className="px-4 py-3">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Newspaper className="h-4 w-4 shrink-0" />
+          <span className="text-sm">Daily briefing unavailable</span>
+        </div>
+      </Card>
+    )
   }
 
   if (!data) return null
