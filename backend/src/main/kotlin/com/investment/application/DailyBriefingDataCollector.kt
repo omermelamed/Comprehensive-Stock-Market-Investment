@@ -64,15 +64,16 @@ class DailyBriefingDataCollector(
         }
         val portfolioTotal = holdingValues.values.fold(BigDecimal.ZERO, BigDecimal::add)
 
-        // Today's portfolio change from snapshot
+        // Today's portfolio change vs yesterday's snapshot
         val todaySnapshot = snapshotRepository.findByDate(today)
-        val portfolioChangeAbsolute: BigDecimal? = todaySnapshot?.dailyPnl
-        val portfolioChangePercent: BigDecimal? = if (todaySnapshot != null) {
-            val prevValue = todaySnapshot.totalValue - todaySnapshot.dailyPnl
-            if (prevValue.compareTo(BigDecimal.ZERO) != 0) {
-                todaySnapshot.dailyPnl.divide(prevValue, 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
-            } else null
+        val yesterdaySnapshot = snapshotRepository.findByDate(today.minusDays(1))
+        val portfolioChangeAbsolute: BigDecimal? = if (todaySnapshot != null && yesterdaySnapshot != null) {
+            todaySnapshot.totalValue - yesterdaySnapshot.totalValue
+        } else null
+        val portfolioChangePercent: BigDecimal? = if (portfolioChangeAbsolute != null && yesterdaySnapshot != null &&
+            yesterdaySnapshot.totalValue.compareTo(BigDecimal.ZERO) != 0) {
+            portfolioChangeAbsolute.divide(yesterdaySnapshot.totalValue, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
         } else null
 
         // Top gainers and losers by day change percent

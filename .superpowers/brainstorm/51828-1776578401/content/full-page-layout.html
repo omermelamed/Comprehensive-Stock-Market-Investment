@@ -1,0 +1,77 @@
+<h2>Full <code>/briefing</code> page layout</h2>
+<p class="subtitle">All sections available: portfolio Δ, market indices, top gainers, top losers, sector breakdown, news headlines, AI narrative</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Single column — top to bottom</h3>
+      <p>Cards stack vertically: AI narrative first as a hero, then metrics in a 2-col grid, then news at the bottom. Simple, scannable, mobile-friendly.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">/briefing — single column</div>
+        <div class="mockup-body" style="padding:10px;font-size:11px;display:flex;flex-direction:column;gap:6px">
+          <div class="placeholder" style="height:44px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);color:rgba(139,92,246,0.9);font-size:10px;display:flex;align-items:center;justify-content:center">🤖 AI Briefing narrative (purple/secondary)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Portfolio Δ</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Market Indices</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Gainers</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Losers</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Sector Breakdown</div>
+          </div>
+          <div class="placeholder" style="height:44px;font-size:10px;display:flex;align-items:center;justify-content:center">News Headlines</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two-column — metrics left, AI + news right</h3>
+      <p>Deterministic data (Δ, indices, movers, sectors) in the left column. AI narrative + news headlines in the right column. Data and commentary clearly separated.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">/briefing — two column</div>
+        <div class="mockup-body" style="padding:10px;font-size:11px;display:flex;gap:8px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Portfolio Δ</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Market Indices</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Gainers</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Losers</div>
+            <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">Sectors</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div class="placeholder" style="flex:1;min-height:80px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);color:rgba(139,92,246,0.9);font-size:10px;display:flex;align-items:center;justify-content:center">🤖 AI narrative</div>
+            <div class="placeholder" style="height:60px;font-size:10px;display:flex;align-items:center;justify-content:center">News Headlines</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Header hero + grid below</h3>
+      <p>Full-width hero strip at the top (portfolio Δ + key index pills). Below: a 3-column grid of cards — movers, sectors, news. AI narrative as a dismissable panel at the bottom.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">/briefing — hero + grid</div>
+        <div class="mockup-body" style="padding:10px;font-size:11px;display:flex;flex-direction:column;gap:6px">
+          <div class="placeholder" style="height:40px;font-size:10px;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.3)">
+            <strong>▲ +1.4%  (+$842)</strong>
+            <span style="opacity:.6">|</span>
+            <span style="color:#22c55e">SPY ▲0.8%</span>
+            <span style="color:#22c55e">QQQ ▲1.2%</span>
+            <span style="color:#ef4444">TLT ▼0.3%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <div class="placeholder" style="height:50px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Gainers</div>
+            <div class="placeholder" style="height:50px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Losers</div>
+            <div class="placeholder" style="height:50px;font-size:10px;display:flex;align-items:center;justify-content:center">Sectors</div>
+          </div>
+          <div class="placeholder" style="height:36px;font-size:10px;display:flex;align-items:center;justify-content:center">News Headlines</div>
+          <div class="placeholder" style="height:36px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.4);color:rgba(139,92,246,0.9);font-size:10px;display:flex;align-items:center;justify-content:center">🤖 AI narrative</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

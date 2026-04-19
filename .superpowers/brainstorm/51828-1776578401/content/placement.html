@@ -1,0 +1,65 @@
+<h2>Where should the Daily Briefing live?</h2>
+<p class="subtitle">The briefing shows portfolio change, market indices, top movers, sector breakdown, and an AI narrative</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Dedicated Page — <code>/briefing</code></h3>
+      <p>New nav item in the sidebar (e.g. under Portfolio). Full-page layout with all briefing sections. Clean separation from the dashboard.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">App Layout Preview</div>
+        <div class="mockup-body" style="display:flex;gap:0;padding:0">
+          <div class="mock-sidebar" style="width:120px;font-size:11px;padding:8px;line-height:2">
+            Dashboard<br>
+            <strong style="color:var(--primary)">📰 Briefing</strong><br>
+            Monthly Flow<br>
+            Allocations
+          </div>
+          <div class="mock-content" style="flex:1;padding:10px;font-size:11px">
+            <strong>Daily Briefing — Apr 19</strong><br>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div class="placeholder" style="height:40px;font-size:10px;display:flex;align-items:center;justify-content:center">Portfolio Δ</div>
+              <div class="placeholder" style="height:40px;font-size:10px;display:flex;align-items:center;justify-content:center">Market Indices</div>
+              <div class="placeholder" style="height:40px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Gainers</div>
+              <div class="placeholder" style="height:40px;font-size:10px;display:flex;align-items:center;justify-content:center">Top Losers</div>
+            </div>
+            <div class="placeholder" style="height:32px;margin-top:6px;font-size:10px;display:flex;align-items:center;justify-content:center">AI Briefing Text</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dashboard Section — top of existing Dashboard</h3>
+      <p>Briefing card appears at the top of the Dashboard page. No new nav item. Feels like a "morning summary" integrated into your daily starting point.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Dashboard Preview</div>
+        <div class="mockup-body" style="padding:10px;font-size:11px">
+          <div class="placeholder" style="height:36px;margin-bottom:6px;font-size:10px;background:var(--primary-muted,rgba(99,102,241,0.15));border:1px solid var(--primary,#6366f1);display:flex;align-items:center;justify-content:center;color:var(--primary,#6366f1)">📰 Daily Briefing Card</div>
+          <div class="placeholder" style="height:36px;margin-bottom:6px;font-size:10px;display:flex;align-items:center;justify-content:center">Portfolio Summary Card</div>
+          <div class="placeholder" style="height:48px;font-size:10px;display:flex;align-items:center;justify-content:center">Holdings Table</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — Dashboard widget + full page</h3>
+      <p>Collapsed summary card on the Dashboard (click to expand or navigate to full page). Good for quick glance without leaving home, with a drill-down for detail.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Dashboard Preview</div>
+        <div class="mockup-body" style="padding:10px;font-size:11px">
+          <div class="placeholder" style="height:28px;margin-bottom:6px;font-size:10px;background:var(--primary-muted,rgba(99,102,241,0.15));border:1px solid var(--primary,#6366f1);display:flex;align-items:center;justify-content:center;color:var(--primary,#6366f1)">📰 Briefing (collapsed) → View full</div>
+          <div class="placeholder" style="height:36px;margin-bottom:6px;font-size:10px;display:flex;align-items:center;justify-content:center">Portfolio Summary Card</div>
+          <div class="placeholder" style="height:48px;font-size:10px;display:flex;align-items:center;justify-content:center">Holdings Table</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
