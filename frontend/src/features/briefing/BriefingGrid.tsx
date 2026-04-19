@@ -7,13 +7,13 @@ interface Props {
   data: DailyBriefingResponse
 }
 
-function MoverRow({ symbol, dayChangePercent, portfolioValue, currency, positive }: {
+function MoverRow({ symbol, dayChangePercent, portfolioValue, currency }: {
   symbol: string
   dayChangePercent: number
   portfolioValue: number
   currency: string
-  positive: boolean
 }) {
+  const positive = dayChangePercent >= 0
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
       <span className="font-semibold text-sm text-foreground">{symbol}</span>
@@ -45,7 +45,6 @@ export function BriefingGrid({ data }: Props) {
               dayChangePercent={g.dayChangePercent}
               portfolioValue={g.portfolioValue}
               currency={data.currency}
-              positive
             />
           ))
         )}
@@ -64,7 +63,6 @@ export function BriefingGrid({ data }: Props) {
               dayChangePercent={l.dayChangePercent}
               portfolioValue={l.portfolioValue}
               currency={data.currency}
-              positive={false}
             />
           ))
         )}
