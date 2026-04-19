@@ -23,6 +23,8 @@ interface Props {
 
 export function BriefingHero({ data }: Props) {
   const positive = data.portfolioChangePercent == null || data.portfolioChangePercent >= 0
+  const day = new Date(data.date + 'T12:00:00Z').getUTCDay()
+  const marketClosed = data.portfolioChangePercent == null && (day === 0 || day === 6)
 
   return (
     <div className="rounded-xl border border-border bg-card px-6 py-5 space-y-3">
@@ -30,6 +32,11 @@ export function BriefingHero({ data }: Props) {
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Today's Portfolio Change
         </p>
+        {marketClosed && (
+          <span className="rounded bg-muted px-2 py-0.5 text-sm font-medium text-muted-foreground">
+            Market closed
+          </span>
+        )}
         {data.portfolioChangePercent != null && (
           <span
             className={cn(
