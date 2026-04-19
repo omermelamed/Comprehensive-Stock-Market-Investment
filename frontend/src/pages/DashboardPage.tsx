@@ -15,6 +15,7 @@ import { RecalculationBanner } from '@/features/sell/RecalculationBanner'
 import { StaleDataOverlay } from '@/features/sell/StaleDataOverlay'
 import { useRecalculation } from '@/features/sell/useRecalculation'
 import type { SellResult } from '@/api/sell'
+import { BriefingWidget } from '@/features/briefing/BriefingWidget'
 
 function DashboardSkeleton() {
   return (
@@ -85,6 +86,11 @@ export default function DashboardPage() {
         animate="visible"
         className="space-y-5"
       >
+        {/* Daily briefing widget */}
+        <motion.div variants={staggerItem}>
+          <BriefingWidget />
+        </motion.div>
+
         {/* Summary card */}
         <motion.div variants={staggerItem}>
           {summary ? (

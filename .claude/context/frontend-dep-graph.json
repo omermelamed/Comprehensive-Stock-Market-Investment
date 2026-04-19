@@ -30,6 +30,9 @@
   "api/analytics.ts": [
     "api/client.ts"
   ],
+  "api/briefing.ts": [
+    "api/client.ts"
+  ],
   "api/chat.ts": [
     "api/client.ts"
   ],
@@ -221,6 +224,15 @@
   "features/alerts/useAlerts.ts": [
     "api/alerts.ts",
     "types/index.ts"
+  ],
+  "features/briefing/BriefingWidget.tsx": [
+    "components/ui/card.tsx",
+    "features/briefing/useBriefing.ts",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
+  "features/briefing/useBriefing.ts": [
+    "api/briefing.ts"
   ],
   "features/chat/ChatPanel.tsx": [
     "features/chat/useChatPanel.ts",
@@ -454,6 +466,7 @@
     "api/export.ts",
     "api/sell.ts",
     "components/charts/index.ts",
+    "features/briefing/BriefingWidget.tsx",
     "features/dashboard/HoldingsHistoryChart.tsx",
     "features/dashboard/HoldingsTable.tsx",
     "features/dashboard/PortfolioHistoryChart.tsx",
