@@ -4,8 +4,8 @@ import com.investment.api.dto.MonthlyFlowPreviewRequest
 import com.investment.domain.DailyBriefingFormatter
 import com.investment.domain.TelegramMessageFormatter
 import com.investment.infrastructure.TransactionRepository
+import com.investment.infrastructure.UserProfileRepository
 import com.investment.infrastructure.ai.ClaudeClient
-import com.investment.infrastructure.ai.ClaudeMessage
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -13,10 +13,14 @@ import java.math.RoundingMode
 import java.time.Clock
 import java.time.YearMonth
 import java.time.ZoneOffset
+import java.util.UUID
 
 /**
  * Generates plain-text Telegram message content for each scheduled message type.
  * Each type calls Claude with the portfolio context for a rich, emoji-enhanced message.
+ *
+ * All methods accept an explicit userId so this generator is safe to call from scheduler
+ * threads where no HTTP request context (ThreadLocal) is present.
  */
 @Service
 class TelegramScheduledMessageContentGenerator(
@@ -27,26 +31,26 @@ class TelegramScheduledMessageContentGenerator(
     private val allocationService: AllocationService,
     private val monthlyInvestmentService: MonthlyInvestmentService,
     private val transactionRepository: TransactionRepository,
-    private val userProfileService: UserProfileService,
+    private val userProfileRepository: UserProfileRepository,
     private val briefingDataCollector: DailyBriefingDataCollector,
     private val clock: Clock
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun generate(messageType: String): String {
+    fun generate(messageType: String, userId: UUID): String {
         return when (messageType.uppercase()) {
-            "PORTFOLIO_SUMMARY"  -> generatePortfolioSummary()
-            "PERFORMANCE_REPORT" -> generatePerformanceReport()
-            "ALLOCATION_CHECK"   -> generateAllocationCheck()
-            "INVESTMENT_REMINDER" -> generateInvestmentReminder()
-            "TOP_MOVERS"         -> generateTopMovers()
-            "DAILY_BRIEFING"     -> generateDailyBriefing()
+            "PORTFOLIO_SUMMARY"  -> generatePortfolioSummary(userId)
+            "PERFORMANCE_REPORT" -> generatePerformanceReport(userId)
+            "ALLOCATION_CHECK"   -> generateAllocationCheck(userId)
+            "INVESTMENT_REMINDER" -> generateInvestmentReminder(userId)
+            "TOP_MOVERS"         -> generateTopMovers(userId)
+            "DAILY_BRIEFING"     -> generateDailyBriefing(userId)
             else -> "Unknown scheduled message type: $messageType"
         }
     }
 
-    private fun generatePortfolioSummary(): String {
+    private fun generatePortfolioSummary(userId: UUID): String {
         val summary = portfolioSummaryService.getPortfolioSummary()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
 
@@ -72,7 +76,7 @@ class TelegramScheduledMessageContentGenerator(
             holdings        = holdingSummaries
         )
 
-        val context = contextBuilder.build()
+        val context = contextBuilder.build(userId)
 
         val holdingLines = holdings
             .sortedByDescending { it.currentValue }
@@ -107,10 +111,10 @@ class TelegramScheduledMessageContentGenerator(
         return callClaude(prompt, fallback = richFallback)
     }
 
-    private fun generatePerformanceReport(): String {
+    private fun generatePerformanceReport(userId: UUID): String {
         val analytics = analyticsService.getAnalytics("1Y")
-        val context = contextBuilder.build()
-        val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
+        val context = contextBuilder.build(userId)
+        val currency = userProfileRepository.findByUserId(userId)?.preferredCurrency ?: "USD"
 
         val metrics = analytics.performanceMetrics
         val topGainers = analytics.positions
@@ -148,10 +152,10 @@ class TelegramScheduledMessageContentGenerator(
         return callClaude(prompt, fallback = "*Performance Report*\n\nReturn: ${returnPct.setScale(1, RoundingMode.HALF_UP)}%")
     }
 
-    private fun generateAllocationCheck(): String {
+    private fun generateAllocationCheck(userId: UUID): String {
         val allocations = allocationService.getAllocations()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
-        val context = contextBuilder.build()
+        val context = contextBuilder.build(userId)
 
         val holdingsBySymbol = holdings.associateBy { it.symbol.uppercase() }
         val driftLines = allocations
@@ -184,7 +188,7 @@ class TelegramScheduledMessageContentGenerator(
         return callClaude(prompt, fallback = "*Allocation Check*\n\n$driftLines")
     }
 
-    private fun generateInvestmentReminder(): String {
+    private fun generateInvestmentReminder(userId: UUID): String {
         val now = clock.instant().atZone(ZoneOffset.UTC)
         val currentMonth = YearMonth.of(now.year, now.month)
         val monthStart = currentMonth.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant()
@@ -199,7 +203,7 @@ class TelegramScheduledMessageContentGenerator(
             return "*Investment Reminder*\n\nYou've already invested this month! Great job staying on track with your plan."
         }
 
-        val profile = userProfileService.getProfile()
+        val profile = userProfileRepository.findByUserId(userId)
         val budget = profile?.monthlyInvestmentMax ?: BigDecimal("1000")
         val currency = profile?.preferredCurrency ?: "USD"
 
@@ -235,15 +239,15 @@ class TelegramScheduledMessageContentGenerator(
         }.trimEnd()
     }
 
-    private fun generateTopMovers(): String {
+    private fun generateTopMovers(userId: UUID): String {
         val holdings = portfolioSummaryService.getHoldingsDashboard()
 
         val sorted = holdings.sortedByDescending { it.pnlPercent }
         val gainers = sorted.take(3).filter { it.pnlPercent > BigDecimal.ZERO }
         val losers  = sorted.takeLast(3).filter { it.pnlPercent < BigDecimal.ZERO }.reversed()
 
-        val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
-        val context  = contextBuilder.build()
+        val currency = userProfileRepository.findByUserId(userId)?.preferredCurrency ?: "USD"
+        val context  = contextBuilder.build(userId)
 
         val gainerLines = gainers.joinToString("\n") { h ->
             "  ${h.symbol}: +${h.pnlPercent.setScale(2, RoundingMode.HALF_UP)}% ($currency ${h.pnlAbsolute.setScale(2, RoundingMode.HALF_UP)})"
@@ -278,9 +282,9 @@ class TelegramScheduledMessageContentGenerator(
         return callClaude(prompt, fallback = fallback)
     }
 
-    private fun generateDailyBriefing(): String {
+    private fun generateDailyBriefing(userId: UUID): String {
         return try {
-            val data = briefingDataCollector.collect()
+            val data = briefingDataCollector.collect(userId)
             DailyBriefingFormatter.format(data)
         } catch (e: Exception) {
             log.warn("Failed to generate daily briefing: {}", e.message)

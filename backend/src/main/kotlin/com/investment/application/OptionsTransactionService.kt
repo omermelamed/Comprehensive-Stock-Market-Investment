@@ -7,7 +7,6 @@ import com.investment.api.dto.OptionsTransactionResponse
 import com.investment.api.dto.UpdateOptionsStatusRequest
 import com.investment.application.agents.OptionsStrategyAgent
 import com.investment.infrastructure.OptionsTransactionRepository
-import com.investment.infrastructure.UserProfileRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -15,14 +14,14 @@ import java.util.UUID
 @Service
 class OptionsTransactionService(
     private val optionsRepository: OptionsTransactionRepository,
-    private val userProfileRepository: UserProfileRepository,
+    private val userProfileService: UserProfileService,
     private val optionsStrategyAgent: OptionsStrategyAgent
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun listAll(): OptionsListResponse {
-        val profile = userProfileRepository.findOne()
+        val profile = userProfileService.getProfile()
         val enabled = profile?.tracksEnabled?.any { it.uppercase() == "OPTIONS" } ?: false
         val positions = if (enabled) optionsRepository.findAll() else emptyList()
         return OptionsListResponse(positions = positions, optionsTrackEnabled = enabled)
@@ -59,13 +58,13 @@ class OptionsTransactionService(
 
     fun getStrategy(symbol: String): OptionsStrategyResponse {
         requireOptionsTrackEnabled()
-        val profile = userProfileRepository.findOne()
+        val profile = userProfileService.getProfile()
         val riskLevel = profile?.riskLevel ?: "MODERATE"
         return optionsStrategyAgent.generateStrategy(symbol.trim().uppercase(), riskLevel)
     }
 
     private fun requireOptionsTrackEnabled() {
-        val profile = userProfileRepository.findOne()
+        val profile = userProfileService.getProfile()
         val enabled = profile?.tracksEnabled?.any { it.uppercase() == "OPTIONS" } ?: false
         require(enabled) { "OPTIONS track is not enabled for this profile" }
     }

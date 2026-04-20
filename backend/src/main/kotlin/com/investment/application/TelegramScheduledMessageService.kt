@@ -43,6 +43,11 @@ class TelegramScheduledMessageService(
             biweeklyWeek = request.biweeklyWeek,
             dayOfMonth   = request.dayOfMonth,
             sendTime     = LocalTime.parse(request.sendTime),
-            timezone     = ZoneId.of(userProfileRepository.findTimezone() ?: "UTC")
+            timezone     = ZoneId.of(resolveTimezone())
         )
+
+    private fun resolveTimezone(): String {
+        val userId = RequestContext.getOrNull() ?: return "UTC"
+        return userProfileRepository.findTimezone(userId) ?: "UTC"
+    }
 }

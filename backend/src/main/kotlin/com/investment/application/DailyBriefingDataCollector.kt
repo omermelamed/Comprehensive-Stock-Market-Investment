@@ -9,6 +9,7 @@ import com.investment.domain.SectorAllocation
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
 import com.investment.infrastructure.SnapshotRepository
+import com.investment.infrastructure.UserProfileRepository
 import com.investment.infrastructure.market.YahooFinanceAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -17,6 +18,7 @@ import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.UUID
 
 @Service
 class DailyBriefingDataCollector(
@@ -24,7 +26,7 @@ class DailyBriefingDataCollector(
     private val allocationRepository: AllocationRepository,
     private val snapshotRepository: SnapshotRepository,
     private val marketDataService: MarketDataService,
-    private val userProfileService: UserProfileService,
+    private val userProfileRepository: UserProfileRepository,
     private val yahooFinanceAdapter: YahooFinanceAdapter,
     private val clock: Clock,
 ) {
@@ -59,10 +61,10 @@ class DailyBriefingDataCollector(
         }
     }
 
-    fun collect(): DailyBriefingData {
+    fun collect(userId: UUID): DailyBriefingData {
         val today = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC)
         val marketOpen = isUsMarketOpen(today)
-        val profile = userProfileService.getProfile()
+        val profile = userProfileRepository.findByUserId(userId)
         val currency = profile?.preferredCurrency ?: "USD"
 
         val holdings = holdingsRepository.findAll().filter { it.track.uppercase() == "LONG" }

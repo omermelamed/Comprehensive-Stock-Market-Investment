@@ -1,5 +1,6 @@
 package com.investment.infrastructure
 
+import com.investment.application.RequestContext
 import com.investment.application.TelegramScheduledMessageContentGenerator
 import com.investment.application.TelegramScheduledMessageService
 import com.investment.domain.NextSendAtCalculator
@@ -15,6 +16,7 @@ class TelegramScheduledMessageJob(
     private val contentGenerator: TelegramScheduledMessageContentGenerator,
     private val notificationService: TelegramNotificationService,
     private val userProfileRepository: UserProfileRepository,
+    private val userRepository: UserRepository,
     private val scheduledMessageService: TelegramScheduledMessageService
 ) {
 
@@ -22,40 +24,51 @@ class TelegramScheduledMessageJob(
 
     @Scheduled(fixedRate = 60_000)
     fun run() {
-        val profile = userProfileRepository.findProfile() ?: return
-        if (profile.telegramChatId.isNullOrBlank() || !profile.telegramEnabled) return
+        for (userId in userRepository.findAllIds()) {
+            runForUser(userId)
+        }
+    }
 
-        val due = repository.findDue()
-        if (due.isEmpty()) return
+    private fun runForUser(userId: java.util.UUID) {
+        RequestContext.set(userId)
+        try {
+            val profile = userProfileRepository.findProfile(userId) ?: return
+            if (profile.telegramChatId.isNullOrBlank() || !profile.telegramEnabled) return
 
-        val tz = ZoneId.of(profile.timezone.ifBlank { "UTC" })
+            val due = repository.findDue()
+            if (due.isEmpty()) return
 
-        for (schedule in due) {
-            try {
-                val content = contentGenerator.generate(schedule.messageType)
-                val msgId = notificationService.sendMessage(profile.telegramChatId, content)
+            val tz = ZoneId.of(profile.timezone.ifBlank { "UTC" })
 
-                val nextSendAt = NextSendAtCalculator.compute(
-                    frequency    = schedule.frequency,
-                    dayOfWeek    = schedule.dayOfWeek,
-                    biweeklyWeek = schedule.biweeklyWeek,
-                    dayOfMonth   = schedule.dayOfMonth,
-                    sendTime     = LocalTime.parse(schedule.sendTime),
-                    timezone     = tz
-                )
-
-                repository.updateAfterSend(schedule.id, nextSendAt)
-                repository.logSend(schedule.id, "SENT", telegramMessageId = msgId)
-
-                log.info("Scheduled Telegram message sent: type={} id={} msgId={}", schedule.messageType, schedule.id, msgId)
-            } catch (e: Exception) {
-                log.error("Failed to send scheduled message id={}: {}", schedule.id, e.message)
+            for (schedule in due) {
                 try {
-                    repository.logSend(schedule.id, "FAILED", errorMessage = e.message)
-                } catch (logEx: Exception) {
-                    log.error("Failed to log send failure for id={}: {}", schedule.id, logEx.message)
+                    val content = contentGenerator.generate(schedule.messageType, userId)
+                    val msgId = notificationService.sendMessage(profile.telegramChatId, content)
+
+                    val nextSendAt = NextSendAtCalculator.compute(
+                        frequency    = schedule.frequency,
+                        dayOfWeek    = schedule.dayOfWeek,
+                        biweeklyWeek = schedule.biweeklyWeek,
+                        dayOfMonth   = schedule.dayOfMonth,
+                        sendTime     = LocalTime.parse(schedule.sendTime),
+                        timezone     = tz
+                    )
+
+                    repository.updateAfterSend(schedule.id, nextSendAt)
+                    repository.logSend(schedule.id, "SENT", telegramMessageId = msgId)
+
+                    log.info("Scheduled Telegram message sent: type={} id={} msgId={}", schedule.messageType, schedule.id, msgId)
+                } catch (e: Exception) {
+                    log.error("Failed to send scheduled message id={}: {}", schedule.id, e.message)
+                    try {
+                        repository.logSend(schedule.id, "FAILED", errorMessage = e.message)
+                    } catch (logEx: Exception) {
+                        log.error("Failed to log send failure for id={}: {}", schedule.id, logEx.message)
+                    }
                 }
             }
+        } finally {
+            RequestContext.clear()
         }
     }
 }
