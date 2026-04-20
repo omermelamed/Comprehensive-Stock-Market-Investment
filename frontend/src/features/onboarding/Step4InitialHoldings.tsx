@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { SectionHeader } from '@/components/shared/section-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import type { OnboardingData } from './useOnboarding'
-import { ASSET_TYPES } from '@/data/onboarding'
+import { ASSET_TRACKS } from '@/data/onboarding'
 
 type HoldingRow = {
   id: string
@@ -35,7 +35,7 @@ export default function Step4InitialHoldings({ data, onUpdate, onNext, onBack }:
 
   function addRow() {
     rowCounter += 1
-    setRows(prev => [...prev, { id: `h-${rowCounter}`, symbol: '', track: 'ETF', quantity: 0, pricePerUnit: 0, transactionDate: today() }])
+    setRows(prev => [...prev, { id: `h-${rowCounter}`, symbol: '', track: 'LONG_EQUITY', quantity: 0, pricePerUnit: 0, transactionDate: today() }])
   }
   function removeRow(id: string) { setRows(prev => prev.filter(r => r.id !== id)) }
   function updateRow(id: string, patch: Partial<HoldingRow>) { setRows(prev => prev.map(r => (r.id === id ? { ...r, ...patch } : r))) }
@@ -88,7 +88,7 @@ export default function Step4InitialHoldings({ data, onUpdate, onNext, onBack }:
                   className="h-8 w-full rounded-xl border border-input bg-card px-2 text-xs text-muted-foreground outline-none"
                   value={row.track} onChange={e => updateRow(row.id, { track: e.target.value })}
                 >
-                  {ASSET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {ASSET_TRACKS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
                 <Input className="h-8 bg-card font-mono text-xs" type="number" min={0} step={0.0001}
                   value={row.quantity || ''} onChange={e => updateRow(row.id, { quantity: Number(e.target.value) })} placeholder="0" />
