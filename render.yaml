@@ -26,3 +26,5 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: JWT_SECRET
+        sync: false        # min 32 chars; generate with: openssl rand -base64 48
