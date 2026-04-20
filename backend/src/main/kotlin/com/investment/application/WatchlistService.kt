@@ -23,10 +23,12 @@ class WatchlistService(
 ) {
 
     fun listItems(): List<WatchlistItemResponse> {
-        return watchlistRepository.findAll()
+        val userId = RequestContext.get()
+        return watchlistRepository.findAll(userId)
     }
 
     fun addItem(request: AddWatchlistItemRequest): WatchlistItemResponse {
+        val userId = RequestContext.get()
         val symbol = request.symbol.trim()
         require(symbol.isNotBlank()) { "Symbol must not be blank" }
         try {
@@ -34,11 +36,12 @@ class WatchlistService(
         } catch (e: MarketDataUnavailableException) {
             throw IllegalArgumentException("Symbol '$symbol' not found in market data")
         }
-        return watchlistRepository.insert(symbol, request.assetType)
+        return watchlistRepository.insert(userId, symbol, request.assetType)
     }
 
     fun getMetrics(id: UUID): WatchlistMetricsResponse {
-        val item = watchlistRepository.findById(id)
+        val userId = RequestContext.get()
+        val item = watchlistRepository.findById(userId, id)
             ?: throw NoSuchElementException("No watchlist item found with id $id")
         val quote = marketDataService.getQuote(item.symbol)
         return WatchlistMetricsResponse(
@@ -50,8 +53,9 @@ class WatchlistService(
     }
 
     fun addToPortfolio(id: UUID, amount: BigDecimal): TransactionResponse {
+        val userId = RequestContext.get()
         require(amount.compareTo(BigDecimal.ZERO) > 0) { "Amount must be positive" }
-        val item = watchlistRepository.findById(id)
+        val item = watchlistRepository.findById(userId, id)
             ?: throw NoSuchElementException("No watchlist item found with id $id")
         val quote = marketDataService.getQuote(item.symbol)
         val quantity = amount.divide(quote.price, 6, RoundingMode.HALF_UP)
@@ -68,6 +72,7 @@ class WatchlistService(
     }
 
     fun removeItem(id: UUID) {
-        watchlistRepository.delete(id)
+        val userId = RequestContext.get()
+        watchlistRepository.delete(userId, id)
     }
 }

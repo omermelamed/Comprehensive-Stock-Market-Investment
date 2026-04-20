@@ -1,6 +1,7 @@
 package com.investment.api
 
 import com.investment.api.dto.HoldingResponse
+import com.investment.application.RequestContext
 import com.investment.infrastructure.HoldingsProjectionRepository
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -15,6 +16,7 @@ class HoldingsController(
 
     @GetMapping
     fun getHoldings(): ResponseEntity<List<HoldingResponse>> {
-        return ResponseEntity.ok(holdingsProjectionRepository.findAll())
+        val userId = RequestContext.get()
+        return ResponseEntity.ok(holdingsProjectionRepository.findAll(userId))
     }
 }

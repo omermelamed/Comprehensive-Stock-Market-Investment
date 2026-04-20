@@ -17,22 +17,32 @@ class TelegramScheduledMessageService(
     private val userProfileRepository: UserProfileRepository
 ) {
 
-    fun list(): List<ScheduledMessageResponse> = repository.findAll()
+    fun list(): List<ScheduledMessageResponse> {
+        val userId = RequestContext.get()
+        return repository.findAll(userId)
+    }
 
     fun create(request: ScheduledMessageRequest): ScheduledMessageResponse {
+        val userId = RequestContext.get()
         val nextSendAt = computeNextSendAt(request)
-        return repository.insert(request, nextSendAt)
+        return repository.insert(userId, request, nextSendAt)
     }
 
     fun update(id: UUID, request: ScheduledMessageRequest): ScheduledMessageResponse {
+        val userId = RequestContext.get()
         val nextSendAt = computeNextSendAt(request)
-        return repository.update(id, request, nextSendAt)
+        return repository.update(userId, id, request, nextSendAt)
     }
 
-    fun toggle(id: UUID, isActive: Boolean): ScheduledMessageResponse =
-        repository.toggle(id, isActive)
+    fun toggle(id: UUID, isActive: Boolean): ScheduledMessageResponse {
+        val userId = RequestContext.get()
+        return repository.toggle(userId, id, isActive)
+    }
 
-    fun delete(id: UUID) = repository.delete(id)
+    fun delete(id: UUID) {
+        val userId = RequestContext.get()
+        repository.delete(userId, id)
+    }
 
     fun getHistory(id: UUID): List<ScheduledMessageLogEntry> = repository.getHistory(id)
 
@@ -43,6 +53,11 @@ class TelegramScheduledMessageService(
             biweeklyWeek = request.biweeklyWeek,
             dayOfMonth   = request.dayOfMonth,
             sendTime     = LocalTime.parse(request.sendTime),
-            timezone     = ZoneId.of(userProfileRepository.findTimezone() ?: "UTC")
+            timezone     = ZoneId.of(resolveTimezone())
         )
+
+    private fun resolveTimezone(): String {
+        val userId = RequestContext.getOrNull() ?: return "UTC"
+        return userProfileRepository.findTimezone(userId) ?: "UTC"
+    }
 }

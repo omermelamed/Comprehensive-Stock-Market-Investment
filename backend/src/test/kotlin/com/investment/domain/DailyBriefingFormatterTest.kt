@@ -13,6 +13,7 @@ class DailyBriefingFormatterTest {
     private fun fullData() = DailyBriefingData(
         date = date,
         currency = "USD",
+        marketOpen = true,
         portfolioChangeAbsolute = BigDecimal("847.50"),
         portfolioChangePercent = BigDecimal("1.23"),
         portfolioTotal = BigDecimal("69000.00"),

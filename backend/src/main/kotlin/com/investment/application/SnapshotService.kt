@@ -14,6 +14,7 @@ import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.UUID
 
 @Service
 class SnapshotService(
@@ -85,18 +86,19 @@ class SnapshotService(
      * as closing prices. Falls back to [fallbackPrices] for symbols missing from [pricesForDate].
      */
     private fun createSnapshotWithPrices(
+        userId: UUID,
         date: LocalDate,
         source: String,
         holdings: List<HoldingState>,
         pricesForDate: Map<String, BigDecimal>,
         fallbackPrices: Map<String, BigDecimal>,
     ) {
-        if (snapshotRepository.existsForDate(date)) {
-            log.debug("Snapshot already exists for date {} — skipping", date)
+        if (snapshotRepository.existsForDate(userId, date)) {
+            log.debug("Snapshot already exists for user {} date {} — skipping", userId, date)
             return
         }
         if (holdings.isEmpty()) {
-            log.debug("No holdings as of {} — skipping snapshot", date)
+            log.debug("No holdings as of {} for user {} — skipping snapshot", date, userId)
             return
         }
 
@@ -111,7 +113,7 @@ class SnapshotService(
         }
 
         if (totalPortfolioValue.compareTo(BigDecimal.ZERO) == 0) {
-            log.warn("Skipping snapshot for {} — all prices resolved to zero (market likely closed)", date)
+            log.warn("Skipping snapshot for user {} on {} — all prices resolved to zero (market likely closed)", userId, date)
             return
         }
 
@@ -129,13 +131,14 @@ class SnapshotService(
         val summary = PortfolioCalculator.computePortfolioSummary(holdingMetrics, SNAPSHOT_CURRENCY)
 
         snapshotRepository.save(
+            userId = userId,
             date = date,
             totalValue = summary.totalValue,
             dailyPnl = summary.totalPnlAbsolute,
             source = source,
         )
 
-        log.info("Snapshot created: date={} totalValue={} source={}", date, summary.totalValue, source)
+        log.info("Snapshot created: user={} date={} totalValue={} source={}", userId, date, summary.totalValue, source)
     }
 
     /** Bridge from [HoldingState] to [HoldingResponse] for [PortfolioCalculator]. */
@@ -157,11 +160,11 @@ class SnapshotService(
      * For today this is exact; for past dates use [regenerateSnapshotsFrom] instead so
      * that each past snapshot only counts transactions that existed on that date.
      */
-    fun createSnapshotForDate(date: LocalDate, source: String) {
+    fun createSnapshotForDate(userId: UUID, date: LocalDate, source: String) {
         val today = LocalDate.now(clock)
 
         // Convert live HoldingResponse → HoldingState
-        val holdings = holdingsRepository.findAll()
+        val holdings = holdingsRepository.findAll(userId)
             .filter { it.netQuantity.compareTo(BigDecimal.ZERO) > 0 }
             .map { h -> HoldingState(h.symbol.uppercase(), h.track, h.netQuantity, h.avgBuyPrice, h.totalCostBasis) }
 
@@ -180,7 +183,7 @@ class SnapshotService(
             }
         }
 
-        createSnapshotWithPrices(date, source, holdings, pricesForDate, emptyMap())
+        createSnapshotWithPrices(userId, date, source, holdings, pricesForDate, emptyMap())
     }
 
     /**
@@ -188,15 +191,15 @@ class SnapshotService(
      * historically accurate per-date holdings (only transactions that existed on each date)
      * and historical closing prices with carry-forward for non-trading days.
      */
-    fun regenerateSnapshotsFrom(fromDate: LocalDate) {
+    fun regenerateSnapshotsFrom(userId: UUID, fromDate: LocalDate) {
         val today = LocalDate.now(clock)
         if (fromDate.isAfter(today)) return
 
-        val deleted = snapshotRepository.deleteByDateRange(fromDate, today)
-        log.info("Regenerating snapshots: deleted {} snapshot(s) from {} to {}", deleted, fromDate, today)
+        val deleted = snapshotRepository.deleteByDateRange(userId, fromDate, today)
+        log.info("Regenerating snapshots for user {}: deleted {} snapshot(s) from {} to {}", userId, deleted, fromDate, today)
 
         // Load all transactions once — we'll filter per date inside the loop
-        val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc()
+        val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
 
         // Determine all symbols that ever appear in the ledger
         val allSymbols = allTransactions.map { it.symbol.uppercase() }.distinct()
@@ -228,7 +231,7 @@ class SnapshotService(
             }
 
             if (holdingsOnDate.isNotEmpty()) {
-                createSnapshotWithPrices(date, "REGENERATED", holdingsOnDate, pricesForDate, fallback)
+                createSnapshotWithPrices(userId, date, "REGENERATED", holdingsOnDate, pricesForDate, fallback)
                 created++
             }
 
@@ -236,6 +239,6 @@ class SnapshotService(
             date = date.plusDays(1)
         }
 
-        log.info("Regeneration complete: {} snapshot(s) created from {} to {}", created, fromDate, today)
+        log.info("Regeneration complete for user {}: {} snapshot(s) created from {} to {}", userId, created, fromDate, today)
     }
 }

@@ -28,13 +28,6 @@ class ImportService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /**
-     * Parses [file], applies [columnMapping], and validates every row.
-     * No data is written to the database.
-     *
-     * [columnMapping] maps file-column-name → domain-field-name.
-     * Recognized domain field names: symbol, type, track, quantity, price, date, notes, fees, currency
-     */
     fun preview(file: MultipartFile, columnMapping: Map<String, String>): ImportPreviewResponse {
         val filename = file.originalFilename ?: file.name
         val (detectedColumns, rawRows) = ImportParser.parse(file.inputStream, filename)
@@ -58,17 +51,13 @@ class ImportService(
         )
     }
 
-    /**
-     * Bulk-inserts the rows from [request] into the transactions table with source = IMPORT.
-     * All rows in the request are assumed to be valid (they came from a successful preview).
-     * Returns the count of rows inserted.
-     */
     @Transactional
     fun confirm(request: ImportConfirmRequest): ImportSummaryResponse {
+        val userId = RequestContext.get()
         if (request.rows.isEmpty()) {
             return ImportSummaryResponse(imported = 0, skipped = 0)
         }
-        val inserted = transactionRepository.insertImport(request.rows)
+        val inserted = transactionRepository.insertImport(userId, request.rows)
         val skipped = request.rows.size - inserted
 
         val earliestDate = request.rows
@@ -86,7 +75,7 @@ class ImportService(
                 override fun afterCommit() {
                     Thread {
                         try {
-                            snapshotService.regenerateSnapshotsFrom(earliestDate)
+                            snapshotService.regenerateSnapshotsFrom(userId, earliestDate)
                         } catch (e: Exception) {
                             log.warn("Snapshot regeneration after import failed from {}: {}", earliestDate, e.message)
                         }

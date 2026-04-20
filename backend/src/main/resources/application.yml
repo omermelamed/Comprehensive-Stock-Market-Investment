@@ -32,3 +32,10 @@ app:
     alert-check-cron: "0 */5 * * * *"
   telegram:
     bot-token: ${TELEGRAM_BOT_TOKEN:}
+  jwt:
+    secret: ${JWT_SECRET}
+    expiry-days: 1
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+  registration:
+    enabled: ${REGISTRATION_ENABLED:true}

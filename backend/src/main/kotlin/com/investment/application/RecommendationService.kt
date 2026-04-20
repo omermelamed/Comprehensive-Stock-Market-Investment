@@ -45,12 +45,12 @@ class RecommendationService(
     }
 
     fun getRecommendations(): RecommendationsResponse {
-        val cached = recommendationCacheRepository.findFresh()
+        val userId = RequestContext.get()
+        val cached = recommendationCacheRepository.findFresh(userId)
         if (cached != null) {
-            // Re-load live profile and portfolio total even on cache hits so the context strip is accurate
             val profile = userProfileService.getProfile()
             val currency = profile?.preferredCurrency ?: DEFAULT_CURRENCY
-            val liveTotal = computePortfolioTotal(currency)
+            val liveTotal = computePortfolioTotal(userId, currency)
             return RecommendationsResponse(
                 recommendations = cached.recommendations,
                 generatedAt = cached.generatedAt,
@@ -72,13 +72,14 @@ class RecommendationService(
     }
 
     private fun generateAndCache(): RecommendationsResponse {
+        val userId = RequestContext.get()
         val profile = userProfileService.getProfile()
         val currency = profile?.preferredCurrency ?: DEFAULT_CURRENCY
         val riskLevel = profile?.riskLevel ?: DEFAULT_RISK_LEVEL
         val monthlyBudget = profile?.monthlyInvestmentMax ?: BigDecimal.ZERO
         val tracksEnabled = profile?.tracksEnabled ?: emptyList()
 
-        val holdings = holdingsRepository.findAll()
+        val holdings = holdingsRepository.findAll(userId)
         val prices = loadPrices(holdings.map { it.symbol }, currency)
 
         val totalPortfolioValue = RecommendationGapCalculator.computePortfolioTotal(holdings, prices)
@@ -90,7 +91,7 @@ class RecommendationService(
             limit = 5
         )
 
-        val watchlistItems = watchlistRepository.findAll().filter { it.signal in ACTIONABLE_SIGNALS }
+        val watchlistItems = watchlistRepository.findAll(userId).filter { it.signal in ACTIONABLE_SIGNALS }
 
         val agentContext = AgentContext(
             totalPortfolioValue = totalPortfolioValue,
@@ -103,7 +104,6 @@ class RecommendationService(
         )
         val userMessage = orchestratorAgentService.buildCombinedPrompt(agentContext)
 
-        // Attempt Claude generation — distinguish Claude failure from parse failure
         var generationError: String? = null
         val rawResponse = try {
             claudeClient.complete(SYSTEM_PROMPT, userMessage, maxTokens = 1400)
@@ -162,9 +162,8 @@ class RecommendationService(
         val now = Instant.now()
         val expiresAt = now.plus(15, ChronoUnit.MINUTES)
 
-        // Only persist successful non-empty results; failed generation should not poison the cache
         if (recommendations.isNotEmpty()) {
-            recommendationCacheRepository.save(recommendations, generatedAt = now, expiresAt = expiresAt)
+            recommendationCacheRepository.save(userId, recommendations, generatedAt = now, expiresAt = expiresAt)
         }
 
         return RecommendationsResponse(
@@ -182,10 +181,6 @@ class RecommendationService(
         )
     }
 
-    /**
-     * Loads converted prices for a list of symbols into the user's preferred currency.
-     * Returns zero for any symbol where market data is unavailable — this is logged as a warning.
-     */
     private fun loadPrices(symbols: List<String>, currency: String): Map<String, BigDecimal> {
         return symbols.associate { symbol ->
             val upperSymbol = symbol.uppercase()
@@ -204,19 +199,12 @@ class RecommendationService(
         }
     }
 
-    /**
-     * Computes live portfolio total for cache-hit responses.
-     * Fetches prices fresh — acceptable for a local personal app.
-     */
-    private fun computePortfolioTotal(currency: String): BigDecimal {
-        val holdings = holdingsRepository.findAll()
+    private fun computePortfolioTotal(userId: java.util.UUID, currency: String): BigDecimal {
+        val holdings = holdingsRepository.findAll(userId)
         val prices = loadPrices(holdings.map { it.symbol }, currency)
         return RecommendationGapCalculator.computePortfolioTotal(holdings, prices)
     }
 
-    /**
-     * Parses Claude's JSON response. Returns null on parse failure, empty list if Claude returns [].
-     */
     private fun tryParseRecommendations(raw: String): List<RecommendationCard>? {
         val cleaned = raw.trim()
             .removePrefix("```json")

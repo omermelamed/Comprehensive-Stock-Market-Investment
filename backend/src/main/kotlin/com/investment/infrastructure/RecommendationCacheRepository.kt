@@ -6,10 +6,11 @@ import com.investment.api.dto.RecommendationCard
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.time.Instant
+import java.util.UUID
 
 /**
- * Persists and retrieves the single cached recommendation payload.
- * The table enforces at-most-one row via a unique partial index on (TRUE).
+ * Persists and retrieves cached recommendation payloads per user.
+ * Uniqueness is enforced on `user_id` (upsert on conflict).
  * Portfolio context is not cached here — the service re-supplies it on read.
  */
 @Repository
@@ -27,9 +28,10 @@ class RecommendationCacheRepository(
     /**
      * Returns the cached entry if it exists and has not expired. Returns null otherwise.
      */
-    fun findFresh(): CachedEntry? {
+    fun findFresh(userId: UUID): CachedEntry? {
         val record = dsl.fetchOne(
-            "SELECT * FROM ai_recommendation_cache WHERE expires_at > NOW() LIMIT 1"
+            "SELECT * FROM ai_recommendation_cache WHERE user_id = ?::uuid AND expires_at > NOW() LIMIT 1",
+            userId
         ) ?: return null
 
         return try {
@@ -47,17 +49,18 @@ class RecommendationCacheRepository(
      * Upserts the recommendations list. Only the list is persisted; timestamps are driven by the DB defaults
      * for inserts and supplied explicitly for forced refreshes.
      */
-    fun save(recommendations: List<RecommendationCard>, generatedAt: Instant, expiresAt: Instant) {
+    fun save(userId: UUID, recommendations: List<RecommendationCard>, generatedAt: Instant, expiresAt: Instant) {
         val recommendationsJson = objectMapper.writeValueAsString(recommendations)
         dsl.execute(
             """
-            INSERT INTO ai_recommendation_cache (id, recommendations, generated_at, expires_at)
-            VALUES (gen_random_uuid(), ?::jsonb, ?, ?)
-            ON CONFLICT ((TRUE)) DO UPDATE SET
+            INSERT INTO ai_recommendation_cache (user_id, recommendations, generated_at, expires_at)
+            VALUES (?::uuid, ?::jsonb, ?, ?)
+            ON CONFLICT (user_id) DO UPDATE SET
                 recommendations = EXCLUDED.recommendations,
                 generated_at = EXCLUDED.generated_at,
                 expires_at = EXCLUDED.expires_at
             """.trimIndent(),
+            userId,
             recommendationsJson,
             java.sql.Timestamp.from(generatedAt),
             java.sql.Timestamp.from(expiresAt)

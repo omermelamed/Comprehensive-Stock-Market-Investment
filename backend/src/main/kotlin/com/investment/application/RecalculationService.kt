@@ -72,7 +72,7 @@ class RecalculationService(
     }
 
     @Async
-    fun startRecalculation(jobId: UUID) {
+    fun startRecalculation(jobId: UUID, userId: UUID) {
         val job = recalculationJobRepository.findById(jobId)
         if (job == null) {
             log.error("Recalculation job {} not found", jobId)
@@ -83,7 +83,7 @@ class RecalculationService(
         log.info("Starting recalculation job {} from {} to {}", jobId, job.recalcFrom, job.recalcTo)
 
         try {
-            val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc()
+            val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
             val allSymbols = allTransactions.map { it.symbol.uppercase() }.distinct()
 
             val historicalBySymbol: Map<String, Map<LocalDate, BigDecimal>> = allSymbols.associateWith { symbol ->
@@ -99,7 +99,7 @@ class RecalculationService(
             var date = job.recalcFrom
             var daysCompleted = 0
 
-            snapshotRepository.deleteByDateRange(job.recalcFrom, job.recalcTo)
+            snapshotRepository.deleteByDateRange(userId, job.recalcFrom, job.recalcTo)
 
             val today = LocalDate.now(clock)
 
@@ -127,6 +127,7 @@ class RecalculationService(
                     }
 
                     snapshotRepository.save(
+                        userId = userId,
                         date = date,
                         totalValue = totalValue,
                         dailyPnl = BigDecimal.ZERO,
@@ -168,7 +169,8 @@ class RecalculationService(
             recalcTo = today
         )
 
-        startRecalculation(newJob.id)
+        val userId = RequestContext.get()
+        startRecalculation(newJob.id, userId)
 
         return getStatus()
     }

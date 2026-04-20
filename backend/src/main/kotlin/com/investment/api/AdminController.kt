@@ -1,5 +1,6 @@
 package com.investment.api
 
+import com.investment.application.RequestContext
 import com.investment.application.SnapshotService
 import com.investment.infrastructure.SnapshotRepository
 import com.investment.infrastructure.TransactionRepository
@@ -25,11 +26,12 @@ class AdminController(
      */
     @PostMapping("/snapshots/regenerate")
     fun regenerateAllSnapshots(): ResponseEntity<Map<String, String>> {
-        val earliest = transactionRepository.findEarliestTransactionDate()
+        val userId = RequestContext.get()
+        val earliest = transactionRepository.findEarliestTransactionDate(userId)
             ?: return ResponseEntity.ok(mapOf("status" to "no_transactions"))
 
         Thread {
-            snapshotService.regenerateSnapshotsFrom(earliest)
+            snapshotService.regenerateSnapshotsFrom(userId, earliest)
         }.also { it.isDaemon = true }.start()
 
         return ResponseEntity.ok(mapOf(
@@ -41,8 +43,9 @@ class AdminController(
 
     @DeleteMapping("/snapshots/{date}")
     fun deleteSnapshot(@PathVariable date: String): ResponseEntity<Map<String, String>> {
+        val userId = RequestContext.get()
         val parsedDate = LocalDate.parse(date)
-        val deleted = snapshotRepository.deleteByDateRange(parsedDate, parsedDate)
+        val deleted = snapshotRepository.deleteByDateRange(userId, parsedDate, parsedDate)
         return ResponseEntity.ok(mapOf("status" to "deleted", "date" to date, "count" to deleted.toString()))
     }
 }

@@ -46,11 +46,12 @@ class SellService(
         price: BigDecimal?,
         dateStr: String?
     ): SellPreviewResponse {
+        val userId = RequestContext.get()
         val upperSymbol = symbol.uppercase()
         val profile = userProfileService.getProfile()
         val preferredCurrency = profile?.preferredCurrency ?: "USD"
 
-        val holding = holdingsRepository.findAll().firstOrNull { it.symbol.equals(upperSymbol, ignoreCase = true) }
+        val holding = holdingsRepository.findAll(userId).firstOrNull { it.symbol.equals(upperSymbol, ignoreCase = true) }
         val sharesHeld = holding?.netQuantity ?: BigDecimal.ZERO
         val avgCost = holding?.avgBuyPrice ?: BigDecimal.ZERO
 
@@ -73,7 +74,7 @@ class SellService(
         var avgCostAtDate: BigDecimal? = null
 
         if (isRetroactive && sellDate != null) {
-            val allTxs = transactionRepository.findAllOrderedByExecutedAtAsc()
+            val allTxs = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
             val holdingsAtDate = computeHoldingsAtDate(allTxs, upperSymbol, sellDate)
             sharesHeldAtDate = holdingsAtDate.first
             avgCostAtDate = holdingsAtDate.second
@@ -112,6 +113,7 @@ class SellService(
 
     @Transactional
     fun executeSell(request: SellRequest): SellResponse {
+        val userId = RequestContext.get()
         val upperSymbol = request.symbol.uppercase()
         val today = LocalDate.now(clock)
         val sellDate = request.executedAt.atZone(ZoneOffset.UTC).toLocalDate()
@@ -136,8 +138,8 @@ class SellService(
         }
 
         val isRetroactive = sellDate.isBefore(today)
-        val allTxs = transactionRepository.findAllOrderedByExecutedAtAsc()
-        val currentHolding = holdingsRepository.findAll()
+        val allTxs = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
+        val currentHolding = holdingsRepository.findAll(userId)
             .firstOrNull { it.symbol.equals(upperSymbol, ignoreCase = true) }
         val holdingTrack = currentHolding?.track ?: "LONG"
 
@@ -160,6 +162,7 @@ class SellService(
         recentSells[dedupeKey] = now
 
         val txResponse = transactionRepository.insert(
+            userId,
             TransactionRequest(
                 symbol = upperSymbol,
                 type = "SELL",
@@ -203,7 +206,7 @@ class SellService(
 
             TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
                 override fun afterCommit() {
-                    recalculationService.startRecalculation(job.id)
+                    recalculationService.startRecalculation(job.id, userId)
                 }
             })
         } else {
@@ -211,7 +214,7 @@ class SellService(
                 override fun afterCommit() {
                     Thread {
                         try {
-                            snapshotService.regenerateSnapshotsFrom(sellDate)
+                            snapshotService.regenerateSnapshotsFrom(userId, sellDate)
                         } catch (e: Exception) {
                             log.warn("Snapshot regeneration after sell failed: {}", e.message)
                         }

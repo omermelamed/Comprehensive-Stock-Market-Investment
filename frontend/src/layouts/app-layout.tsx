@@ -16,12 +16,14 @@ import {
   Bell,
   Upload,
   Newspaper,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import { useChatPanel } from '@/features/chat/useChatPanel'
 import { useAlertBadge } from '@/features/alerts/useAlertBadge'
+import { useAuth } from '@/features/auth/AuthContext'
 import { AllocaLogo } from '@/components/shared/AllocaLogo'
 
 interface AppLayoutProps {
@@ -103,6 +105,7 @@ function NavSection({ group, alertCount, collapsed }: { group: NavGroup; alertCo
 
 export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
   const { theme, toggle } = useTheme()
+  const { logout } = useAuth()
   const chatPanel = useChatPanel()
   const { count: alertBadgeCount } = useAlertBadge()
   const [hovered, setHovered] = useState(false)
@@ -213,6 +216,17 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
                 : <Moon className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
               }
               {!collapsed && <span className="text-sm font-medium">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
+            </button>
+            <button
+              onClick={logout}
+              title={collapsed ? 'Sign out' : undefined}
+              className={cn(
+                'flex w-full items-center rounded-lg text-sidebar-foreground/60 transition-all duration-150 hover:bg-destructive/10 hover:text-destructive',
+                collapsed ? 'justify-center px-0 py-2 mx-1' : 'gap-2.5 px-3 py-2',
+              )}
+            >
+              <LogOut className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+              {!collapsed && <span className="text-sm font-medium">Sign out</span>}
             </button>
           </div>
         </aside>

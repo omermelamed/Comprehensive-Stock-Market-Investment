@@ -31,12 +31,6 @@ class PortfolioSummaryService(
         val fxRate: BigDecimal
     )
 
-    /**
-     * Fetches each holding's price in its native currency, then converts to [userCurrency]
-     * using per-stock FX rates. Returns both the converted price and the exchange rate so
-     * the caller can also convert cost basis (stored in the asset's native currency) to keep
-     * P&L calculations in a single consistent currency.
-     */
     private fun convertedPriceData(
         symbols: List<String>,
         userCurrency: String
@@ -58,7 +52,8 @@ class PortfolioSummaryService(
     }
 
     fun getHoldingsDashboard(): List<HoldingDashboardResponse> {
-        val holdings = holdingsRepository.findAll()
+        val userId = RequestContext.get()
+        val holdings = holdingsRepository.findAll(userId)
         if (holdings.isEmpty()) return emptyList()
 
         val currency = userProfileService.getProfile()?.preferredCurrency ?: DEFAULT_CURRENCY
@@ -74,7 +69,6 @@ class PortfolioSummaryService(
             val upperSymbol = holding.symbol.uppercase()
             val data = priceData[upperSymbol]
             val currentPrice = data?.convertedPrice ?: BigDecimal.ZERO
-            // Convert cost basis from the asset's native currency to the user's display currency
             val convertedHolding = holding.copy(totalCostBasis = holding.totalCostBasis * (data?.fxRate ?: BigDecimal.ONE))
             val allocation = allocationsBySymbol[upperSymbol]
             val metrics = PortfolioCalculator.computeHoldingMetrics(
@@ -89,8 +83,9 @@ class PortfolioSummaryService(
     }
 
     fun getPortfolioSummary(): PortfolioSummaryResponse {
+        val userId = RequestContext.get()
         val currency = userProfileService.getProfile()?.preferredCurrency ?: DEFAULT_CURRENCY
-        val holdings = holdingsRepository.findAll()
+        val holdings = holdingsRepository.findAll(userId)
 
         if (holdings.isEmpty()) {
             return PortfolioCalculator.computePortfolioSummary(emptyList(), currency)
@@ -107,7 +102,6 @@ class PortfolioSummaryService(
             val upperSymbol = holding.symbol.uppercase()
             val data = priceData[upperSymbol]
             val currentPrice = data?.convertedPrice ?: BigDecimal.ZERO
-            // Convert cost basis from the asset's native currency to the user's display currency
             val convertedHolding = holding.copy(totalCostBasis = holding.totalCostBasis * (data?.fxRate ?: BigDecimal.ONE))
             val allocation = allocationsBySymbol[upperSymbol]
             PortfolioCalculator.computeHoldingMetrics(

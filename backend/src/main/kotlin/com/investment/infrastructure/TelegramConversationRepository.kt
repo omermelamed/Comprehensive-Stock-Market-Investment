@@ -26,13 +26,14 @@ class TelegramConversationRepository(private val dsl: DSLContext) {
         body: String,
         intent: String? = null,
         intentData: String? = null,
-        telegramMessageId: String? = null
+        telegramMessageId: String? = null,
+        userId: UUID? = null
     ) {
         dsl.execute(
             """
             INSERT INTO telegram_conversations
-                (session_id, phone_number, direction, message_body, intent, intent_data, telegram_message_id)
-            VALUES (?::uuid, ?, ?, ?, ?, ?::jsonb, ?)
+                (session_id, phone_number, direction, message_body, intent, intent_data, telegram_message_id, user_id)
+            VALUES (?::uuid, ?, ?, ?, ?, ?::jsonb, ?, ?::uuid)
             """.trimIndent(),
             sessionId.toString(),
             phoneNumber,
@@ -40,7 +41,8 @@ class TelegramConversationRepository(private val dsl: DSLContext) {
             body,
             intent,
             intentData,
-            telegramMessageId
+            telegramMessageId,
+            userId?.toString()
         )
     }
 

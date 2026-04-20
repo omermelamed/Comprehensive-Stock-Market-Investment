@@ -33,8 +33,9 @@ class AnalyticsService(
 ) {
 
     fun getAnalytics(range: String): AnalyticsResponse {
+        val userId = RequestContext.get()
         val today = LocalDate.now(clock)
-        val snapshots = snapshotsForRange(range, today)
+        val snapshots = snapshotsForRange(userId, range, today)
 
         val summary = portfolioSummaryService.getPortfolioSummary()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
@@ -86,7 +87,7 @@ class AnalyticsService(
             )
         }
 
-        val ledgerRows = transactionRepository.findAllOrderedByExecutedAtAsc()
+        val ledgerRows = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
         val realizedEntries = ledgerRows.map { row ->
             RealizedPnlCalculator.TransactionEntry(
                 symbol = row.symbol,
@@ -124,8 +125,9 @@ class AnalyticsService(
     }
 
     fun getMonthlyReturns(range: String): MonthlyReturnsResponse {
+        val userId = RequestContext.get()
         val today = LocalDate.now(clock)
-        val snapshots = snapshotsForRange(range, today)
+        val snapshots = snapshotsForRange(userId, range, today)
         val summary = portfolioSummaryService.getPortfolioSummary()
         val currency = userProfileService.getProfile()?.preferredCurrency ?: summary.currency
 
@@ -163,14 +165,14 @@ class AnalyticsService(
         return buildBenchmark(from, to, symbol)
     }
 
-    private fun snapshotsForRange(range: String, today: LocalDate): List<SnapshotRecord> {
+    private fun snapshotsForRange(userId: java.util.UUID, range: String, today: LocalDate): List<SnapshotRecord> {
         return when (range) {
-            "1M" -> snapshotRepository.findByDateRange(today.minusDays(30), today)
-            "3M" -> snapshotRepository.findByDateRange(today.minusDays(90), today)
-            "6M" -> snapshotRepository.findByDateRange(today.minusDays(180), today)
-            "1Y" -> snapshotRepository.findByDateRange(today.minusDays(365), today)
-            "ALL" -> snapshotRepository.findAllOrderedByDate()
-            else -> snapshotRepository.findByDateRange(today.minusDays(30), today)
+            "1M" -> snapshotRepository.findByDateRange(userId, today.minusDays(30), today)
+            "3M" -> snapshotRepository.findByDateRange(userId, today.minusDays(90), today)
+            "6M" -> snapshotRepository.findByDateRange(userId, today.minusDays(180), today)
+            "1Y" -> snapshotRepository.findByDateRange(userId, today.minusDays(365), today)
+            "ALL" -> snapshotRepository.findAllOrderedByDate(userId)
+            else -> snapshotRepository.findByDateRange(userId, today.minusDays(30), today)
         }
     }
 

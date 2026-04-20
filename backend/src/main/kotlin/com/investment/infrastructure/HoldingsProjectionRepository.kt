@@ -6,20 +6,24 @@ import org.jooq.Record
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.UUID
 
 @Repository
 class HoldingsProjectionRepository(
     private val dsl: DSLContext
 ) {
 
-    fun findAll(): List<HoldingResponse> {
-        return dsl.fetch("SELECT * FROM current_holdings ORDER BY symbol, track")
-            .map { it.toResponse() }
+    fun findAll(userId: UUID): List<HoldingResponse> {
+        return dsl.fetch(
+            "SELECT * FROM current_holdings WHERE user_id = ?::uuid ORDER BY symbol, track",
+            userId.toString()
+        ).map { it.toResponse() }
     }
 
-    fun findBySymbolAndTrack(symbol: String, track: String): BigDecimal {
+    fun findBySymbolAndTrack(userId: UUID, symbol: String, track: String): BigDecimal {
         val record = dsl.fetchOne(
-            "SELECT net_quantity FROM current_holdings WHERE UPPER(symbol) = UPPER(?) AND track = ?::track_enum",
+            "SELECT net_quantity FROM current_holdings WHERE user_id = ?::uuid AND UPPER(symbol) = UPPER(?) AND track = ?::track_enum",
+            userId.toString(),
             symbol,
             track.uppercase()
         )

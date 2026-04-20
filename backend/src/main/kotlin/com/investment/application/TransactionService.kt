@@ -30,8 +30,9 @@ class TransactionService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun getTransactions(page: Int, size: Int): Map<String, Any> {
-        val content = transactionRepository.findAll(page, size)
-        val totalElements = transactionRepository.count()
+        val userId = RequestContext.get()
+        val content = transactionRepository.findAll(userId, page, size)
+        val totalElements = transactionRepository.count(userId)
         return mapOf(
             "content" to content,
             "totalElements" to totalElements,
@@ -42,7 +43,9 @@ class TransactionService(
 
     @Transactional
     fun addTransaction(request: TransactionRequest): TransactionResponse {
+        val userId = RequestContext.get()
         val currentHolding = holdingsProjectionRepository.findBySymbolAndTrack(
+            userId = userId,
             symbol = request.symbol,
             track = request.track
         )
@@ -52,11 +55,11 @@ class TransactionService(
             is ValidationResult.Valid -> { /* proceed */ }
         }
 
-        val saved = transactionRepository.insert(request)
+        val saved = transactionRepository.insert(userId, request)
 
-        schedulePostCommitSnapshotRegeneration(request.executedAt)
+        schedulePostCommitSnapshotRegeneration(userId, request.executedAt)
 
-        val totalCount = transactionRepository.count()
+        val totalCount = transactionRepository.count(userId)
         if (totalCount % 10L == 0L) {
             schedulePostCommitRiskEvaluation()
         }
@@ -66,10 +69,12 @@ class TransactionService(
 
     @Transactional
     fun updateTransaction(id: UUID, request: TransactionRequest): TransactionResponse {
-        val oldExecutedAt = transactionRepository.findExecutedAtById(id)
+        val userId = RequestContext.get()
+        val oldExecutedAt = transactionRepository.findExecutedAtById(userId, id)
             ?: throw NoSuchElementException("No transaction found with id $id")
 
         val currentHolding = holdingsProjectionRepository.findBySymbolAndTrack(
+            userId = userId,
             symbol = request.symbol,
             track = request.track
         )
@@ -79,31 +84,28 @@ class TransactionService(
             is ValidationResult.Valid -> { /* proceed */ }
         }
 
-        val updated = transactionRepository.update(id, request)
+        val updated = transactionRepository.update(userId, id, request)
 
         val earliestDate = minOf(
             oldExecutedAt.atZone(ZoneOffset.UTC).toLocalDate(),
             request.executedAt.atZone(ZoneOffset.UTC).toLocalDate()
         )
-        schedulePostCommitSnapshotRegeneration(earliestDate.atStartOfDay(ZoneOffset.UTC).toInstant())
+        schedulePostCommitSnapshotRegeneration(userId, earliestDate.atStartOfDay(ZoneOffset.UTC).toInstant())
 
         return updated
     }
 
     @Transactional
     fun deleteTransaction(id: UUID) {
-        val executedAt = transactionRepository.findExecutedAtById(id)
-        transactionRepository.delete(id)
+        val userId = RequestContext.get()
+        val executedAt = transactionRepository.findExecutedAtById(userId, id)
+        transactionRepository.delete(userId, id)
         if (executedAt != null) {
-            schedulePostCommitSnapshotRegeneration(executedAt)
+            schedulePostCommitSnapshotRegeneration(userId, executedAt)
         }
     }
 
-    /**
-     * Registers a callback that fires after the current transaction commits,
-     * so the regeneration thread sees the newly committed ledger state.
-     */
-    private fun schedulePostCommitSnapshotRegeneration(executedAt: Instant) {
+    private fun schedulePostCommitSnapshotRegeneration(userId: UUID, executedAt: Instant) {
         val txDate = executedAt.atZone(ZoneOffset.UTC).toLocalDate()
         val today = LocalDate.now(clock)
         if (txDate.isAfter(today)) return
@@ -112,7 +114,7 @@ class TransactionService(
             override fun afterCommit() {
                 Thread {
                     try {
-                        snapshotService.regenerateSnapshotsFrom(txDate)
+                        snapshotService.regenerateSnapshotsFrom(userId, txDate)
                     } catch (e: Exception) {
                         log.warn("Snapshot regeneration failed from {}: {}", txDate, e.message)
                     }

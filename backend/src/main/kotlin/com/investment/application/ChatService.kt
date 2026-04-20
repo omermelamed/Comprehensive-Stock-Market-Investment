@@ -35,12 +35,13 @@ class ChatService(
     }
 
     private fun buildSystemPrompt(): String = buildString {
+        val userId = RequestContext.get()
         appendLine(ASSISTANT_PREAMBLE)
         appendLine()
         appendLine("PORTFOLIO SNAPSHOT:")
         appendLine(sharedContextBuilder.build().contextString)
 
-        val cached = recommendationCacheRepository.findFresh()
+        val cached = recommendationCacheRepository.findFresh(userId)
         if (cached != null && cached.recommendations.isNotEmpty()) {
             appendLine()
             appendLine("Latest AI recommendations:")

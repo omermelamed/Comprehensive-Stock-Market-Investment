@@ -3,14 +3,17 @@ package com.investment.application
 import com.investment.domain.MarketDataUnavailableException
 import com.investment.infrastructure.AllocationRepository
 import com.investment.infrastructure.HoldingsProjectionRepository
+import com.investment.infrastructure.UserProfileRepository
 import com.investment.infrastructure.WatchlistRepository
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.UUID
 
 @Component
 class SharedContextBuilder(
     private val userProfileService: UserProfileService,
+    private val userProfileRepository: UserProfileRepository,
     private val holdingsRepository: HoldingsProjectionRepository,
     private val allocationRepository: AllocationRepository,
     private val watchlistRepository: WatchlistRepository,
@@ -27,13 +30,18 @@ class SharedContextBuilder(
     )
 
     fun build(): PortfolioContext {
-        val profile = userProfileService.getProfile()
+        val userId = RequestContext.get()
+        return build(userId)
+    }
+
+    fun build(userId: UUID): PortfolioContext {
+        val profile = userProfileRepository.findByUserId(userId)
         val currency = profile?.preferredCurrency ?: "USD"
         val riskLevel = profile?.riskLevel ?: "MODERATE"
         val monthlyBudget = profile?.monthlyInvestmentMax ?: BigDecimal.ZERO
         val tracksEnabled = profile?.tracksEnabled ?: emptyList()
 
-        val holdings = holdingsRepository.findAll().filter { it.track.uppercase() == "LONG" }
+        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() == "LONG" }
 
         val prices = holdings.associate { h ->
             h.symbol.uppercase() to try {
@@ -83,7 +91,7 @@ class SharedContextBuilder(
             }
 
             appendLine()
-            val watchlistSignals = watchlistRepository.findAll().filter { !it.signal.isNullOrBlank() }
+            val watchlistSignals = watchlistRepository.findAll(userId).filter { !it.signal.isNullOrBlank() }
             if (watchlistSignals.isNotEmpty()) {
                 appendLine("Watchlist signals:")
                 watchlistSignals.forEach { w ->
