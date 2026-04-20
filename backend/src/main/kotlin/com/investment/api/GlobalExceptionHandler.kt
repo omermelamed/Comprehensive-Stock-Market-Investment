@@ -1,5 +1,6 @@
 package com.investment.api
 
+import com.investment.domain.UnauthorizedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -9,6 +10,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 class GlobalExceptionHandler {
 
     private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
+    @ExceptionHandler(UnauthorizedException::class)
+    fun handleUnauthorized(ex: UnauthorizedException): ResponseEntity<Map<String, String?>> {
+        return ResponseEntity.status(401).body(mapOf("error" to ex.message))
+    }
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleIllegalArgument(ex: IllegalArgumentException): ResponseEntity<Map<String, String?>> {
