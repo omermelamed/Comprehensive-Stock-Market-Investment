@@ -114,6 +114,7 @@ export interface WatchlistMetrics {
 
 export interface Alert {
   id: string
+  userId?: string
   symbol: string
   condition: 'ABOVE' | 'BELOW'
   thresholdPrice: number

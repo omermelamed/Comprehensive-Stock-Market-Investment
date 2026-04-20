@@ -15,7 +15,7 @@ import java.util.UUID
 class UserServiceTest {
 
     private val userRepository = mock<UserRepository>()
-    private val service = UserService(userRepository)
+    private val service = UserService(userRepository, registrationEnabled = true)
 
     @Test
     fun `register creates user and returns userId and username`() {
@@ -84,5 +84,11 @@ class UserServiceTest {
     @Test
     fun `register throws IllegalArgumentException for password shorter than 8 characters`() {
         assertThrows<IllegalArgumentException> { service.register("alice", "short") }
+    }
+
+    @Test
+    fun `register throws UnauthorizedException when registration is disabled`() {
+        val disabledService = UserService(userRepository, registrationEnabled = false)
+        assertThrows<UnauthorizedException> { disabledService.register("alice", "password123") }
     }
 }

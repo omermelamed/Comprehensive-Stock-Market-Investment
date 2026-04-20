@@ -7,6 +7,7 @@ import com.investment.application.RequestContext
 import com.investment.application.UserService
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/auth")
 class AuthController(
     private val userService: UserService,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    @Value("\${app.jwt.expiry-days}") private val expiryDays: Long,
+    @Value("\${app.cookie.secure:true}") private val cookieSecure: Boolean
 ) {
 
     @PostMapping("/register")
@@ -60,10 +63,10 @@ class AuthController(
         val token = jwtService.generateToken(authResponse.userId)
         val cookie = Cookie("auth_token", token)
         cookie.isHttpOnly = true
-        cookie.secure = true
+        cookie.secure = cookieSecure
         cookie.path = "/"
-        cookie.maxAge = 24 * 60 * 60  // 1 day in seconds
-        cookie.setAttribute("SameSite", "None")
+        cookie.maxAge = (expiryDays * 86400).toInt()
+        cookie.setAttribute("SameSite", if (cookieSecure) "None" else "Lax")
         response.addCookie(cookie)
     }
 
@@ -72,8 +75,8 @@ class AuthController(
         cookie.maxAge = 0
         cookie.path = "/"
         cookie.isHttpOnly = true
-        cookie.secure = true
-        cookie.setAttribute("SameSite", "None")
+        cookie.secure = cookieSecure
+        cookie.setAttribute("SameSite", if (cookieSecure) "None" else "Lax")
         response.addCookie(cookie)
     }
 }

@@ -34,7 +34,7 @@ class CatchUpService(
         // Catch-up covers from earliest transaction date through yesterday.
         // Today's snapshot is the scheduled job's responsibility.
         // Note: catch-up prices reflect today's market prices, not historical prices,
-        // because this is a local single-user app without a paid historical data API.
+        // because we don't have a paid historical data API.
         val yesterday = LocalDate.now().minusDays(1)
         if (earliest.isAfter(yesterday)) {
             log.debug("Earliest transaction date {} is not before yesterday for user {} — nothing to catch up", earliest, userId)

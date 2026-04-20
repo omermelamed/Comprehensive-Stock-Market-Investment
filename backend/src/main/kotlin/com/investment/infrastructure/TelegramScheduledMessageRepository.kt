@@ -29,9 +29,10 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
         )?.toResponse()
     }
 
-    fun findDue(): List<ScheduledMessageResponse> {
+    fun findDue(userId: UUID): List<ScheduledMessageResponse> {
         return dsl.fetch(
-            "SELECT * FROM upcoming_scheduled_messages ORDER BY next_send_at ASC"
+            "SELECT * FROM upcoming_scheduled_messages WHERE user_id = ?::uuid ORDER BY next_send_at ASC",
+            userId.toString()
         ).map { it.toResponse() }
     }
 

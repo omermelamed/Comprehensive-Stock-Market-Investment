@@ -35,7 +35,7 @@ class TelegramScheduledMessageJob(
             val profile = userProfileRepository.findProfile(userId) ?: return
             if (profile.telegramChatId.isNullOrBlank() || !profile.telegramEnabled) return
 
-            val due = repository.findDue()
+            val due = repository.findDue(userId)
             if (due.isEmpty()) return
 
             val tz = ZoneId.of(profile.timezone.ifBlank { "UTC" })
