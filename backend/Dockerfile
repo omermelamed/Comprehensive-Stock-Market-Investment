@@ -6,4 +6,10 @@ RUN ./gradlew bootJar --no-daemon
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Constrained for Render free tier (512MB). UseSerialGC avoids G1GC overhead on low-RAM containers.
+ENTRYPOINT ["java", \
+  "-Xmx380m", \
+  "-Xss512k", \
+  "-XX:MaxMetaspaceSize=96m", \
+  "-XX:+UseSerialGC", \
+  "-jar", "app.jar"]
