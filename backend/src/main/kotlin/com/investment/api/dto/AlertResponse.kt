@@ -6,6 +6,7 @@ import java.util.UUID
 
 data class AlertResponse(
     val id: UUID,
+    val userId: UUID,
     val symbol: String,
     val condition: String,
     val thresholdPrice: BigDecimal,

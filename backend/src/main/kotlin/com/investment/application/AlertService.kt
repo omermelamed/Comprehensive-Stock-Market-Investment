@@ -18,10 +18,12 @@ class AlertService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun listAlerts(): List<AlertResponse> {
-        return alertRepository.findAll()
+        val userId = RequestContext.get()
+        return alertRepository.findAll(userId)
     }
 
     fun createAlert(request: CreateAlertRequest): AlertResponse {
+        val userId = RequestContext.get()
         require(request.symbol.isNotBlank()) { "Symbol must not be blank" }
         val condition = request.condition.trim().uppercase()
         require(condition == "ABOVE" || condition == "BELOW") {
@@ -34,6 +36,7 @@ class AlertService(
         marketDataService.getQuote(request.symbol)
 
         return alertRepository.insert(
+            userId = userId,
             symbol = request.symbol,
             condition = condition,
             thresholdPrice = request.thresholdPrice,
@@ -42,19 +45,23 @@ class AlertService(
     }
 
     fun deleteAlert(id: UUID) {
-        alertRepository.delete(id)
+        val userId = RequestContext.get()
+        alertRepository.delete(userId, id)
     }
 
     fun dismissAlert(id: UUID) {
-        alertRepository.dismiss(id)
+        val userId = RequestContext.get()
+        alertRepository.dismiss(userId, id)
     }
 
     fun reEnableAlert(id: UUID) {
-        alertRepository.reEnable(id)
+        val userId = RequestContext.get()
+        alertRepository.reEnable(userId, id)
     }
 
     fun countUnread(): Int {
-        return alertRepository.countUnread()
+        val userId = RequestContext.get()
+        return alertRepository.countUnread(userId)
     }
 
     fun checkAlerts() {
@@ -74,7 +81,7 @@ class AlertService(
             }
 
             if (triggered) {
-                alertRepository.trigger(alert.id)
+                alertRepository.trigger(alert.userId, alert.id)
                 log.info(
                     "Alert {} triggered for {} (condition={}, threshold={}): current price {}",
                     alert.id,

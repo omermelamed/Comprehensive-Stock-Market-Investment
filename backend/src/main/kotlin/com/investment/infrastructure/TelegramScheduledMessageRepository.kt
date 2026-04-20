@@ -14,16 +14,18 @@ import java.util.UUID
 @Repository
 class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
 
-    fun findAll(): List<ScheduledMessageResponse> {
+    fun findAll(userId: UUID): List<ScheduledMessageResponse> {
         return dsl.fetch(
-            "SELECT * FROM telegram_scheduled_messages ORDER BY created_at ASC"
+            "SELECT * FROM telegram_scheduled_messages WHERE user_id = ?::uuid ORDER BY created_at ASC",
+            userId.toString()
         ).map { it.toResponse() }
     }
 
-    fun findById(id: UUID): ScheduledMessageResponse? {
+    fun findById(userId: UUID, id: UUID): ScheduledMessageResponse? {
         return dsl.fetchOne(
-            "SELECT * FROM telegram_scheduled_messages WHERE id = ?::uuid",
-            id.toString()
+            "SELECT * FROM telegram_scheduled_messages WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )?.toResponse()
     }
 
@@ -33,22 +35,23 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
         ).map { it.toResponse() }
     }
 
-    fun insert(request: ScheduledMessageRequest, nextSendAt: Instant): ScheduledMessageResponse {
+    fun insert(userId: UUID, request: ScheduledMessageRequest, nextSendAt: Instant): ScheduledMessageResponse {
         val id = UUID.randomUUID()
         val record = dsl.fetchOne(
             """
             INSERT INTO telegram_scheduled_messages (
-                id, message_type, label, frequency,
+                id, user_id, message_type, label, frequency,
                 day_of_week, biweekly_week, day_of_month,
                 send_time, is_active, next_send_at, send_count, created_at
             ) VALUES (
-                ?::uuid, ?::tg_message_type_enum, ?, ?::tg_frequency_enum,
+                ?::uuid, ?::uuid, ?::tg_message_type_enum, ?, ?::tg_frequency_enum,
                 ?, ?, ?,
                 ?::time, TRUE, ?, 0, NOW()
             )
             RETURNING *
             """.trimIndent(),
             id.toString(),
+            userId.toString(),
             request.messageType.uppercase(),
             request.label,
             request.frequency.uppercase(),
@@ -61,7 +64,7 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
         return record.toResponse()
     }
 
-    fun update(id: UUID, request: ScheduledMessageRequest, nextSendAt: Instant): ScheduledMessageResponse {
+    fun update(userId: UUID, id: UUID, request: ScheduledMessageRequest, nextSendAt: Instant): ScheduledMessageResponse {
         val record = dsl.fetchOne(
             """
             UPDATE telegram_scheduled_messages SET
@@ -73,7 +76,7 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
                 day_of_month  = ?,
                 send_time     = ?::time,
                 next_send_at  = ?
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
             request.messageType.uppercase(),
@@ -84,16 +87,18 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
             request.dayOfMonth,
             request.sendTime,
             Timestamp.from(nextSendAt),
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No scheduled message found with id $id")
         return record.toResponse()
     }
 
-    fun toggle(id: UUID, isActive: Boolean): ScheduledMessageResponse {
+    fun toggle(userId: UUID, id: UUID, isActive: Boolean): ScheduledMessageResponse {
         val record = dsl.fetchOne(
-            "UPDATE telegram_scheduled_messages SET is_active = ? WHERE id = ?::uuid RETURNING *",
+            "UPDATE telegram_scheduled_messages SET is_active = ? WHERE id = ?::uuid AND user_id = ?::uuid RETURNING *",
             isActive,
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No scheduled message found with id $id")
         return record.toResponse()
     }
@@ -112,10 +117,11 @@ class TelegramScheduledMessageRepository(private val dsl: DSLContext) {
         )
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM telegram_scheduled_messages WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM telegram_scheduled_messages WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) throw NoSuchElementException("No scheduled message found with id $id")
     }

@@ -12,9 +12,11 @@ class AlertRepository(
     private val dsl: DSLContext
 ) {
 
-    fun findAll(): List<AlertResponse> {
-        return dsl.fetch("SELECT * FROM alerts ORDER BY created_at DESC")
-            .map { it.toResponse() }
+    fun findAll(userId: UUID): List<AlertResponse> {
+        return dsl.fetch(
+            "SELECT * FROM alerts WHERE user_id = ?::uuid ORDER BY created_at DESC",
+            userId.toString()
+        ).map { it.toResponse() }
     }
 
     fun findActive(): List<AlertResponse> {
@@ -23,6 +25,7 @@ class AlertRepository(
     }
 
     fun insert(
+        userId: UUID,
         symbol: String,
         condition: String,
         thresholdPrice: BigDecimal,
@@ -31,10 +34,11 @@ class AlertRepository(
     ): AlertResponse {
         val record = dsl.fetchOne(
             """
-            INSERT INTO alerts (symbol, condition, threshold_price, note, source)
-            VALUES (?, ?::alert_condition_enum, ?, ?, ?)
+            INSERT INTO alerts (user_id, symbol, condition, threshold_price, note, source)
+            VALUES (?::uuid, ?, ?::alert_condition_enum, ?, ?, ?)
             RETURNING *
             """.trimIndent(),
+            userId.toString(),
             symbol.uppercase(),
             condition.uppercase(),
             thresholdPrice,
@@ -45,63 +49,70 @@ class AlertRepository(
         return record.toResponse()
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM alerts WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM alerts WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) {
             throw NoSuchElementException("No alert found with id $id")
         }
     }
 
-    fun trigger(id: UUID) {
+    fun trigger(userId: UUID, id: UUID) {
         dsl.execute(
             """
             UPDATE alerts
             SET triggered_at = NOW(), is_active = FALSE, updated_at = NOW()
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             """.trimIndent(),
-            id.toString()
+            id.toString(),
+            userId.toString()
         )
     }
 
-    fun dismiss(id: UUID) {
+    fun dismiss(userId: UUID, id: UUID) {
         val updated = dsl.execute(
             """
             UPDATE alerts
             SET dismissed_at = NOW(), updated_at = NOW()
-            WHERE id = ?::uuid AND is_active = FALSE AND triggered_at IS NOT NULL
+            WHERE id = ?::uuid AND user_id = ?::uuid AND is_active = FALSE AND triggered_at IS NOT NULL
             """.trimIndent(),
-            id.toString()
+            id.toString(),
+            userId.toString()
         )
         if (updated == 0) throw NoSuchElementException("No triggered alert found with id $id")
     }
 
-    fun reEnable(id: UUID) {
+    fun reEnable(userId: UUID, id: UUID) {
         val updated = dsl.execute(
             """
             UPDATE alerts
             SET is_active = TRUE, triggered_at = NULL, dismissed_at = NULL, updated_at = NOW()
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             """.trimIndent(),
-            id.toString()
+            id.toString(),
+            userId.toString()
         )
         if (updated == 0) throw NoSuchElementException("No alert found with id $id")
     }
 
-    fun countUnread(): Int {
+    fun countUnread(userId: UUID): Int {
         return dsl.fetchOne(
             """
             SELECT COUNT(*)::int FROM alerts
-            WHERE is_active = FALSE AND triggered_at IS NOT NULL AND dismissed_at IS NULL
-            """.trimIndent()
+            WHERE user_id = ?::uuid
+              AND is_active = FALSE AND triggered_at IS NOT NULL AND dismissed_at IS NULL
+            """.trimIndent(),
+            userId.toString()
         )?.getValue(0, Int::class.java) ?: 0
     }
 
     private fun Record.toResponse(): AlertResponse {
         return AlertResponse(
             id = UUID.fromString(get("id", String::class.java)),
+            userId = UUID.fromString(get("user_id", String::class.java)),
             symbol = get("symbol", String::class.java),
             condition = get("condition", String::class.java),
             thresholdPrice = get("threshold_price", BigDecimal::class.java),

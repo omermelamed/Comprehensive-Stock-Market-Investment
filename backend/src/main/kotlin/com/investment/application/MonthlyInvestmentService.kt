@@ -32,11 +32,11 @@ class MonthlyInvestmentService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun preview(request: MonthlyFlowPreviewRequest): MonthlyFlowPreviewResponse {
+        val userId = RequestContext.get()
         require(request.budget > BigDecimal.ZERO) { "Budget must be greater than zero" }
 
-        val holdings = holdingsRepository.findAll()
+        val holdings = holdingsRepository.findAll(userId)
         val allAllocations = allocationRepository.findAll()
-        // Only pass leaf allocations to the calculator — skip category parents
         val allocations = allAllocations.filter { !it.isCategory }
         val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
@@ -102,8 +102,6 @@ class MonthlyInvestmentService(
         var transactionsCreated = 0
         for (entry in investable) {
             val quote = marketDataService.getQuote(entry.symbol.uppercase())
-            // Convert the user-entered amount (in their currency) back to the stock's native currency
-            // to calculate how many shares were bought.
             val rate = marketDataService.getExchangeRate(userCurrency, quote.currency)
             val amountInStockCurrency = entry.amount * rate
             val quantity = amountInStockCurrency.divide(quote.price, 6, RoundingMode.HALF_UP)

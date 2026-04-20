@@ -13,6 +13,7 @@ class RiskScoreHistoryRepository(
 ) {
 
     fun insert(
+        userId: UUID,
         riskLevel: String,
         aiInferredScore: BigDecimal,
         reasoning: String,
@@ -21,10 +22,11 @@ class RiskScoreHistoryRepository(
     ): RiskHistoryEntryResponse {
         val record = dsl.fetchOne(
             """
-            INSERT INTO risk_score_history (risk_level, ai_inferred_score, reasoning, trigger, transaction_count_at_update)
-            VALUES (?::risk_level_enum, ?, ?, ?::risk_score_trigger_enum, ?)
+            INSERT INTO risk_score_history (user_id, risk_level, ai_inferred_score, reasoning, trigger, transaction_count_at_update)
+            VALUES (?::uuid, ?::risk_level_enum, ?, ?, ?::risk_score_trigger_enum, ?)
             RETURNING *
             """.trimIndent(),
+            userId,
             riskLevel,
             aiInferredScore,
             reasoning,
@@ -43,13 +45,15 @@ class RiskScoreHistoryRepository(
         )
     }
 
-    fun findAllNewestFirst(): List<RiskHistoryEntryResponse> {
+    fun findAllNewestFirst(userId: UUID): List<RiskHistoryEntryResponse> {
         return dsl.fetch(
             """
             SELECT id, risk_level, ai_inferred_score, reasoning, trigger, transaction_count_at_update, created_at
             FROM risk_score_history
+            WHERE user_id = ?::uuid
             ORDER BY created_at DESC
-            """.trimIndent()
+            """.trimIndent(),
+            userId
         ).map { record ->
             RiskHistoryEntryResponse(
                 id = UUID.fromString(record.get("id", String::class.java)),

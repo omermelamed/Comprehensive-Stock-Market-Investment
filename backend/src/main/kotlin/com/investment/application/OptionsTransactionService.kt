@@ -21,16 +21,19 @@ class OptionsTransactionService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun listAll(): OptionsListResponse {
+        val userId = RequestContext.get()
         val profile = userProfileService.getProfile()
         val enabled = profile?.tracksEnabled?.any { it.uppercase() == "OPTIONS" } ?: false
-        val positions = if (enabled) optionsRepository.findAll() else emptyList()
+        val positions = if (enabled) optionsRepository.findAll(userId) else emptyList()
         return OptionsListResponse(positions = positions, optionsTrackEnabled = enabled)
     }
 
     fun create(request: OptionsTransactionRequest): OptionsTransactionResponse {
+        val userId = RequestContext.get()
         requireOptionsTrackEnabled()
         validateRequest(request)
         return optionsRepository.insert(
+            userId = userId,
             underlyingSymbol = request.underlyingSymbol.trim().uppercase(),
             optionType = request.optionType.trim().uppercase(),
             action = request.action.trim().uppercase(),
@@ -43,20 +46,23 @@ class OptionsTransactionService(
     }
 
     fun updateStatus(id: UUID, request: UpdateOptionsStatusRequest): OptionsTransactionResponse {
+        val userId = RequestContext.get()
         requireOptionsTrackEnabled()
         val status = request.status.trim().uppercase()
         require(status in setOf("EXPIRED", "EXERCISED", "CLOSED")) {
             "Status must be one of: EXPIRED, EXERCISED, CLOSED"
         }
-        return optionsRepository.updateStatus(id, status)
+        return optionsRepository.updateStatus(userId, id, status)
     }
 
     fun delete(id: UUID) {
+        val userId = RequestContext.get()
         requireOptionsTrackEnabled()
-        optionsRepository.delete(id)
+        optionsRepository.delete(userId, id)
     }
 
     fun getStrategy(symbol: String): OptionsStrategyResponse {
+        RequestContext.get()
         requireOptionsTrackEnabled()
         val profile = userProfileService.getProfile()
         val riskLevel = profile?.riskLevel ?: "MODERATE"

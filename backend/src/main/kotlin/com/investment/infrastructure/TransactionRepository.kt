@@ -28,13 +28,15 @@ class TransactionRepository(
     private val dsl: DSLContext
 ) {
 
-    fun findAllOrderedByExecutedAtAsc(): List<TransactionLedgerRow> {
+    fun findAllOrderedByExecutedAtAsc(userId: UUID): List<TransactionLedgerRow> {
         return dsl.fetch(
             """
             SELECT symbol, type, track, quantity, price_per_unit, executed_at
             FROM transactions
+            WHERE user_id = ?::uuid
             ORDER BY executed_at ASC
-            """.trimIndent()
+            """.trimIndent(),
+            userId.toString()
         ).map { row ->
             TransactionLedgerRow(
                 symbol = row.get("symbol", String::class.java),
@@ -47,33 +49,38 @@ class TransactionRepository(
         }
     }
 
-    fun findAll(page: Int, size: Int): List<TransactionResponse> {
+    fun findAll(userId: UUID, page: Int, size: Int): List<TransactionResponse> {
         val offset = page * size
         return dsl.fetch(
             """
             SELECT * FROM transactions
+            WHERE user_id = ?::uuid
             ORDER BY executed_at DESC
             LIMIT ? OFFSET ?
             """.trimIndent(),
+            userId.toString(),
             size,
             offset
         ).map { it.toResponse() }
     }
 
-    fun count(): Long {
-        return dsl.fetchOne("SELECT COUNT(*) FROM transactions")
-            ?.get(0, Long::class.java) ?: 0L
+    fun count(userId: UUID): Long {
+        return dsl.fetchOne(
+            "SELECT COUNT(*) FROM transactions WHERE user_id = ?::uuid",
+            userId.toString()
+        )?.get(0, Long::class.java) ?: 0L
     }
 
-    fun insert(request: TransactionRequest): TransactionResponse {
+    fun insert(userId: UUID, request: TransactionRequest): TransactionResponse {
         val id = UUID.randomUUID()
         val record = dsl.fetchOne(
             """
-            INSERT INTO transactions (id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at)
-            VALUES (?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW())
+            INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at)
+            VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW())
             RETURNING *
             """.trimIndent(),
             id.toString(),
+            userId.toString(),
             request.symbol.uppercase(),
             request.type.uppercase(),
             request.track.uppercase(),
@@ -86,26 +93,20 @@ class TransactionRepository(
         return record.toResponse()
     }
 
-    /**
-     * Bulk-inserts a list of pre-validated [ParsedTransactionRow]s with source = 'IMPORT'.
-     * [ParsedTransactionRow.transactionDate] is an ISO date string (yyyy-MM-dd); it is stored
-     * as midnight UTC on that day so that holdings derivation treats it as an end-of-day event.
-     * Returns the count of successfully inserted rows.
-     */
-    fun insertImport(rows: List<ParsedTransactionRow>): Int {
+    fun insertImport(userId: UUID, rows: List<ParsedTransactionRow>): Int {
         var inserted = 0
         for (row in rows) {
             val id = UUID.randomUUID()
-            // Parse the date and store as start-of-day UTC timestamp
             val executedAt = LocalDate.parse(row.transactionDate)
                 .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
             dsl.execute(
                 """
-                INSERT INTO transactions (id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at, source)
-                VALUES (?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW(), 'IMPORT')
+                INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at, source)
+                VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW(), 'IMPORT')
                 """.trimIndent(),
                 id.toString(),
+                userId.toString(),
                 row.symbol.uppercase(),
                 row.transactionType.uppercase(),
                 row.track.uppercase(),
@@ -119,35 +120,40 @@ class TransactionRepository(
         return inserted
     }
 
-    fun countByType(): Map<String, Int> {
+    fun countByType(userId: UUID): Map<String, Int> {
         return dsl.fetch(
-            "SELECT type, COUNT(*) AS cnt FROM transactions GROUP BY type"
+            "SELECT type, COUNT(*) AS cnt FROM transactions WHERE user_id = ?::uuid GROUP BY type",
+            userId.toString()
         ).associate { record ->
             record.get("type", String::class.java) to record.get("cnt", Long::class.java).toInt()
         }
     }
 
-    fun findEarliestTransactionDate(): LocalDate? {
-        val record = dsl.fetchOne("SELECT MIN(executed_at::date) AS earliest_date FROM transactions")
+    fun findEarliestTransactionDate(userId: UUID): LocalDate? {
+        val record = dsl.fetchOne(
+            "SELECT MIN(executed_at::date) AS earliest_date FROM transactions WHERE user_id = ?::uuid",
+            userId.toString()
+        )
         val date = record?.get("earliest_date", Date::class.java)
         return date?.toLocalDate()
     }
 
-    fun findExecutedAtById(id: UUID): Instant? {
+    fun findExecutedAtById(userId: UUID, id: UUID): Instant? {
         val record = dsl.fetchOne(
-            "SELECT executed_at FROM transactions WHERE id = ?::uuid",
-            id.toString()
+            "SELECT executed_at FROM transactions WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         return record?.get("executed_at", Timestamp::class.java)?.toInstant()
     }
 
-    fun update(id: UUID, request: TransactionRequest): TransactionResponse {
+    fun update(userId: UUID, id: UUID, request: TransactionRequest): TransactionResponse {
         val record = dsl.fetchOne(
             """
             UPDATE transactions
             SET symbol = ?, type = ?::transaction_type_enum, track = ?::track_enum,
                 quantity = ?, price_per_unit = ?, notes = ?, executed_at = ?
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
             request.symbol.uppercase(),
@@ -157,15 +163,17 @@ class TransactionRepository(
             request.pricePerUnit,
             request.notes,
             Timestamp.from(request.executedAt),
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No transaction found with id $id")
         return record.toResponse()
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM transactions WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM transactions WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) {
             throw NoSuchElementException("No transaction found with id $id")

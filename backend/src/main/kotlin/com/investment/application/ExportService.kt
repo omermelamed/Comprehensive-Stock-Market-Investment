@@ -54,7 +54,8 @@ class ExportService(
      * Exports the full transaction ledger in chronological order.
      */
     fun exportTransactions(format: String): ByteArray {
-        val transactions = transactionRepository.findAll(page = 0, size = Int.MAX_VALUE)
+        val userId = RequestContext.get()
+        val transactions = transactionRepository.findAll(userId, page = 0, size = Int.MAX_VALUE)
 
         val headers = listOf(
             "ID", "Symbol", "Type", "Track",

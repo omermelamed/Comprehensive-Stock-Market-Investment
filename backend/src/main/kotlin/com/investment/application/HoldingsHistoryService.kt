@@ -30,6 +30,7 @@ class HoldingsHistoryService(
     private val executor = Executors.newFixedThreadPool(6)
 
     fun getHoldingsHistory(range: String): HoldingsHistoryResponse {
+        val userId = RequestContext.get()
         val today = LocalDate.now(clock)
         val portfolioCurrency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
@@ -37,11 +38,11 @@ class HoldingsHistoryService(
             .associate { it.symbol.uppercase() to it.label }
 
         // Single DB call — group by symbol
-        val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc()
+        val allTransactions = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
             .filter { it.type.uppercase() in setOf("BUY", "SELL") }
             .groupBy { it.symbol.uppercase() }
 
-        val activeSymbols = holdingsRepository.findAll()
+        val activeSymbols = holdingsRepository.findAll(userId)
             .filter { it.netQuantity.compareTo(BigDecimal.ZERO) > 0 }
             .map { it.symbol.uppercase() }
 

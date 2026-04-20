@@ -14,7 +14,8 @@ import java.time.LocalDate
 class DailySnapshotScheduler(
     private val snapshotService: SnapshotService,
     private val catchUpService: CatchUpService,
-    private val clock: Clock
+    private val clock: Clock,
+    private val userRepository: UserRepository
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -22,8 +23,13 @@ class DailySnapshotScheduler(
     @Scheduled(cron = "0 0 0 * * *")
     fun scheduledDailySnapshot() {
         val today = LocalDate.now(clock)
-        log.info("Daily scheduler: creating snapshot for {}", today)
-        snapshotService.createSnapshotForDate(today, "SCHEDULED")
+        for (userId in userRepository.findAllIds()) {
+            try {
+                snapshotService.createSnapshotForDate(userId, today, "SCHEDULED")
+            } catch (e: Exception) {
+                log.error("Snapshot failed for user {}: {}", userId, e.message)
+            }
+        }
     }
 
     @EventListener(ApplicationReadyEvent::class)
@@ -32,7 +38,12 @@ class DailySnapshotScheduler(
         catchUpService.runCatchUp()
 
         val today = LocalDate.now(clock)
-        log.info("Application ready: ensuring today's snapshot exists for {}", today)
-        snapshotService.createSnapshotForDate(today, "SCHEDULED")
+        for (userId in userRepository.findAllIds()) {
+            try {
+                snapshotService.createSnapshotForDate(userId, today, "SCHEDULED")
+            } catch (e: Exception) {
+                log.error("Startup snapshot failed for user {}: {}", userId, e.message)
+            }
+        }
     }
 }

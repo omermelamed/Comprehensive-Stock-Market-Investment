@@ -17,7 +17,8 @@ class RiskProfileService(
 ) {
 
     fun getHistory(): List<RiskHistoryEntryResponse> {
-        return riskScoreHistoryRepository.findAllNewestFirst()
+        val userId = RequestContext.get()
+        return riskScoreHistoryRepository.findAllNewestFirst(userId)
     }
 
     fun evaluate(trigger: String): RiskEvaluationResponse {
@@ -25,7 +26,7 @@ class RiskProfileService(
         val profile = userProfileRepository.findByUserId(userId)
             ?: throw NoSuchElementException("No user profile found — cannot evaluate risk")
 
-        val countByType = transactionRepository.countByType()
+        val countByType = transactionRepository.countByType(userId)
         val totalTransactions = countByType.values.sum()
         val buyCount = countByType["BUY"] ?: 0
         val sellCount = countByType["SELL"] ?: 0
@@ -42,6 +43,7 @@ class RiskProfileService(
         userProfileRepository.updateRiskScore(userId, result.riskLevel, result.aiInferredScore)
 
         riskScoreHistoryRepository.insert(
+            userId = userId,
             riskLevel = result.riskLevel,
             aiInferredScore = result.aiInferredScore,
             reasoning = result.reasoning,

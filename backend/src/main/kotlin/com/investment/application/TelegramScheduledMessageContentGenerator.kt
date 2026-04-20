@@ -194,7 +194,7 @@ class TelegramScheduledMessageContentGenerator(
         val monthStart = currentMonth.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant()
         val monthEnd   = currentMonth.atEndOfMonth().atStartOfDay(ZoneOffset.UTC).plusDays(1).toInstant()
 
-        val transactions = transactionRepository.findAllOrderedByExecutedAtAsc()
+        val transactions = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
         val investedThisMonth = transactions.any { tx ->
             tx.type == "BUY" && tx.executedAt >= monthStart && tx.executedAt < monthEnd
         }

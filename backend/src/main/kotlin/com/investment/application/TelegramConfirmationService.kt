@@ -357,8 +357,9 @@ class TelegramConfirmationService(
                 )
             }
             is ClassifiedIntent.SellHolding -> {
+                val userId = RequestContext.get()
                 val symbol = intent.symbol.uppercase()
-                val holding = holdingsRepository.findAll()
+                val holding = holdingsRepository.findAll(userId)
                     .firstOrNull { it.symbol.equals(symbol, ignoreCase = true) }
                 val sharesHeld = holding?.netQuantity ?: BigDecimal.ZERO
                 val quantity = when (intent.quantityMode) {

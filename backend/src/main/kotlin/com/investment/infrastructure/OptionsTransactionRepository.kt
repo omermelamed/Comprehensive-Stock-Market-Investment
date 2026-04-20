@@ -12,15 +12,24 @@ import java.util.UUID
 @Repository
 class OptionsTransactionRepository(private val dsl: DSLContext) {
 
-    fun findAll(): List<OptionsTransactionResponse> =
-        dsl.fetch("SELECT * FROM options_transactions ORDER BY executed_at DESC")
-            .map { it.toResponse(currentPremium = null) }
+    fun findAll(userId: UUID): List<OptionsTransactionResponse> =
+        dsl.fetch(
+            "SELECT * FROM options_transactions WHERE user_id = ?::uuid ORDER BY executed_at DESC",
+            userId.toString()
+        ).map { it.toResponse(currentPremium = null) }
 
-    fun findActive(): List<OptionsTransactionResponse> =
-        dsl.fetch("SELECT * FROM options_transactions WHERE status = 'ACTIVE' ORDER BY expiration_date ASC")
-            .map { it.toResponse(currentPremium = null) }
+    fun findActive(userId: UUID): List<OptionsTransactionResponse> =
+        dsl.fetch(
+            """
+            SELECT * FROM options_transactions
+            WHERE user_id = ?::uuid AND status = 'ACTIVE'
+            ORDER BY expiration_date ASC
+            """.trimIndent(),
+            userId.toString()
+        ).map { it.toResponse(currentPremium = null) }
 
     fun insert(
+        userId: UUID,
         underlyingSymbol: String,
         optionType: String,
         action: String,
@@ -33,11 +42,12 @@ class OptionsTransactionRepository(private val dsl: DSLContext) {
         val record = dsl.fetchOne(
             """
             INSERT INTO options_transactions
-                (underlying_symbol, option_type, action, strike_price, expiration_date,
+                (user_id, underlying_symbol, option_type, action, strike_price, expiration_date,
                  contracts, premium_per_contract, notes)
-            VALUES (?, ?::option_type_enum, ?::option_action_enum, ?, ?, ?, ?, ?)
+            VALUES (?::uuid, ?, ?::option_type_enum, ?::option_action_enum, ?, ?, ?, ?, ?)
             RETURNING *
             """.trimIndent(),
+            userId.toString(),
             underlyingSymbol.uppercase(),
             optionType.uppercase(),
             action.uppercase(),
@@ -51,37 +61,41 @@ class OptionsTransactionRepository(private val dsl: DSLContext) {
         return record.toResponse(currentPremium = null)
     }
 
-    fun updateStatus(id: UUID, status: String): OptionsTransactionResponse {
+    fun updateStatus(userId: UUID, id: UUID, status: String): OptionsTransactionResponse {
         val record = dsl.fetchOne(
             """
             UPDATE options_transactions
             SET status = ?::option_status_enum
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
             status.uppercase(),
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No options transaction found with id $id")
 
         return record.toResponse(currentPremium = null)
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM options_transactions WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM options_transactions WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) throw NoSuchElementException("No options transaction found with id $id")
     }
 
-    fun findExpiringWithin(days: Int): List<OptionsTransactionResponse> =
+    fun findExpiringWithin(userId: UUID, days: Int): List<OptionsTransactionResponse> =
         dsl.fetch(
             """
             SELECT * FROM options_transactions
-            WHERE status = 'ACTIVE'
+            WHERE user_id = ?::uuid
+              AND status = 'ACTIVE'
               AND expiration_date <= CURRENT_DATE + ?::integer
             ORDER BY expiration_date ASC
             """.trimIndent(),
+            userId.toString(),
             days
         ).map { it.toResponse(currentPremium = null) }
 

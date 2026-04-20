@@ -15,25 +15,29 @@ class WatchlistRepository(
     private val objectMapper: ObjectMapper
 ) {
 
-    fun findAll(): List<WatchlistItemResponse> {
-        return dsl.fetch("SELECT * FROM watchlist ORDER BY added_at DESC")
-            .map { it.toResponse() }
+    fun findAll(userId: UUID): List<WatchlistItemResponse> {
+        return dsl.fetch(
+            "SELECT * FROM watchlist WHERE user_id = ?::uuid ORDER BY added_at DESC",
+            userId.toString()
+        ).map { it.toResponse() }
     }
 
-    fun findById(id: UUID): WatchlistItemResponse? {
+    fun findById(userId: UUID, id: UUID): WatchlistItemResponse? {
         return dsl.fetchOne(
-            "SELECT * FROM watchlist WHERE id = ?::uuid",
-            id.toString()
+            "SELECT * FROM watchlist WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )?.toResponse()
     }
 
-    fun insert(symbol: String, assetType: String): WatchlistItemResponse {
+    fun insert(userId: UUID, symbol: String, assetType: String): WatchlistItemResponse {
         val record = dsl.fetchOne(
             """
-            INSERT INTO watchlist (symbol, asset_type)
-            VALUES (?, ?::asset_type_enum)
+            INSERT INTO watchlist (id, user_id, symbol, asset_type)
+            VALUES (gen_random_uuid(), ?::uuid, ?, ?::asset_type_enum)
             RETURNING *
             """.trimIndent(),
+            userId.toString(),
             symbol.uppercase(),
             assetType.uppercase()
         ) ?: throw IllegalStateException("Insert into watchlist returned no record")
@@ -41,10 +45,11 @@ class WatchlistRepository(
         return record.toResponse()
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM watchlist WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM watchlist WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) {
             throw NoSuchElementException("No watchlist item found with id $id")
@@ -52,6 +57,7 @@ class WatchlistRepository(
     }
 
     fun saveAnalysis(
+        userId: UUID,
         id: UUID,
         signal: String,
         signalSummary: String,
@@ -65,13 +71,14 @@ class WatchlistRepository(
                 full_analysis = ?::jsonb,
                 last_analyzed_at = NOW(),
                 updated_at = NOW()
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
             signal,
             signalSummary,
             fullAnalysis,
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No watchlist item found with id $id")
 
         return record.toResponse()

@@ -10,6 +10,7 @@ import com.investment.api.dto.PortfolioSummaryResponse
 import com.investment.application.HoldingsHistoryService
 import com.investment.application.MarketDataService
 import com.investment.application.PortfolioSummaryService
+import com.investment.application.RequestContext
 import com.investment.application.UserProfileService
 import com.investment.infrastructure.SnapshotRepository
 import org.springframework.web.bind.annotation.GetMapping
@@ -44,15 +45,16 @@ class PortfolioController(
 
     @GetMapping("/history")
     fun getHistory(@RequestParam(defaultValue = "1M") range: String): PortfolioHistoryResponse {
+        val userId = RequestContext.get()
         val today = LocalDate.now(clock)
         val records = when (range) {
-            "1W" -> snapshotRepository.findByDateRange(today.minusDays(7), today)
-            "1M" -> snapshotRepository.findByDateRange(today.minusDays(30), today)
-            "3M" -> snapshotRepository.findByDateRange(today.minusDays(90), today)
-            "6M" -> snapshotRepository.findByDateRange(today.minusDays(180), today)
-            "1Y" -> snapshotRepository.findByDateRange(today.minusDays(365), today)
-            "ALL" -> snapshotRepository.findAllOrderedByDate()
-            else -> snapshotRepository.findByDateRange(today.minusDays(30), today)
+            "1W" -> snapshotRepository.findByDateRange(userId, today.minusDays(7), today)
+            "1M" -> snapshotRepository.findByDateRange(userId, today.minusDays(30), today)
+            "3M" -> snapshotRepository.findByDateRange(userId, today.minusDays(90), today)
+            "6M" -> snapshotRepository.findByDateRange(userId, today.minusDays(180), today)
+            "1Y" -> snapshotRepository.findByDateRange(userId, today.minusDays(365), today)
+            "ALL" -> snapshotRepository.findAllOrderedByDate(userId)
+            else -> snapshotRepository.findByDateRange(userId, today.minusDays(30), today)
         }
 
         // Snapshots are stored in USD (native currency). Convert to user's preferred currency

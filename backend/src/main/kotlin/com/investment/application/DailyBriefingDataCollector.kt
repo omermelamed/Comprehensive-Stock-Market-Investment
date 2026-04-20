@@ -67,7 +67,7 @@ class DailyBriefingDataCollector(
         val profile = userProfileRepository.findByUserId(userId)
         val currency = profile?.preferredCurrency ?: "USD"
 
-        val holdings = holdingsRepository.findAll().filter { it.track.uppercase() == "LONG" }
+        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() == "LONG" }
         val allocationsBySym = allocationRepository.findAll()
             .associateBy { it.symbol.uppercase() }
 
@@ -88,8 +88,8 @@ class DailyBriefingDataCollector(
         val portfolioTotal = holdingValues.values.fold(BigDecimal.ZERO, BigDecimal::add)
 
         // Today's portfolio change vs yesterday's snapshot
-        val todaySnapshot = snapshotRepository.findByDate(today)
-        val yesterdaySnapshot = snapshotRepository.findByDate(today.minusDays(1))
+        val todaySnapshot = snapshotRepository.findByDate(userId, today)
+        val yesterdaySnapshot = snapshotRepository.findByDate(userId, today.minusDays(1))
         val portfolioChangeAbsolute: BigDecimal? = if (todaySnapshot != null && yesterdaySnapshot != null) {
             todaySnapshot.totalValue - yesterdaySnapshot.totalValue
         } else null

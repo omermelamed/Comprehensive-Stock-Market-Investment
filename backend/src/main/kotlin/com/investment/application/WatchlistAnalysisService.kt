@@ -22,7 +22,8 @@ class WatchlistAnalysisService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun analyze(id: UUID): WatchlistItemResponse {
-        val item = watchlistRepository.findById(id)
+        val userId = RequestContext.get()
+        val item = watchlistRepository.findById(userId, id)
             ?: throw NoSuchElementException("No watchlist item found with id $id")
 
         val currentPrice = try {
@@ -75,6 +76,7 @@ class WatchlistAnalysisService(
         val (signal, summary, _, fullAnalysisJson) = parseAnalysisResponse(rawResponse)
 
         return watchlistRepository.saveAnalysis(
+            userId = userId,
             id = id,
             signal = signal,
             signalSummary = summary,

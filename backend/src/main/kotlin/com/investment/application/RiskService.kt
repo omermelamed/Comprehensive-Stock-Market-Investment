@@ -23,6 +23,7 @@ import java.math.RoundingMode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 @Service
 class RiskService(
@@ -38,6 +39,7 @@ class RiskService(
     private val scale2 = RoundingMode.HALF_UP
 
     fun getRiskMetrics(): RiskMetricsResponse {
+        val userId: UUID = RequestContext.get()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
         val thresholds = riskThresholdRepository.get()
 
@@ -55,7 +57,7 @@ class RiskService(
         }
 
         val summary = portfolioSummaryService.getPortfolioSummary()
-        val snapshots = snapshotRepository.findAllOrderedByDate()
+        val snapshots = snapshotRepository.findAllOrderedByDate(userId)
         val perf = PerformanceCalculator.compute(
             snapshots = snapshots,
             currentTotalValue = summary.totalValue,
@@ -158,17 +160,18 @@ class RiskService(
     }
 
     fun getRiskWarnings(): RiskWarningsResponse {
+        val userId: UUID = RequestContext.get()
         val thresholds = riskThresholdRepository.get()
         val holdings = portfolioSummaryService.getHoldingsDashboard()
         val summary = portfolioSummaryService.getPortfolioSummary()
-        val snapshots = snapshotRepository.findAllOrderedByDate()
+        val snapshots = snapshotRepository.findAllOrderedByDate(userId)
         val perf = PerformanceCalculator.compute(
             snapshots = snapshots,
             currentTotalValue = summary.totalValue,
             totalCostBasis = summary.totalCostBasis
         )
 
-        val lastSession = monthlyInvestmentSessionRepository.findLastSessionDate()
+        val lastSession = monthlyInvestmentSessionRepository.findLastSessionDate(userId)
         val today = LocalDate.now(clock)
         val daysSinceRebalance = lastSession?.let { ChronoUnit.DAYS.between(it, today).toInt() }
 
