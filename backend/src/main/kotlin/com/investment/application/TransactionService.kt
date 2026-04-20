@@ -65,6 +65,32 @@ class TransactionService(
     }
 
     @Transactional
+    fun updateTransaction(id: UUID, request: TransactionRequest): TransactionResponse {
+        val oldExecutedAt = transactionRepository.findExecutedAtById(id)
+            ?: throw NoSuchElementException("No transaction found with id $id")
+
+        val currentHolding = holdingsProjectionRepository.findBySymbolAndTrack(
+            symbol = request.symbol,
+            track = request.track
+        )
+
+        when (val result = TransactionValidator.validate(request, currentHolding)) {
+            is ValidationResult.Invalid -> throw IllegalArgumentException(result.message)
+            is ValidationResult.Valid -> { /* proceed */ }
+        }
+
+        val updated = transactionRepository.update(id, request)
+
+        val earliestDate = minOf(
+            oldExecutedAt.atZone(ZoneOffset.UTC).toLocalDate(),
+            request.executedAt.atZone(ZoneOffset.UTC).toLocalDate()
+        )
+        schedulePostCommitSnapshotRegeneration(earliestDate.atStartOfDay(ZoneOffset.UTC).toInstant())
+
+        return updated
+    }
+
+    @Transactional
     fun deleteTransaction(id: UUID) {
         val executedAt = transactionRepository.findExecutedAtById(id)
         transactionRepository.delete(id)

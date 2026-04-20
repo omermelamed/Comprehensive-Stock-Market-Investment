@@ -141,6 +141,27 @@ class TransactionRepository(
         return record?.get("executed_at", Timestamp::class.java)?.toInstant()
     }
 
+    fun update(id: UUID, request: TransactionRequest): TransactionResponse {
+        val record = dsl.fetchOne(
+            """
+            UPDATE transactions
+            SET symbol = ?, type = ?::transaction_type_enum, track = ?::track_enum,
+                quantity = ?, price_per_unit = ?, notes = ?, executed_at = ?
+            WHERE id = ?::uuid
+            RETURNING *
+            """.trimIndent(),
+            request.symbol.uppercase(),
+            request.type.uppercase(),
+            request.track.uppercase(),
+            request.quantity,
+            request.pricePerUnit,
+            request.notes,
+            Timestamp.from(request.executedAt),
+            id.toString()
+        ) ?: throw NoSuchElementException("No transaction found with id $id")
+        return record.toResponse()
+    }
+
     fun delete(id: UUID) {
         val deleted = dsl.execute(
             "DELETE FROM transactions WHERE id = ?::uuid",

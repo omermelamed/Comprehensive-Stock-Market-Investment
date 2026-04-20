@@ -34,7 +34,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
     setSubmitting(true)
     setError(null)
     try {
-      await updateTransaction(Number(transaction.id), {
+      await updateTransaction(transaction.id, {
         symbol: symbol.trim().toUpperCase(),
         type,
         track,
