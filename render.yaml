@@ -3,7 +3,6 @@ services:
     name: investment-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
     plan: free
     healthCheckPath: /actuator/health
     envVars:
