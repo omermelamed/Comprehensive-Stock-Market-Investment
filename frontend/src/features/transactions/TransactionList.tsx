@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Pencil } from 'lucide-react'
 import { getTransactions, deleteTransaction } from '../../api/transactions'
 import type { Transaction } from '../../types'
 import { Card } from '@/components/ui/card'
+import EditTransactionModal from './EditTransactionModal'
 
 const TYPE_STYLES: Record<string, string> = {
   BUY:        'bg-success/15 text-success',
@@ -22,6 +24,7 @@ export default function TransactionList() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Transaction | null>(null)
 
   async function load() {
     setLoading(true)
@@ -103,19 +106,36 @@ export default function TransactionList() {
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-xs text-foreground">{fmt(tx.pricePerUnit)}</td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-sm font-semibold text-foreground">{fmt(tx.totalValue)}</td>
                 <td className="px-6 py-3 text-right">
-                  <button
-                    onClick={() => void handleDelete(tx.id)}
-                    disabled={deleting === tx.id}
-                    className="text-xs text-muted-foreground hover:text-destructive transition-colors duration-150 disabled:opacity-40"
-                  >
-                    {deleting === tx.id ? '…' : 'Delete'}
-                  </button>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setEditing(tx)}
+                      className="text-muted-foreground opacity-40 hover:opacity-100 hover:text-foreground transition-all duration-150"
+                      aria-label={`Edit ${tx.symbol}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => void handleDelete(tx.id)}
+                      disabled={deleting === tx.id}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors duration-150 disabled:opacity-40"
+                    >
+                      {deleting === tx.id ? '…' : 'Delete'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {editing && (
+        <EditTransactionModal
+          transaction={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { void load() }}
+        />
+      )}
     </Card>
   )
 }

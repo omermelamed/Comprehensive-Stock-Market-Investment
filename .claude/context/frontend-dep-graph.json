@@ -423,12 +423,18 @@
   "features/telegram/useTelegramSchedules.ts": [
     "api/telegramSchedules.ts"
   ],
+  "features/transactions/EditTransactionModal.tsx": [
+    "api/transactions.ts",
+    "data/onboarding.ts",
+    "types/index.ts"
+  ],
   "features/transactions/SymbolAutocomplete.tsx": [
     "types/index.ts"
   ],
   "features/transactions/TransactionList.tsx": [
     "api/transactions.ts",
     "components/ui/card.tsx",
+    "features/transactions/EditTransactionModal.tsx",
     "types/index.ts"
   ],
   "features/transactions/useTransactionForm.ts": [
