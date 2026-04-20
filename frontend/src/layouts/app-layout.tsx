@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -40,20 +41,25 @@ interface NavGroup {
   items: NavItem[]
 }
 
-function NavSection({ group, alertCount }: { group: NavGroup; alertCount: number }) {
+function NavSection({ group, alertCount, collapsed }: { group: NavGroup; alertCount: number; collapsed: boolean }) {
   return (
     <div className="mb-1">
-      <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
-        {group.label}
-      </p>
+      {!collapsed && (
+        <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
+          {group.label}
+        </p>
+      )}
+      {collapsed && <div className="mb-1 h-3" />}
       {group.items.map(({ to, label, icon: Icon, end, badge }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
+          title={collapsed ? label : undefined}
           className={({ isActive }) =>
             cn(
-              'group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+              'group relative flex items-center rounded-lg transition-all duration-150',
+              collapsed ? 'justify-center px-0 py-2 mx-1' : 'gap-2.5 px-3 py-2',
               isActive
                 ? 'bg-primary/12 text-primary'
                 : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
@@ -62,7 +68,7 @@ function NavSection({ group, alertCount }: { group: NavGroup; alertCount: number
         >
           {({ isActive }) => (
             <>
-              {isActive && (
+              {isActive && !collapsed && (
                 <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
               )}
               <Icon
@@ -71,15 +77,20 @@ function NavSection({ group, alertCount }: { group: NavGroup; alertCount: number
                   isActive ? 'text-primary' : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70',
                 )}
               />
-              <span className="flex-1 truncate">{label}</span>
-              {to === '/alerts' && alertCount > 0 && (
+              {!collapsed && <span className="flex-1 truncate text-sm font-medium">{label}</span>}
+              {!collapsed && to === '/alerts' && alertCount > 0 && (
                 <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
                   {alertCount > 99 ? '99+' : alertCount}
                 </span>
               )}
-              {badge != null && badge > 0 && to !== '/alerts' && (
+              {!collapsed && badge != null && badge > 0 && to !== '/alerts' && (
                 <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/20 px-1 text-[10px] font-semibold leading-none text-primary">
                   {badge}
+                </span>
+              )}
+              {collapsed && to === '/alerts' && alertCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-3 w-3 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white">
+                  {alertCount > 9 ? '9+' : alertCount}
                 </span>
               )}
             </>
@@ -94,6 +105,8 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
   const { theme, toggle } = useTheme()
   const chatPanel = useChatPanel()
   const { count: alertBadgeCount } = useAlertBadge()
+  const [hovered, setHovered] = useState(false)
+  const collapsed = !hovered
 
   const optionsEnabled = tracksEnabled.includes('OPTIONS')
 
@@ -130,27 +143,38 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
     <>
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-full">
-
+        <aside
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className={cn(
+            'flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-full transition-all duration-200',
+            collapsed ? 'w-14' : 'w-56',
+          )}
+        >
           {/* Logo */}
-          <div className="flex h-14 items-center px-4 border-b border-sidebar-border">
-            <AllocaLogo className="h-6 w-auto text-sidebar-foreground" />
+          <div className="flex h-14 items-center border-b border-sidebar-border px-3">
+            {!collapsed
+              ? <AllocaLogo className="h-6 w-auto text-sidebar-foreground" />
+              : <AllocaLogo className="h-6 w-6 text-sidebar-foreground mx-auto" />
+            }
           </div>
 
           {/* Nav groups */}
-          <nav className="flex flex-col gap-3 overflow-y-auto p-3 pt-4">
+          <nav className="flex flex-col gap-3 overflow-y-auto p-2 pt-4">
             {navGroups.map(group => (
-              <NavSection key={group.label} group={group} alertCount={alertBadgeCount} />
+              <NavSection key={group.label} group={group} alertCount={alertBadgeCount} collapsed={collapsed} />
             ))}
           </nav>
 
           {/* Bottom actions */}
-          <div className="mt-auto border-t border-sidebar-border p-3 space-y-0.5">
+          <div className="mt-auto border-t border-sidebar-border p-2 space-y-0.5">
             <NavLink
               to="/import"
+              title={collapsed ? 'Import' : undefined}
               className={({ isActive }) =>
                 cn(
-                  'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                  'group flex items-center rounded-lg transition-all duration-150',
+                  collapsed ? 'justify-center px-0 py-2 mx-1' : 'gap-2.5 px-3 py-2',
                   isActive
                     ? 'bg-primary/12 text-primary'
                     : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
@@ -158,13 +182,15 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
               }
             >
               <Upload className="h-4 w-4 shrink-0 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70" />
-              <span>Import</span>
+              {!collapsed && <span className="text-sm font-medium">Import</span>}
             </NavLink>
             <NavLink
               to="/profile"
+              title={collapsed ? 'Profile' : undefined}
               className={({ isActive }) =>
                 cn(
-                  'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+                  'group flex items-center rounded-lg transition-all duration-150',
+                  collapsed ? 'justify-center px-0 py-2 mx-1' : 'gap-2.5 px-3 py-2',
                   isActive
                     ? 'bg-primary/12 text-primary'
                     : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
@@ -172,28 +198,31 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
               }
             >
               <User className="h-4 w-4 shrink-0 text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70" />
-              <span>Profile</span>
+              {!collapsed && <span className="text-sm font-medium">Profile</span>}
             </NavLink>
             <button
               onClick={toggle}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              title={collapsed ? (theme === 'dark' ? 'Light mode' : 'Dark mode') : undefined}
+              className={cn(
+                'flex w-full items-center rounded-lg text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                collapsed ? 'justify-center px-0 py-2 mx-1' : 'gap-2.5 px-3 py-2',
+              )}
             >
               {theme === 'dark'
                 ? <Sun className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
                 : <Moon className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
               }
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              {!collapsed && <span className="text-sm font-medium">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
             </button>
           </div>
         </aside>
 
-        {/* Main content — scrolls independently */}
+        {/* Main content */}
         <main className="flex-1 overflow-y-auto bg-background">
           <Outlet />
         </main>
       </div>
 
-      {/* Chat panel — persists across routes */}
       <ChatPanel {...chatPanel} />
     </>
   )
