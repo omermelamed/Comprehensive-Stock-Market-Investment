@@ -169,6 +169,7 @@ export function useOnboarding(onComplete: (profile: UserProfile) => void) {
             quantity: holding.quantity,
             pricePerUnit: holding.pricePerUnit,
             track: holding.track,
+            executedAt: holding.transactionDate ? `${holding.transactionDate}T12:00:00Z` : undefined,
           })
           savedHoldingSymbols.current.add(holding.symbol)
         }
