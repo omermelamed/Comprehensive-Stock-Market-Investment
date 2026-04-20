@@ -1,5 +1,6 @@
 package com.investment.api
 
+import com.investment.domain.ConflictException
 import com.investment.domain.UnauthorizedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -14,6 +15,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException::class)
     fun handleUnauthorized(ex: UnauthorizedException): ResponseEntity<Map<String, String?>> {
         return ResponseEntity.status(401).body(mapOf("error" to ex.message))
+    }
+
+    @ExceptionHandler(ConflictException::class)
+    fun handleConflict(ex: ConflictException): ResponseEntity<Map<String, String?>> {
+        return ResponseEntity.status(409).body(mapOf("error" to ex.message))
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

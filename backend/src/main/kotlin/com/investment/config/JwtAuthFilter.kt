@@ -13,6 +13,14 @@ class JwtAuthFilter(
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
 
+    // Paths that do not require a valid JWT — everything else is protected,
+    // including GET /api/auth/me which needs RequestContext to be populated.
+    private val publicPaths = setOf(
+        "/api/auth/register",
+        "/api/auth/login",
+        "/api/auth/logout"
+    )
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -23,7 +31,7 @@ class JwtAuthFilter(
             return
         }
 
-        if (request.requestURI.startsWith("/api/auth/")) {
+        if (request.requestURI in publicPaths) {
             filterChain.doFilter(request, response)
             return
         }
