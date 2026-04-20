@@ -6,6 +6,7 @@ import java.time.LocalDate
 data class DailyBriefingResponse(
     val date: LocalDate,
     val currency: String,
+    val marketOpen: Boolean,
     val portfolioChangePercent: BigDecimal?,
     val portfolioChangeAbsolute: BigDecimal?,
     val portfolioTotal: BigDecimal,

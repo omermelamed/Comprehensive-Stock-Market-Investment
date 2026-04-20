@@ -26,6 +26,7 @@ class DailyBriefingController(
         val response = DailyBriefingResponse(
             date = data.date,
             currency = data.currency,
+            marketOpen = data.marketOpen,
             portfolioChangePercent = data.portfolioChangePercent,
             portfolioChangeAbsolute = data.portfolioChangeAbsolute,
             portfolioTotal = data.portfolioTotal,

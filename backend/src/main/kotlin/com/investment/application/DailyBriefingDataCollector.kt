@@ -37,10 +37,31 @@ class DailyBriefingDataCollector(
             "^IXIC" to "NASDAQ",
             "^RUT"  to "Russell 2000"
         )
+
+        // US stock market holidays for 2026 (NYSE/NASDAQ schedule)
+        private val US_MARKET_HOLIDAYS_2026 = setOf(
+            LocalDate.of(2026, 1, 1),   // New Year's Day
+            LocalDate.of(2026, 1, 19),  // MLK Day
+            LocalDate.of(2026, 2, 16),  // Presidents' Day
+            LocalDate.of(2026, 4, 3),   // Good Friday
+            LocalDate.of(2026, 5, 25),  // Memorial Day
+            LocalDate.of(2026, 6, 19),  // Juneteenth
+            LocalDate.of(2026, 7, 3),   // Independence Day (observed)
+            LocalDate.of(2026, 9, 7),   // Labor Day
+            LocalDate.of(2026, 11, 26), // Thanksgiving
+            LocalDate.of(2026, 12, 25), // Christmas
+        )
+
+        fun isUsMarketOpen(date: LocalDate): Boolean {
+            val dow = date.dayOfWeek
+            if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) return false
+            return date !in US_MARKET_HOLIDAYS_2026
+        }
     }
 
     fun collect(): DailyBriefingData {
         val today = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC)
+        val marketOpen = isUsMarketOpen(today)
         val profile = userProfileService.getProfile()
         val currency = profile?.preferredCurrency ?: "USD"
 
@@ -116,6 +137,7 @@ class DailyBriefingDataCollector(
         return DailyBriefingData(
             date = today,
             currency = currency,
+            marketOpen = marketOpen,
             portfolioChangeAbsolute = portfolioChangeAbsolute,
             portfolioChangePercent = portfolioChangePercent,
             portfolioTotal = portfolioTotal,

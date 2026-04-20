@@ -47,8 +47,7 @@ export function BriefingWidget() {
   const positive = changePercent == null || changePercent >= 0
   const topGainer = data.topGainers[0] ?? null
   const topLoser = data.topLosers[0] ?? null
-  const day = new Date(data.date + 'T12:00:00Z').getUTCDay()
-  const marketClosed = changePercent == null && (day === 0 || day === 6)
+  const marketClosed = !data.marketOpen
 
   return (
     <Card className="px-4 py-3 space-y-2">
@@ -62,7 +61,7 @@ export function BriefingWidget() {
               Market closed
             </span>
           )}
-          {changePercent != null && (
+          {!marketClosed && changePercent != null && (
             <span
               className={cn(
                 'tabular-nums font-mono text-sm font-bold',
@@ -72,7 +71,7 @@ export function BriefingWidget() {
               {positive ? '▲' : '▼'} {positive ? '+' : ''}{changePercent.toFixed(2)}%
             </span>
           )}
-          {changeAbsolute != null && (
+          {!marketClosed && changeAbsolute != null && (
             <span className="text-xs text-muted-foreground tabular-nums font-mono">
               ({positive ? '+' : ''}{formatMoney(changeAbsolute, data.currency)})
             </span>

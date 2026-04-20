@@ -6,6 +6,7 @@ import java.time.LocalDate
 data class DailyBriefingData(
     val date: LocalDate,
     val currency: String,
+    val marketOpen: Boolean,
     val portfolioChangeAbsolute: BigDecimal?,
     val portfolioChangePercent: BigDecimal?,
     val portfolioTotal: BigDecimal,

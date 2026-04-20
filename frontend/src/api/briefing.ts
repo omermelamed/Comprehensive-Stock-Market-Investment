@@ -25,6 +25,7 @@ export interface NewsHeadlineDto {
 export interface DailyBriefingResponse {
   date: string
   currency: string
+  marketOpen: boolean
   portfolioChangePercent: number | null
   portfolioChangeAbsolute: number | null
   portfolioTotal: number
