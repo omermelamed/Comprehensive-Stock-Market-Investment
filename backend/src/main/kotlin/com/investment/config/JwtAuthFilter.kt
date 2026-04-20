@@ -2,6 +2,7 @@ package com.investment.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.investment.application.JwtService
+import com.investment.application.RequestContext
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -17,6 +18,11 @@ class JwtAuthFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
+        if (request.method == "OPTIONS") {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         if (request.requestURI.startsWith("/api/auth/")) {
             filterChain.doFilter(request, response)
             return
@@ -31,6 +37,7 @@ class JwtAuthFilter(
         if (userId == null) {
             response.status = 401
             response.contentType = "application/json"
+            response.characterEncoding = "UTF-8"
             response.writer.write(objectMapper.writeValueAsString(mapOf("error" to "Unauthorized")))
             return
         }

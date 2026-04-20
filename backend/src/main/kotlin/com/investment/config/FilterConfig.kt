@@ -15,6 +15,7 @@ class FilterConfig(
     @Bean
     fun jwtAuthFilterRegistration(): FilterRegistrationBean<JwtAuthFilter> {
         val filter = FilterRegistrationBean(JwtAuthFilter(jwtService, objectMapper))
+        // "/api/*" is a servlet-spec wildcard: matches any path under /api/ at any depth.
         filter.addUrlPatterns("/api/*")
         filter.order = 1
         return filter

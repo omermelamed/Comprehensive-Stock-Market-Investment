@@ -5,18 +5,26 @@ import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.util.Date
 import java.util.UUID
 
 @Service
 class JwtService(
     @Value("\${app.jwt.secret}") private val secret: String,
-    @Value("\${app.jwt.expiry-days}") private val expiryDays: Long
+    @Value("\${app.jwt.expiry-days}") private val expiryDays: Long,
+    private val clock: Clock
 ) {
+    init {
+        require(secret.length >= 32) {
+            "app.jwt.secret must be at least 32 characters; got ${secret.length}"
+        }
+    }
+
     private val key by lazy { Keys.hmacShaKeyFor(secret.toByteArray()) }
 
     fun generateToken(userId: UUID): String {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val expiry = now + expiryDays * 24 * 60 * 60 * 1000
         return Jwts.builder()
             .subject(userId.toString())

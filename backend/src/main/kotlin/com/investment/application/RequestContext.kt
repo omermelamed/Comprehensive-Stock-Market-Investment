@@ -1,4 +1,4 @@
-package com.investment.config
+package com.investment.application
 
 import com.investment.domain.UnauthorizedException
 import java.util.UUID
