@@ -3,6 +3,10 @@ import { useEffect, useState, Component } from 'react'
 import type { ReactNode, ErrorInfo } from 'react'
 import { getProfile } from './api/profile'
 import type { UserProfile } from './types'
+import { AuthProvider } from './features/auth/AuthContext'
+import { ProtectedRoute } from './components/shared/ProtectedRoute'
+import LoginPage from './features/auth/LoginPage'
+import RegisterPage from './features/auth/RegisterPage'
 import OnboardingPage from './pages/OnboardingPage'
 import TransactionFormPage from './pages/TransactionFormPage'
 import DashboardPage from './pages/DashboardPage'
@@ -58,7 +62,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-function App() {
+function AuthenticatedApp() {
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined)
 
   useEffect(() => {
@@ -78,38 +82,56 @@ function App() {
   const needsOnboarding = !profile || !profile.onboardingCompleted
 
   return (
+    <CurrencyProvider currency={profile?.preferredCurrency ?? 'USD'}>
+      <Routes>
+        <Route path="/onboarding" element={needsOnboarding ? <OnboardingPage onComplete={setProfile} /> : <Navigate to="/" replace />} />
+        <Route
+          element={
+            needsOnboarding
+              ? <Navigate to="/onboarding" replace />
+              : <AppLayout tracksEnabled={profile?.tracksEnabled ?? []} />
+          }
+        >
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/briefing" element={<BriefingPage />} />
+          <Route path="/transactions/new" element={<TransactionFormPage />} />
+          <Route path="/monthly-flow" element={<MonthlyFlowPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/allocations" element={<AllocationPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/risk" element={<RiskPage />} />
+          <Route path="/options" element={<OptionsPage />} />
+          <Route path="/options/new" element={<OptionsTransactionFormPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/import" element={<ImportPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </CurrencyProvider>
+  )
+}
+
+function App() {
+  return (
     <ErrorBoundary>
-      <CurrencyProvider currency={profile?.preferredCurrency ?? 'USD'}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/onboarding" element={needsOnboarding ? <OnboardingPage onComplete={setProfile} /> : <Navigate to="/" replace />} />
-          {/* App shell for authenticated routes */}
-          <Route
-            element={
-              needsOnboarding
-                ? <Navigate to="/onboarding" replace />
-                : <AppLayout tracksEnabled={profile?.tracksEnabled ?? []} />
-            }
-          >
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/briefing" element={<BriefingPage />} />
-            <Route path="/transactions/new" element={<TransactionFormPage />} />
-            <Route path="/monthly-flow" element={<MonthlyFlowPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/allocations" element={<AllocationPage />} />
-            <Route path="/watchlist" element={<WatchlistPage />} />
-            <Route path="/recommendations" element={<RecommendationsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/risk" element={<RiskPage />} />
-            <Route path="/options" element={<OptionsPage />} />
-            <Route path="/options/new" element={<OptionsTransactionFormPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
-            <Route path="/import" element={<ImportPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-      </CurrencyProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AuthenticatedApp />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ErrorBoundary>
   )
 }
