@@ -60,6 +60,12 @@ export interface AnalyticsResponse {
   realizedPnl: RealizedPnl | null
 }
 
+export interface FeesSummary {
+  totalFees: number
+  monthlyFees: Array<{ month: string; fees: number }>
+  symbolFees: Array<{ symbol: string; fees: number }>
+}
+
 export interface MonthlyReturn {
   month: string
   returnPct: number
@@ -67,6 +73,11 @@ export interface MonthlyReturn {
 
 export async function getAnalytics(range: string): Promise<AnalyticsResponse> {
   const res = await client.get<AnalyticsResponse>('/api/analytics', { params: { range } })
+  return res.data
+}
+
+export async function getFeesSummary(): Promise<FeesSummary> {
+  const res = await client.get<FeesSummary>('/api/transactions/fees-summary')
   return res.data
 }
 

@@ -35,6 +35,7 @@ export interface Transaction {
   quantity: number
   pricePerUnit: number
   totalValue: number
+  fees: number
   notes: string | null
   executedAt: string
   createdAt: string

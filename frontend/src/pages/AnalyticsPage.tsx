@@ -4,7 +4,9 @@ import { stagger, staggerItem } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import {
   getAnalytics,
+  getFeesSummary,
   type AnalyticsResponse,
+  type FeesSummary,
   type PerformanceMetrics,
   type PositionPnl,
 } from '@/api/analytics'
@@ -12,6 +14,7 @@ import { ExportButton } from '@/features/export/ExportButton'
 import { downloadPerformance } from '@/api/export'
 import { chart, seriesColor, pnlClass } from '@/lib/chart-theme'
 import { UniversalChart } from '@/components/charts'
+import { HoldingsHistoryChart } from '@/features/dashboard/HoldingsHistoryChart'
 
 const RANGES = ['1M', '3M', '6M', '1Y', 'ALL'] as const
 type Range = (typeof RANGES)[number]
@@ -78,8 +81,13 @@ function metricsPositive(key: keyof PerformanceMetrics, value: number | null): b
 export default function AnalyticsPage() {
   const [range, setRange] = useState<Range>('1Y')
   const [data, setData] = useState<AnalyticsResponse | null>(null)
+  const [feesSummary, setFeesSummary] = useState<FeesSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getFeesSummary().then(setFeesSummary).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -139,7 +147,7 @@ export default function AnalyticsPage() {
       {data && (
         <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-5">
           {/* Metric cards */}
-          <motion.div variants={staggerItem} className="grid grid-cols-2 gap-4 md:grid-cols-5">
+          <motion.div variants={staggerItem} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <MetricCard
               label="Total Return (Cost Basis)"
               value={fmtPct(data.performanceMetrics.costBasisReturnPct)}
@@ -172,6 +180,11 @@ export default function AnalyticsPage() {
                 ? data.performanceMetrics.sharpeRatio >= 1
                 : null}
             />
+            <MetricCard
+              label="Total Fees Paid"
+              value={feesSummary ? fmtCurrency(feesSummary.totalFees, data.currency) : '—'}
+              positive={feesSummary ? feesSummary.totalFees === 0 : null}
+            />
           </motion.div>
 
           {/* Portfolio vs benchmark chart */}
@@ -186,6 +199,19 @@ export default function AnalyticsPage() {
           {data.positions.length > 0 && (
             <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
               <PositionPnlChart positions={data.positions} currency={data.currency} />
+            </motion.div>
+          )}
+
+          {/* Holdings performance */}
+          <motion.div variants={staggerItem}>
+            <HoldingsHistoryChart />
+          </motion.div>
+
+          {/* Fees chart — cost drag context near performance */}
+          {feesSummary && feesSummary.totalFees > 0 && (
+            <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Monthly Fees</h2>
+              <FeesChart data={feesSummary} currency={data.currency} />
             </motion.div>
           )}
 
@@ -331,12 +357,33 @@ function PositionPnlChart({ positions, currency }: { positions: PositionPnl[]; c
         chartId="analytics-position-pnl"
         data={chartData}
         defaultType="bar"
-        allowedTypes={['bar', 'donut', 'radar']}
+        allowedTypes={['bar', 'donut']}
         height={Math.max(240, sorted.length * 48 + 40)}
         formatValue={(v) => `${v >= 0 ? '+' : ''}${fmtCurrency(v, currency)}`}
         formatCenterValue={(total) => `${total >= 0 ? '+' : ''}${fmtCurrency(total, currency)}`}
         centerLabel="Total P&L"
       />
     </>
+  )
+}
+
+function FeesChart({ data, currency }: { data: FeesSummary; currency: string }) {
+  const chartData = useMemo(
+    () => data.monthlyFees.map(m => ({
+      name: m.month,
+      value: Number(m.fees.toFixed(2)),
+    })),
+    [data],
+  )
+
+  return (
+    <UniversalChart
+      chartId="analytics-fees"
+      data={chartData}
+      defaultType="bar"
+      allowedTypes={['bar']}
+      height={240}
+      formatValue={(v) => fmtCurrency(v, currency)}
+    />
   )
 }

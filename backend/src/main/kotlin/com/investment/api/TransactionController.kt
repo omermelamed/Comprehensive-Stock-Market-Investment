@@ -29,6 +29,11 @@ class TransactionController(
         return ResponseEntity.ok(transactionService.getTransactions(page, size))
     }
 
+    @GetMapping("/fees-summary")
+    fun getFeesSummary(): ResponseEntity<Map<String, Any>> {
+        return ResponseEntity.ok(transactionService.getFeesSummary())
+    }
+
     @PostMapping
     fun addTransaction(@RequestBody request: TransactionRequest): ResponseEntity<TransactionResponse> {
         val transaction = transactionService.addTransaction(request)

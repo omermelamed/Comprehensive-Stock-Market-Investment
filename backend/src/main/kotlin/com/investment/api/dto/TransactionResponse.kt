@@ -12,6 +12,7 @@ data class TransactionResponse(
     val quantity: BigDecimal,
     val pricePerUnit: BigDecimal,
     val totalValue: BigDecimal,
+    val fees: BigDecimal,
     val notes: String?,
     val executedAt: Instant,
     val createdAt: Instant

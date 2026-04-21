@@ -106,6 +106,10 @@
     "lib/chart-theme.ts",
     "lib/utils.ts"
   ],
+  "components/charts/DivergingBarChart.tsx": [
+    "lib/chart-theme.ts",
+    "lib/utils.ts"
+  ],
   "components/charts/DonutChart.tsx": [
     "lib/chart-theme.ts",
     "lib/utils.ts"
@@ -134,10 +138,12 @@
   "components/charts/index.ts": [
     "components/charts/AreaChart.tsx",
     "components/charts/CandlestickChart.tsx",
+    "components/charts/DivergingBarChart.tsx",
     "components/charts/DonutChart.tsx",
     "components/charts/HBarChart.tsx",
     "components/charts/LineChart.tsx",
     "components/charts/RadarChart.tsx",
+    "components/charts/Sparkline.tsx",
     "components/charts/UniversalChart.tsx"
   ],
   "components/onboarding/profile-setup.tsx": [
@@ -319,6 +325,13 @@
     "lib/chart-theme.ts",
     "lib/currency.ts"
   ],
+  "features/dashboard/PortfolioSparklineSummary.tsx": [
+    "api/portfolio.ts",
+    "contexts/currency-context.tsx",
+    "lib/chart-theme.ts",
+    "lib/currency.ts",
+    "lib/utils.ts"
+  ],
   "features/dashboard/PortfolioSummaryCard.tsx": [
     "api/portfolio.ts",
     "components/ui/badge.tsx",
@@ -401,6 +414,8 @@
     "api/options.ts"
   ],
   "features/recommendations/RecommendationCard.tsx": [
+    "components/charts/index.ts",
+    "hooks/useSparkline.ts",
     "lib/currency.ts",
     "lib/utils.ts",
     "types/index.ts"
@@ -478,8 +493,13 @@
   ],
   "features/watchlist/WatchlistCard.tsx": [
     "api/watchlist.ts",
+    "components/charts/index.ts",
+    "hooks/useSparkline.ts",
     "lib/utils.ts",
     "types/index.ts"
+  ],
+  "hooks/useSparkline.ts": [
+    "api/portfolio.ts"
   ],
   "layouts/app-layout.tsx": [
     "components/shared/AllocaLogo.tsx",
@@ -517,6 +537,7 @@
     "api/analytics.ts",
     "api/export.ts",
     "components/charts/index.ts",
+    "features/dashboard/HoldingsHistoryChart.tsx",
     "features/export/ExportButton.tsx",
     "lib/chart-theme.ts",
     "lib/motion.ts",
@@ -535,9 +556,9 @@
     "api/sell.ts",
     "components/charts/index.ts",
     "features/briefing/BriefingWidget.tsx",
-    "features/dashboard/HoldingsHistoryChart.tsx",
     "features/dashboard/HoldingsTable.tsx",
     "features/dashboard/PortfolioHistoryChart.tsx",
+    "features/dashboard/PortfolioSparklineSummary.tsx",
     "features/dashboard/PortfolioSummaryCard.tsx",
     "features/dashboard/useDashboard.ts",
     "features/export/ExportButton.tsx",
@@ -605,6 +626,7 @@
   ],
   "pages/RiskPage.tsx": [
     "api/risk.ts",
+    "components/charts/DivergingBarChart.tsx",
     "components/charts/index.ts",
     "features/risk/RiskProfileCard.tsx",
     "features/risk/RiskReasoningPanel.tsx",

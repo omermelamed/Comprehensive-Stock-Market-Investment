@@ -20,6 +20,7 @@ data class TransactionLedgerRow(
     val track: String,
     val quantity: BigDecimal,
     val pricePerUnit: BigDecimal,
+    val fees: BigDecimal,
     val executedAt: Instant
 )
 
@@ -31,7 +32,7 @@ class TransactionRepository(
     fun findAllOrderedByExecutedAtAsc(userId: UUID): List<TransactionLedgerRow> {
         return dsl.fetch(
             """
-            SELECT symbol, type, track, quantity, price_per_unit, executed_at
+            SELECT symbol, type, track, quantity, price_per_unit, fees, executed_at
             FROM transactions
             WHERE user_id = ?::uuid
             ORDER BY executed_at ASC
@@ -44,6 +45,7 @@ class TransactionRepository(
                 track = row.get("track", String::class.java),
                 quantity = row.get("quantity", BigDecimal::class.java),
                 pricePerUnit = row.get("price_per_unit", BigDecimal::class.java),
+                fees = row.get("fees", BigDecimal::class.java),
                 executedAt = row.get("executed_at", Timestamp::class.java).toInstant()
             )
         }
@@ -75,8 +77,8 @@ class TransactionRepository(
         val id = UUID.randomUUID()
         val record = dsl.fetchOne(
             """
-            INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at)
-            VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW())
+            INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, fees, notes, executed_at, created_at)
+            VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, ?, NOW())
             RETURNING *
             """.trimIndent(),
             id.toString(),
@@ -86,6 +88,7 @@ class TransactionRepository(
             request.track.uppercase(),
             request.quantity,
             request.pricePerUnit,
+            request.fees,
             request.notes,
             Timestamp.from(request.executedAt)
         ) ?: throw IllegalStateException("Insert into transactions returned no record")
@@ -102,8 +105,8 @@ class TransactionRepository(
                 .toInstant()
             dsl.execute(
                 """
-                INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, notes, executed_at, created_at, source)
-                VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, NOW(), 'IMPORT')
+                INSERT INTO transactions (id, user_id, symbol, type, track, quantity, price_per_unit, fees, notes, executed_at, created_at, source)
+                VALUES (?::uuid, ?::uuid, ?, ?::transaction_type_enum, ?::track_enum, ?, ?, ?, ?, ?, NOW(), 'IMPORT')
                 """.trimIndent(),
                 id.toString(),
                 userId.toString(),
@@ -112,6 +115,7 @@ class TransactionRepository(
                 row.track.uppercase(),
                 BigDecimal(row.quantity),
                 BigDecimal(row.pricePerUnit),
+                BigDecimal(row.fees),
                 row.notes,
                 Timestamp.from(executedAt)
             )
@@ -152,7 +156,7 @@ class TransactionRepository(
             """
             UPDATE transactions
             SET symbol = ?, type = ?::transaction_type_enum, track = ?::track_enum,
-                quantity = ?, price_per_unit = ?, notes = ?, executed_at = ?
+                quantity = ?, price_per_unit = ?, fees = ?, notes = ?, executed_at = ?
             WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
@@ -161,6 +165,7 @@ class TransactionRepository(
             request.track.uppercase(),
             request.quantity,
             request.pricePerUnit,
+            request.fees,
             request.notes,
             Timestamp.from(request.executedAt),
             id.toString(),
@@ -189,6 +194,7 @@ class TransactionRepository(
             quantity = get("quantity", BigDecimal::class.java),
             pricePerUnit = get("price_per_unit", BigDecimal::class.java),
             totalValue = get("total_value", BigDecimal::class.java),
+            fees = get("fees", BigDecimal::class.java),
             notes = get("notes", String::class.java),
             executedAt = get("executed_at", Timestamp::class.java).toInstant(),
             createdAt = get("created_at", Timestamp::class.java).toInstant()

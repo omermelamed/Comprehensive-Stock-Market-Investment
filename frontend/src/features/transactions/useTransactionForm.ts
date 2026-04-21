@@ -48,6 +48,7 @@ export function useTransactionForm(onSuccess: () => void) {
         track: formData.track,
         quantity: formData.quantity,
         pricePerUnit: formData.pricePerUnit,
+        fees: formData.fees,
         notes: formData.notes || undefined,
       })
       setFormData(DEFAULT_FORM)

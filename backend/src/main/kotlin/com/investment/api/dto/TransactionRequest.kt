@@ -10,5 +10,6 @@ data class TransactionRequest(
     val quantity: BigDecimal,
     val pricePerUnit: BigDecimal,
     val executedAt: Instant = Instant.now(),
-    val notes: String? = null
+    val notes: String? = null,
+    val fees: BigDecimal = BigDecimal.ZERO
 )

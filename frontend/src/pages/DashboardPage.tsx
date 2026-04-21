@@ -5,7 +5,7 @@ import { useDashboard } from '@/features/dashboard/useDashboard'
 import { PortfolioSummaryCard } from '@/features/dashboard/PortfolioSummaryCard'
 import { HoldingsTable } from '@/features/dashboard/HoldingsTable'
 import { PortfolioHistoryChart } from '@/features/dashboard/PortfolioHistoryChart'
-import { HoldingsHistoryChart } from '@/features/dashboard/HoldingsHistoryChart'
+import { PortfolioSparklineSummary } from '@/features/dashboard/PortfolioSparklineSummary'
 import { ExportButton } from '@/features/export/ExportButton'
 import { downloadHoldings } from '@/api/export'
 import { UniversalChart } from '@/components/charts'
@@ -113,8 +113,8 @@ export default function DashboardPage() {
               <UniversalChart
                 chartId="dashboard-composition"
                 data={holdings.map(h => ({ name: h.symbol, value: h.currentPercent }))}
-                defaultType="donut"
-                allowedTypes={['donut', 'bar', 'radar']}
+                defaultType={holdings.length > 8 ? 'bar' : 'donut'}
+                allowedTypes={['bar', 'donut']}
                 formatCenterValue={(t) => `${t.toFixed(1)}%`}
                 centerLabel="Of portfolio"
                 formatValue={(v) => `${v.toFixed(1)}%`}
@@ -131,7 +131,7 @@ export default function DashboardPage() {
                   }, {}),
                 ).map(([track, pct]) => ({ name: track, value: pct }))}
                 defaultType="donut"
-                allowedTypes={['donut', 'bar', 'radar']}
+                allowedTypes={['donut', 'bar']}
                 formatCenterValue={(_, count) => `${count}`}
                 centerLabel="Tracks"
                 formatValue={(v) => `${v.toFixed(1)}%`}
@@ -151,9 +151,13 @@ export default function DashboardPage() {
           <StaleDataOverlay visible={isRunning} sellDate={recalcStatus?.sellDate} />
         </motion.div>
 
-        {/* Per-holding price history overlay */}
+        {/* Compact portfolio trend + link to Analytics (per-holding chart lives there) */}
         <motion.div variants={staggerItem} className="relative">
-          <HoldingsHistoryChart />
+          <PortfolioSparklineSummary
+            history={history}
+            historyRange={historyRange}
+            loading={loading && !history}
+          />
           <StaleDataOverlay visible={isRunning} sellDate={recalcStatus?.sellDate} />
         </motion.div>
       </motion.div>

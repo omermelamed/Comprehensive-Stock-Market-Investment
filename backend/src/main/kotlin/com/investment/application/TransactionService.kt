@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -38,6 +39,44 @@ class TransactionService(
             "totalElements" to totalElements,
             "page" to page,
             "size" to size
+        )
+    }
+
+    fun getFeesSummary(): Map<String, Any> {
+        val userId = RequestContext.get()
+        val rows = transactionRepository.findAllOrderedByExecutedAtAsc(userId)
+
+        val monthlyFees = rows
+            .filter { it.fees > BigDecimal.ZERO }
+            .groupBy {
+                val date = it.executedAt.atZone(ZoneOffset.UTC).toLocalDate()
+                "${date.year}-${date.monthValue.toString().padStart(2, '0')}"
+            }
+            .map { (month, txns) ->
+                mapOf(
+                    "month" to month,
+                    "fees" to txns.fold(BigDecimal.ZERO) { acc, t -> acc + t.fees }
+                )
+            }
+            .sortedBy { it["month"] as String }
+
+        val symbolFees = rows
+            .filter { it.fees > BigDecimal.ZERO }
+            .groupBy { it.symbol }
+            .map { (symbol, txns) ->
+                mapOf(
+                    "symbol" to symbol,
+                    "fees" to txns.fold(BigDecimal.ZERO) { acc, t -> acc + t.fees }
+                )
+            }
+            .sortedByDescending { it["fees"] as BigDecimal }
+
+        val totalFees = rows.fold(BigDecimal.ZERO) { acc, t -> acc + t.fees }
+
+        return mapOf(
+            "totalFees" to totalFees,
+            "monthlyFees" to monthlyFees,
+            "symbolFees" to symbolFees
         )
     }
 

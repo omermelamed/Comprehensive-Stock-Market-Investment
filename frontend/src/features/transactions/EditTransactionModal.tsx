@@ -25,6 +25,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
   const [track, setTrack] = useState(transaction.track)
   const [quantity, setQuantity] = useState(transaction.quantity)
   const [pricePerUnit, setPricePerUnit] = useState(transaction.pricePerUnit)
+  const [fees, setFees] = useState(transaction.fees ?? 0)
   const [executedAt, setExecutedAt] = useState(toDateInput(transaction.executedAt))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +41,7 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
         track,
         quantity,
         pricePerUnit,
+        fees,
         executedAt: `${executedAt}T12:00:00Z`,
       })
       onSaved()
@@ -113,8 +115,8 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
             </div>
           </div>
 
-          {/* Qty + Price */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Qty + Price + Fees */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Quantity</label>
               <input
@@ -137,6 +139,17 @@ export default function EditTransactionModal({ transaction, onClose, onSaved }: 
                 value={pricePerUnit}
                 onChange={e => setPricePerUnit(Number(e.target.value))}
                 required
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Fees</label>
+              <input
+                type="number"
+                className={inputClass}
+                min={0}
+                step={0.01}
+                value={fees}
+                onChange={e => setFees(Number(e.target.value))}
               />
             </div>
           </div>

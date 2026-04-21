@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, BrainCircuit, ExternalLink, PlusCircle } from 'lucide-react'
+import { Sparkline } from '@/components/charts'
 import { cn } from '@/lib/utils'
 import type { WatchlistItem, WatchlistMetrics } from '@/types'
 import { getWatchlistMetrics } from '@/api/watchlist'
+import { useSparkline } from '@/hooks/useSparkline'
 
 const SIGNAL_STYLES: Record<WatchlistItem['signal'], string> = {
   GOOD_BUY_NOW: 'bg-success/15 text-success border-success/30',
@@ -51,6 +53,7 @@ export function WatchlistCard({ item, onAnalyze, onRemove, isAnalyzing, isOverwe
   const [metrics, setMetrics] = useState<WatchlistMetrics | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(false)
   const navigate = useNavigate()
+  const { data: sparklineData } = useSparkline(item.symbol)
 
   useEffect(() => {
     if (!showAnalysis || metrics) return
@@ -68,11 +71,14 @@ export function WatchlistCard({ item, onAnalyze, onRemove, isAnalyzing, isOverwe
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-mono text-base font-bold text-card-foreground">{item.symbol}</p>
-          {item.companyName && (
-            <p className="text-xs text-muted-foreground">{item.companyName}</p>
-          )}
+        <div className="flex items-center gap-3">
+          <div>
+            <p className="font-mono text-base font-bold text-card-foreground">{item.symbol}</p>
+            {item.companyName && (
+              <p className="text-xs text-muted-foreground">{item.companyName}</p>
+            )}
+          </div>
+          {sparklineData && <Sparkline data={sparklineData} width={64} height={28} />}
         </div>
         <div className="flex items-center gap-2">
           {confidenceScore != null && (

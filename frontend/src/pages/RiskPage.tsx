@@ -16,6 +16,7 @@ import { useRiskProfile } from '@/features/risk/useRiskProfile'
 import { RiskProfileCard } from '@/features/risk/RiskProfileCard'
 import { RiskReasoningPanel } from '@/features/risk/RiskReasoningPanel'
 import { RiskScoreHistory } from '@/features/risk/RiskScoreHistory'
+import { DivergingBarChart } from '@/components/charts/DivergingBarChart'
 import { RadarChartComponent, UniversalChart } from '@/components/charts'
 
 function fmtPct(v: number | null): string {
@@ -284,17 +285,11 @@ export default function RiskPage() {
         {metrics && metrics.allocationDrift.length > 0 && (
           <motion.div variants={staggerItem} className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 text-sm font-semibold text-foreground">Allocation Drift</h2>
-            <UniversalChart
-              chartId="risk-allocation-drift"
+            <DivergingBarChart
               data={metrics.allocationDrift.map(item => ({
                 name: item.symbol,
                 value: item.driftPct,
-                color: item.driftPct > 0
-                  ? '#16a34a'
-                  : Math.abs(item.driftPct) > 5 ? '#dc2626' : '#f59e0b',
               }))}
-              defaultType="bar"
-              allowedTypes={['bar', 'donut', 'radar']}
               formatValue={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
             />
             <div className="mt-4 overflow-x-auto">

@@ -1,5 +1,7 @@
 import { ExternalLink } from 'lucide-react'
+import { Sparkline } from '@/components/charts'
 import { cn } from '@/lib/utils'
+import { useSparkline } from '@/hooks/useSparkline'
 import { formatMoney } from '@/lib/currency'
 import type { RecommendationCard as RecommendationCardType, FundamentalsData } from '@/types'
 
@@ -96,6 +98,8 @@ interface Props {
 }
 
 export function RecommendationCard({ card, currency }: Props) {
+  const { data: sparklineData } = useSparkline(card.symbol)
+
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       {/* Header row: rank + symbol + action badge */}
@@ -104,7 +108,7 @@ export function RecommendationCard({ card, currency }: Props) {
           {card.rank}
         </span>
         <div className="flex flex-1 items-center justify-between gap-2">
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
             {card.sourceUrl ? (
               <a
                 href={card.sourceUrl}
@@ -118,6 +122,7 @@ export function RecommendationCard({ card, currency }: Props) {
             ) : (
               <p className="font-mono text-lg font-bold text-card-foreground">{card.symbol}</p>
             )}
+            {sparklineData && <Sparkline data={sparklineData} width={56} height={24} />}
             {card.currentPrice !== null && (
               <span className="tabular-nums font-mono text-xs text-muted-foreground">
                 {formatMoney(card.currentPrice, currency)}
