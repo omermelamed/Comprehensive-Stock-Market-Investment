@@ -26,7 +26,7 @@ export default function OptionsPage() {
         <Layers className="mb-3 h-8 w-8 text-muted-foreground/40" />
         <p className="text-sm font-medium text-muted-foreground">Options Track Not Enabled</p>
         <p className="mt-1 text-xs text-muted-foreground/60 max-w-md">
-          Enable the Options track in your profile to start tracking options positions and get AI strategy suggestions.
+          Enable the Options track in your profile to start tracking options positions.
         </p>
         <Link
           to="/profile"

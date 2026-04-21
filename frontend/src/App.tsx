@@ -17,7 +17,6 @@ import MonthlyFlowPage from './pages/MonthlyFlowPage'
 import ProfilePage from './pages/ProfilePage'
 import AllocationPage from './pages/AllocationPage'
 import WatchlistPage from './pages/WatchlistPage'
-import RecommendationsPage from './pages/RecommendationsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import RiskPage from './pages/RiskPage'
 import OptionsPage from './pages/OptionsPage'
@@ -102,7 +101,6 @@ function AuthenticatedApp() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/allocations" element={<AllocationPage />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
-          <Route path="/recommendations" element={<RecommendationsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/risk" element={<RiskPage />} />
           <Route path="/options" element={<OptionsPage />} />

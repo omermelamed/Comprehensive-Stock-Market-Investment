@@ -1,7 +1,7 @@
-import { useRef, useEffect, useState, type KeyboardEvent } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Bot, X, Trash2, Send, Zap,
+  Bot, X, Trash2, Zap,
   Briefcase, BarChart2, TrendingUp, PieChart,
   Target, Shield, Newspaper, Activity, Receipt,
 } from 'lucide-react'
@@ -74,8 +74,7 @@ function ActionGrid({ onAction, disabled }: { onAction: (a: ChatAction) => void;
 }
 
 export function ChatPanel(props: ChatPanelProps) {
-  const { messages, isOpen, isLoading, sendMessage, executeAction, togglePanel, clearConversation } = props
-  const [inputText, setInputText] = useState('')
+  const { messages, isOpen, isLoading, executeAction, togglePanel, clearConversation } = props
   const [showActions, setShowActions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -86,19 +85,6 @@ export function ChatPanel(props: ChatPanelProps) {
   useEffect(() => {
     if (!isOpen) setShowActions(false)
   }, [isOpen])
-
-  const handleSend = () => {
-    if (!inputText.trim()) return
-    sendMessage(inputText)
-    setInputText('')
-  }
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
 
   const handleAction = (action: ChatAction) => {
     setShowActions(false)
@@ -253,87 +239,32 @@ export function ChatPanel(props: ChatPanelProps) {
                 </div>
               )}
 
-              {/* Inline actions toggle when conversation exists */}
-              {!isEmpty && !isLoading && !showActions && (
-                <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={() => setShowActions(true)}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-full border border-border/50 px-3 py-1.5 text-xs',
-                      'text-muted-foreground transition-all hover:border-purple-500/40 hover:text-purple-400',
-                    )}
-                  >
-                    <Zap className="h-3 w-3" />
-                    More actions
-                  </button>
-                </div>
-              )}
-
               {!isEmpty && showActions && (
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Choose an action</p>
-                    <button
-                      onClick={() => setShowActions(false)}
-                      className="text-xs text-muted-foreground/70 hover:text-foreground"
-                    >
-                      Hide
-                    </button>
-                  </div>
                   <ActionGrid onAction={handleAction} disabled={isLoading} />
                 </div>
               )}
             </div>
 
-            {/* Input bar */}
-            <div className="border-t border-border p-3">
-              <div className="flex items-end gap-2">
+            {/* Bottom bar */}
+            {!isEmpty && (
+              <div className="border-t border-border p-3">
                 <button
                   onClick={() => setShowActions(v => !v)}
                   disabled={isLoading}
-                  title="Quick actions"
                   className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border transition-colors',
+                    'flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
                     showActions
                       ? 'border-purple-500/50 bg-purple-500/10 text-purple-400'
-                      : 'text-muted-foreground hover:border-purple-500/30 hover:text-purple-400',
+                      : 'border-border text-muted-foreground hover:border-purple-500/30 hover:text-purple-400',
                     'disabled:cursor-not-allowed disabled:opacity-40',
                   )}
                 >
-                  <Zap className="h-4 w-4" />
-                </button>
-                <textarea
-                  value={inputText}
-                  onChange={e => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message or use quick actions..."
-                  rows={1}
-                  className={cn(
-                    'flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2',
-                    'text-sm text-foreground placeholder:text-muted-foreground',
-                    'focus:outline-none focus:ring-1 focus:ring-purple-500/50',
-                    'max-h-32 overflow-y-auto',
-                  )}
-                  style={{ height: 'auto' }}
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || isLoading}
-                  aria-label="Send message"
-                  className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
-                    'bg-violet-500 text-white hover:opacity-90',
-                    'disabled:cursor-not-allowed disabled:opacity-40',
-                  )}
-                >
-                  <Send className="h-4 w-4" />
+                  <Zap className="h-3.5 w-3.5" />
+                  {showActions ? 'Hide actions' : 'Show actions'}
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                Press Enter to send, Shift+Enter for new line
-              </p>
-            </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -24,10 +24,9 @@ interface Props {
   position: PositionCard
   amount: string
   onAmountChange: (value: string) => void
-  isLoadingSummary?: boolean
 }
 
-export function PositionAllocationCard({ position, amount, onAmountChange, isLoadingSummary }: Props) {
+export function PositionAllocationCard({ position, amount, onAmountChange }: Props) {
   const currency = useCurrency()
   const fmt = (v: number) => formatMoney(v, currency)
   const sym = getCurrencySymbol(currency)
@@ -136,36 +135,6 @@ export function PositionAllocationCard({ position, amount, onAmountChange, isLoa
         )}
       </div>
 
-      {/* AI summary */}
-      {(isLoadingSummary || position.aiSummary) && (
-        <div className="mt-3 border-t border-border pt-3">
-          {isLoadingSummary && !position.aiSummary ? (
-            <div className="space-y-1.5">
-              <div className="h-2.5 w-2/3 animate-pulse rounded bg-muted" />
-              <div className="h-2.5 w-1/2 animate-pulse rounded bg-muted" />
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-purple-500">AI</span>
-                {position.aiSentiment && (
-                  <span
-                    className={cn(
-                      'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
-                      position.aiSentiment === 'POSITIVE' && 'bg-success/15 text-success border-success/30',
-                      position.aiSentiment === 'CAUTIOUS' && 'bg-warning/15 text-warning border-warning/30',
-                      position.aiSentiment === 'NEUTRAL' && 'bg-muted text-muted-foreground border-border',
-                    )}
-                  >
-                    {position.aiSentiment.charAt(0) + position.aiSentiment.slice(1).toLowerCase()}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs leading-relaxed text-purple-400">{position.aiSummary}</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

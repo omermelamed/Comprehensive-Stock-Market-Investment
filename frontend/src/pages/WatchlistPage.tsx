@@ -7,10 +7,8 @@ import {
   getWatchlist,
   addWatchlistItem,
   removeWatchlistItem,
-  analyzeWatchlistItem,
 } from '@/api/watchlist'
 import { getPortfolioHoldings, type HoldingDashboard } from '@/api/portfolio'
-import { useChatActions } from '@/contexts/chat-context'
 import type { WatchlistItem } from '@/types'
 
 export default function WatchlistPage() {
@@ -20,16 +18,12 @@ export default function WatchlistPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [overweightSymbols, setOverweightSymbols] = useState<Set<string>>(new Set())
-  const { openWithPrompt } = useChatActions()
 
   // Add form state
   const [symbol, setSymbol] = useState('')
   const [assetType, setAssetType] = useState<string>(ASSET_TYPES[0].value)
   const [isAdding, setIsAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
-
-  // Per-item analyzing state
-  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     Promise.all([
@@ -64,20 +58,6 @@ export default function WatchlistPage() {
       setAddError('Failed to add item. Check the symbol and try again.')
     } finally {
       setIsAdding(false)
-    }
-  }
-
-  async function handleAnalyze(id: string) {
-    setAnalyzingIds(prev => new Set(prev).add(id))
-    try {
-      const updated = await analyzeWatchlistItem(id)
-      setItems(prev => prev.map(item => (item.id === id ? updated : item)))
-    } finally {
-      setAnalyzingIds(prev => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
     }
   }
 
@@ -178,11 +158,8 @@ export default function WatchlistPage() {
                 <WatchlistCard
                   key={item.id}
                   item={item}
-                  onAnalyze={handleAnalyze}
                   onRemove={handleRemove}
-                  isAnalyzing={analyzingIds.has(item.id)}
                   isOverweight={overweightSymbols.has(item.symbol.toUpperCase())}
-                  onAskAi={(sym) => openWithPrompt(`What do you think about ${sym}? Should I add it to my portfolio?`)}
                   onSetAlert={handleSetAlert}
                 />
               ))}

@@ -14,8 +14,6 @@ import {
 } from '@/api/risk'
 import { useRiskProfile } from '@/features/risk/useRiskProfile'
 import { RiskProfileCard } from '@/features/risk/RiskProfileCard'
-import { RiskReasoningPanel } from '@/features/risk/RiskReasoningPanel'
-import { RiskScoreHistory } from '@/features/risk/RiskScoreHistory'
 import { DivergingBarChart } from '@/components/charts/DivergingBarChart'
 import { RadarChartComponent, UniversalChart } from '@/components/charts'
 
@@ -48,10 +46,7 @@ const STATUS_COLORS = {
 export default function RiskPage() {
   const {
     current,
-    history: riskHistory,
     loading: profileLoading,
-    evaluating,
-    evaluate,
   } = useRiskProfile()
 
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null)
@@ -145,11 +140,7 @@ export default function RiskPage() {
           {profileLoading ? (
             <div className="h-28 animate-pulse rounded-xl bg-muted" />
           ) : (
-            <>
-              <RiskProfileCard current={current} evaluating={evaluating} onEvaluate={evaluate} />
-              <RiskReasoningPanel reasoning={current?.reasoning} />
-              <RiskScoreHistory history={riskHistory} />
-            </>
+            <RiskProfileCard current={current} />
           )}
         </motion.div>
 

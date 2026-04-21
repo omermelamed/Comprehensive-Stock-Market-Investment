@@ -9,7 +9,6 @@ import {
   Sun,
   Moon,
   Star,
-  Lightbulb,
   BarChart2,
   ShieldAlert,
   Layers,
@@ -128,7 +127,6 @@ export function AppLayout({ tracksEnabled = [] }: AppLayoutProps) {
       label: 'Research',
       items: [
         { to: '/watchlist',       label: 'Watchlist',       icon: Star },
-        { to: '/recommendations', label: 'Recommendations', icon: Lightbulb },
         { to: '/analytics',       label: 'Analytics',       icon: BarChart2 },
         ...(optionsEnabled ? [{ to: '/options', label: 'Options', icon: Layers }] : []),
       ],

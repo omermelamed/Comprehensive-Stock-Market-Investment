@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { previewMonthlyFlow, confirmMonthlyFlow, fetchAiSummaries } from '@/api/monthly-flow'
+import { previewMonthlyFlow, confirmMonthlyFlow } from '@/api/monthly-flow'
 import type { MonthlyFlowConfirmResult, MonthlyFlowPreview } from '@/types'
 
 export function useMonthlyFlow() {
@@ -7,7 +7,6 @@ export function useMonthlyFlow() {
   const [preview, setPreview] = useState<MonthlyFlowPreview | null>(null)
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
-  const [isLoadingSummaries, setIsLoadingSummaries] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const [confirmResult, setConfirmResult] = useState<MonthlyFlowConfirmResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -50,30 +49,6 @@ export function useMonthlyFlow() {
         initial[pos.symbol] = pos.suggestedAmount.toFixed(2)
       })
       setOverrides(initial)
-
-      // Fire summaries fetch in the background — do not block the preview render
-      setIsLoadingSummaries(true)
-      fetchAiSummaries(n)
-        .then((summaries) => {
-          const bySymbol = Object.fromEntries(summaries.map((s) => [s.symbol, s]))
-          setPreview((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  positions: prev.positions.map((pos) => {
-                    const ai = bySymbol[pos.symbol]
-                    return {
-                      ...pos,
-                      aiSummary: ai?.summary ?? undefined,
-                      aiSentiment: ai?.sentiment ?? undefined,
-                    }
-                  }),
-                }
-              : prev
-          )
-        })
-        .catch(() => { /* summaries are advisory — swallow errors silently */ })
-        .finally(() => setIsLoadingSummaries(false))
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load preview')
     } finally {
@@ -122,7 +97,6 @@ export function useMonthlyFlow() {
     preview,
     overrides,
     isLoadingPreview,
-    isLoadingSummaries,
     isConfirming,
     confirmResult,
     error,
