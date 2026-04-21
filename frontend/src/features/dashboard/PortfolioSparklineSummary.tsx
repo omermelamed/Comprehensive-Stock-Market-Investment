@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
+import { LineChart, Line, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import type { PortfolioHistory } from '@/api/portfolio'
 import { chart, recharts } from '@/lib/chart-theme'
 import { useCurrency } from '@/contexts/currency-context'
@@ -16,20 +16,30 @@ interface Props {
 export function PortfolioSparklineSummary({ history, historyRange, loading }: Props) {
   const currency = useCurrency()
 
-  const { data, pctChange, isUp } = useMemo(() => {
+  const { data, pctChange, isUp, yDomain } = useMemo(() => {
     if (!history?.points?.length) {
       return {
         data: [] as { date: string; value: number }[],
         pctChange: null as number | null,
         isUp: null as boolean | null,
+        yDomain: undefined as [number, number] | undefined,
       }
     }
     const pts = history.points.map(p => ({ date: p.date, value: p.totalValue }))
     const first = pts[0].value
     const last = pts[pts.length - 1].value
-    if (first === 0) return { data: pts, pctChange: null, isUp: null }
+    const values = pts.map(p => p.value)
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const padding = (max - min) * 0.15 || max * 0.01
+    if (first === 0) return { data: pts, pctChange: null, isUp: null, yDomain: undefined }
     const pct = ((last - first) / first) * 100
-    return { data: pts, pctChange: pct, isUp: pct >= 0 }
+    return {
+      data: pts,
+      pctChange: pct,
+      isUp: pct >= 0,
+      yDomain: [min - padding, max + padding] as [number, number],
+    }
   }, [history])
 
   if (loading && !history) {
@@ -70,6 +80,7 @@ export function PortfolioSparklineSummary({ history, historyRange, loading }: Pr
         <div className="h-14 w-full shrink-0 sm:w-44 md:w-52">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+              {yDomain && <YAxis domain={yDomain} hide />}
               <Tooltip
                 contentStyle={recharts.tooltip.contentStyle}
                 labelStyle={recharts.tooltip.labelStyle}

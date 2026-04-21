@@ -105,40 +105,47 @@ export default function DashboardPage() {
           <HoldingsTable holdings={holdings} onSell={handleSell} />
         </motion.div>
 
-        {/* Portfolio composition donut */}
-        {holdings.length > 0 && (
-          <motion.div variants={staggerItem} className="grid gap-5 md:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-2 text-sm font-semibold text-foreground">Portfolio Composition</h2>
-              <UniversalChart
-                chartId="dashboard-composition"
-                data={holdings.map(h => ({ name: h.symbol, value: h.currentPercent }))}
-                defaultType={holdings.length > 8 ? 'bar' : 'donut'}
-                allowedTypes={['bar', 'donut']}
-                formatCenterValue={(t) => `${t.toFixed(1)}%`}
-                centerLabel="Of portfolio"
-                formatValue={(v) => `${v.toFixed(1)}%`}
-              />
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-2 text-sm font-semibold text-foreground">By Track</h2>
-              <UniversalChart
-                chartId="dashboard-by-track"
-                data={Object.entries(
-                  holdings.reduce<Record<string, number>>((acc, h) => {
-                    acc[h.track] = (acc[h.track] ?? 0) + h.currentPercent
-                    return acc
-                  }, {}),
-                ).map(([track, pct]) => ({ name: track, value: pct }))}
-                defaultType="donut"
-                allowedTypes={['donut', 'bar']}
-                formatCenterValue={(_, count) => `${count}`}
-                centerLabel="Tracks"
-                formatValue={(v) => `${v.toFixed(1)}%`}
-              />
-            </div>
-          </motion.div>
-        )}
+        {/* Portfolio composition — only when enough data to be useful */}
+        {holdings.length >= 3 && (() => {
+          const tracks = Object.entries(
+            holdings.reduce<Record<string, number>>((acc, h) => {
+              acc[h.track] = (acc[h.track] ?? 0) + h.currentPercent
+              return acc
+            }, {}),
+          ).map(([track, pct]) => ({ name: track, value: pct }))
+          const showTrack = tracks.length >= 2
+
+          return (
+            <motion.div variants={staggerItem} className={showTrack ? 'grid gap-5 md:grid-cols-2' : ''}>
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="mb-2 text-sm font-semibold text-foreground">Portfolio Composition</h2>
+                <UniversalChart
+                  chartId="dashboard-composition"
+                  data={holdings.map(h => ({ name: h.symbol, value: h.currentPercent }))}
+                  defaultType={holdings.length > 8 ? 'bar' : 'donut'}
+                  allowedTypes={['bar', 'donut']}
+                  formatCenterValue={(t) => `${t.toFixed(1)}%`}
+                  centerLabel="Of portfolio"
+                  formatValue={(v) => `${v.toFixed(1)}%`}
+                />
+              </div>
+              {showTrack && (
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="mb-2 text-sm font-semibold text-foreground">By Track</h2>
+                  <UniversalChart
+                    chartId="dashboard-by-track"
+                    data={tracks}
+                    defaultType="donut"
+                    allowedTypes={['donut', 'bar']}
+                    formatCenterValue={(_, count) => `${count}`}
+                    centerLabel="Tracks"
+                    formatValue={(v) => `${v.toFixed(1)}%`}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )
+        })()}
 
         {/* History chart */}
         <motion.div variants={staggerItem} className="relative">
