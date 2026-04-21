@@ -1,4 +1,11 @@
 {
+  "config.FilterConfig": [
+    "application.JwtService"
+  ],
+  "config.JwtAuthFilter": [
+    "application.JwtService",
+    "application.RequestContext"
+  ],
   "config.MarketDataConfig": [
     "infrastructure.market.AlphaVantageAdapter",
     "infrastructure.market.MarketDataProvider",
@@ -48,6 +55,7 @@
     "application.HoldingsHistoryService",
     "application.MarketDataService",
     "application.PortfolioSummaryService",
+    "application.RequestContext",
     "application.UserProfileService",
     "infrastructure.SnapshotRepository"
   ],
@@ -57,6 +65,13 @@
     "api.dto.SellResponse",
     "application.SellService",
     "application.SellValidationException"
+  ],
+  "api.AuthController": [
+    "api.dto.AuthRequest",
+    "api.dto.AuthResponse",
+    "application.JwtService",
+    "application.RequestContext",
+    "application.UserService"
   ],
   "api.RecommendationController": [
     "api.dto.RecommendationsResponse",
@@ -71,6 +86,7 @@
     "application.UserProfileService"
   ],
   "api.AdminController": [
+    "application.RequestContext",
     "application.SnapshotService",
     "infrastructure.SnapshotRepository",
     "infrastructure.TransactionRepository"
@@ -124,12 +140,17 @@
     "api.dto.NewsHeadlineDto",
     "api.dto.SectorBreakdownDto",
     "application.DailyBriefingDataCollector",
+    "application.RequestContext",
     "domain.DailyBriefingFormatter"
   ],
   "api.TelegramWebhookController": [
     "application.TelegramBotService",
     "application.UserProfileService",
     "infrastructure.TelegramNotificationService"
+  ],
+  "api.GlobalExceptionHandler": [
+    "domain.ConflictException",
+    "domain.UnauthorizedException"
   ],
   "api.ChatController": [
     "api.dto.ChatRequest",
@@ -138,6 +159,7 @@
   ],
   "api.HoldingsController": [
     "api.dto.HoldingResponse",
+    "application.RequestContext",
     "infrastructure.HoldingsProjectionRepository"
   ],
   "api.AlertController": [
@@ -221,6 +243,7 @@
     "infrastructure.AllocationRepository",
     "infrastructure.HoldingsProjectionRepository",
     "infrastructure.SnapshotRepository",
+    "infrastructure.UserProfileRepository",
     "infrastructure.market.YahooFinanceAdapter"
   ],
   "application.MarketDataService": [
@@ -254,8 +277,7 @@
     "api.dto.OptionsTransactionResponse",
     "api.dto.UpdateOptionsStatusRequest",
     "application.agents.OptionsStrategyAgent",
-    "infrastructure.OptionsTransactionRepository",
-    "infrastructure.UserProfileRepository"
+    "infrastructure.OptionsTransactionRepository"
   ],
   "application.ImportService": [
     "api.dto.ImportConfirmRequest",
@@ -304,11 +326,13 @@
     "domain.MarketDataUnavailableException",
     "infrastructure.AllocationRepository",
     "infrastructure.HoldingsProjectionRepository",
+    "infrastructure.UserProfileRepository",
     "infrastructure.WatchlistRepository"
   ],
   "application.CatchUpService": [
     "infrastructure.SnapshotRepository",
-    "infrastructure.TransactionRepository"
+    "infrastructure.TransactionRepository",
+    "infrastructure.UserRepository"
   ],
   "application.WatchlistAnalysisService": [
     "api.dto.WatchlistItemResponse",
@@ -332,6 +356,9 @@
   ],
   "application.BenchmarkService": [
     "infrastructure.market.YahooFinanceAdapter"
+  ],
+  "application.RequestContext": [
+    "domain.UnauthorizedException"
   ],
   "application.HoldingsHistoryService": [
     "api.dto.HoldingsHistoryResponse",
@@ -412,8 +439,8 @@
     "domain.DailyBriefingFormatter",
     "domain.TelegramMessageFormatter",
     "infrastructure.TransactionRepository",
-    "infrastructure.ai.ClaudeClient",
-    "infrastructure.ai.ClaudeMessage"
+    "infrastructure.UserProfileRepository",
+    "infrastructure.ai.ClaudeClient"
   ],
   "application.TelegramScheduledMessageService": [
     "api.dto.ScheduledMessageLogEntry",
@@ -436,6 +463,12 @@
     "api.dto.UserProfileResponse",
     "domain.RiskLevelCalculator",
     "infrastructure.UserProfileRepository"
+  ],
+  "application.UserService": [
+    "api.dto.AuthResponse",
+    "domain.ConflictException",
+    "domain.UnauthorizedException",
+    "infrastructure.UserRepository"
   ],
   "infrastructure.AlertRepository": [
     "api.dto.AlertResponse"
@@ -494,6 +527,7 @@
     "api.dto.RiskHistoryEntryResponse"
   ],
   "infrastructure.TelegramScheduledMessageJob": [
+    "application.RequestContext",
     "application.TelegramScheduledMessageContentGenerator",
     "application.TelegramScheduledMessageService",
     "domain.NextSendAtCalculator"
