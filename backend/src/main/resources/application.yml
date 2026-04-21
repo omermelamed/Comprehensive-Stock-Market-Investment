@@ -10,6 +10,17 @@ spring:
     baseline-on-migrate: false
   jooq:
     sql-dialect: POSTGRES
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: ${BACKEND_PORT:8080}
@@ -39,3 +50,8 @@ app:
     secure: ${COOKIE_SECURE:true}
   registration:
     enabled: ${REGISTRATION_ENABLED:true}
+  mail:
+    from-address: ${MAIL_FROM_ADDRESS:noreply@example.com}
+    from-name: ${MAIL_FROM_NAME:Alloca}
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+

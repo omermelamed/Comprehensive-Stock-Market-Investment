@@ -1,17 +1,31 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { register, resendVerification } from '@/api/auth'
+import { Link, useSearchParams } from 'react-router-dom'
+import { resetPassword } from '@/api/auth'
 import { AllocaLogo } from '@/components/shared/AllocaLogo'
 
-export default function RegisterPage() {
-  const [email, setEmail] = useState('')
+export default function ResetPasswordPage() {
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [resending, setResending] = useState(false)
-  const [resendDisabled, setResendDisabled] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  if (!token) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <AllocaLogo className="mx-auto h-10 w-auto text-foreground" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Invalid link</h1>
+          <p className="text-sm text-muted-foreground">This password reset link is invalid or has expired.</p>
+          <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+            Request a new link
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,57 +42,34 @@ export default function RegisterPage() {
 
     setSubmitting(true)
     try {
-      await register(email, password)
-      setEmailSent(true)
+      await resetPassword(token!, password)
+      setSuccess(true)
     } catch (err: any) {
       const msg = err?.response?.data?.error
-      setError(msg ?? 'Registration failed')
+      setError(msg ?? 'Password reset failed')
     } finally {
       setSubmitting(false)
     }
   }
 
-  async function handleResend() {
-    setResending(true)
-    try {
-      await resendVerification(email)
-      setResendDisabled(true)
-      setTimeout(() => setResendDisabled(false), 120_000)
-    } catch {
-      // silently fail — don't reveal account existence
-    } finally {
-      setResending(false)
-    }
-  }
-
-  if (emailSent) {
+  if (success) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <AllocaLogo className="h-10 w-auto text-foreground" />
-          </div>
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+          <AllocaLogo className="mx-auto h-10 w-auto text-foreground" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Check your email</h1>
-          <p className="text-sm text-muted-foreground">
-            We sent a verification link to <span className="font-medium text-foreground">{email}</span>
-          </p>
-          <button
-            onClick={handleResend}
-            disabled={resending || resendDisabled}
-            className="text-sm font-medium text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Password updated!</h1>
+          <p className="text-sm text-muted-foreground">You can now sign in with your new password.</p>
+          <Link
+            to="/login"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
-            {resending ? 'Sending...' : resendDisabled ? 'Email sent — check your inbox' : "Didn't receive it? Resend"}
-          </button>
-          <p className="text-sm text-muted-foreground">
-            <Link to="/login" className="font-medium text-primary hover:underline">
-              Back to sign in
-            </Link>
-          </p>
+            Sign in
+          </Link>
         </div>
       </div>
     )
@@ -89,7 +80,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center gap-3">
           <AllocaLogo className="h-10 w-auto text-foreground" />
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Create account</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Set new password</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,23 +91,8 @@ export default function RegisterPage() {
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-foreground">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          <div className="space-y-1.5">
             <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Password
+              New password
             </label>
             <input
               id="password"
@@ -131,7 +107,7 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
-              Confirm password
+              Confirm new password
             </label>
             <input
               id="confirmPassword"
@@ -149,14 +125,13 @@ export default function RegisterPage() {
             disabled={submitting}
             className="flex h-10 w-full items-center justify-center rounded-lg bg-primary text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {submitting ? 'Creating account...' : 'Create account'}
+            {submitting ? 'Updating...' : 'Update password'}
           </button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
           <Link to="/login" className="font-medium text-primary hover:underline">
-            Sign in
+            Back to sign in
           </Link>
         </p>
       </div>

@@ -1,6 +1,8 @@
 package com.investment.api
 
 import com.investment.domain.ConflictException
+import com.investment.domain.EmailNotVerifiedException
+import com.investment.domain.RateLimitException
 import com.investment.domain.UnauthorizedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -32,6 +34,16 @@ class GlobalExceptionHandler {
     fun handleNotFound(ex: NoSuchElementException): ResponseEntity<Map<String, String?>> {
         log.warn("Not found: ${ex.message}")
         return ResponseEntity.status(404).body(mapOf("error" to ex.message))
+    }
+
+    @ExceptionHandler(EmailNotVerifiedException::class)
+    fun handleEmailNotVerified(ex: EmailNotVerifiedException): ResponseEntity<Map<String, String?>> {
+        return ResponseEntity.status(403).body(mapOf("error" to ex.message, "code" to "EMAIL_NOT_VERIFIED"))
+    }
+
+    @ExceptionHandler(RateLimitException::class)
+    fun handleRateLimit(ex: RateLimitException): ResponseEntity<Map<String, String?>> {
+        return ResponseEntity.status(429).body(mapOf("error" to ex.message))
     }
 
     @ExceptionHandler(Exception::class)

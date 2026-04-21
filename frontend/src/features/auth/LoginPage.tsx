@@ -1,25 +1,49 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { login } from '@/api/auth'
+import { login, resendVerification } from '@/api/auth'
 import { AllocaLogo } from '@/components/shared/AllocaLogo'
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [emailNotVerified, setEmailNotVerified] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resentSuccess, setResentSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setEmailNotVerified(false)
+    setResentSuccess(false)
     setSubmitting(true)
     try {
-      await login(username, password)
+      await login(email, password)
       window.location.href = '/'
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Invalid credentials')
+      const code = err?.response?.data?.code
+      const msg = err?.response?.data?.error
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        setEmailNotVerified(true)
+        setError('Please verify your email before signing in.')
+      } else {
+        setError(msg ?? 'Invalid credentials')
+      }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleResend() {
+    setResending(true)
+    try {
+      await resendVerification(email)
+      setResentSuccess(true)
+    } catch {
+      // silently fail
+    } finally {
+      setResending(false)
     }
   }
 
@@ -35,28 +59,43 @@ export default function LoginPage() {
           {error && (
             <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
+              {emailNotVerified && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending || resentSuccess}
+                  className="mt-2 block text-sm font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  {resending ? 'Sending...' : resentSuccess ? 'Verification email sent!' : 'Resend verification email'}
+                </button>
+              )}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="username" className="text-sm font-medium text-foreground">
-              Username
+            <label htmlFor="email" className="text-sm font-medium text-foreground">
+              Email
             </label>
             <input
-              id="username"
-              type="text"
-              autoComplete="username"
+              id="email"
+              type="email"
+              autoComplete="email"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

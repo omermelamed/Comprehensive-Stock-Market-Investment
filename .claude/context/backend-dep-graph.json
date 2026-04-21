@@ -1,4 +1,7 @@
 {
+  "config.TokenCleanupScheduler": [
+    "infrastructure.VerificationTokenRepository"
+  ],
   "config.FilterConfig": [
     "application.JwtService"
   ],
@@ -67,8 +70,7 @@
     "application.SellValidationException"
   ],
   "api.AuthController": [
-    "api.dto.AuthRequest",
-    "api.dto.AuthResponse",
+    "api.dto.*",
     "application.JwtService",
     "application.RequestContext",
     "application.UserService"
@@ -150,6 +152,8 @@
   ],
   "api.GlobalExceptionHandler": [
     "domain.ConflictException",
+    "domain.EmailNotVerifiedException",
+    "domain.RateLimitException",
     "domain.UnauthorizedException"
   ],
   "api.ChatController": [
@@ -467,8 +471,11 @@
   "application.UserService": [
     "api.dto.AuthResponse",
     "domain.ConflictException",
+    "domain.EmailNotVerifiedException",
+    "domain.RateLimitException",
     "domain.UnauthorizedException",
-    "infrastructure.UserRepository"
+    "infrastructure.UserRepository",
+    "infrastructure.VerificationTokenRepository"
   ],
   "infrastructure.AlertRepository": [
     "api.dto.AlertResponse"

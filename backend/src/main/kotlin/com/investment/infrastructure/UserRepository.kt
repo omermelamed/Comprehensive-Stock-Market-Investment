@@ -6,33 +6,49 @@ import java.util.UUID
 
 data class UserRecord(
     val id: UUID,
-    val username: String,
-    val passwordHash: String
+    val email: String,
+    val passwordHash: String,
+    val emailVerified: Boolean
 )
 
 @Repository
 class UserRepository(private val dsl: DSLContext) {
 
-    fun findByUsername(username: String): UserRecord? {
+    fun findByEmail(email: String): UserRecord? {
         return dsl.fetchOne(
-            "SELECT id, username, password_hash FROM users WHERE username = ?",
-            username
+            "SELECT id, email, password_hash, email_verified FROM users WHERE LOWER(email) = LOWER(?)",
+            email
         )?.let { r ->
             UserRecord(
                 id = r.get("id", UUID::class.java),
-                username = r.get("username", String::class.java),
-                passwordHash = r.get("password_hash", String::class.java)
+                email = r.get("email", String::class.java),
+                passwordHash = r.get("password_hash", String::class.java),
+                emailVerified = r.get("email_verified", Boolean::class.java)
             )
         }
     }
 
-    fun insert(username: String, passwordHash: String): UUID {
+    fun insert(email: String, passwordHash: String): UUID {
         val id = UUID.randomUUID()
         dsl.execute(
-            "INSERT INTO users (id, username, password_hash) VALUES (?::uuid, ?, ?)",
-            id.toString(), username, passwordHash
+            "INSERT INTO users (id, email, password_hash, email_verified) VALUES (?::uuid, ?, ?, FALSE)",
+            id.toString(), email, passwordHash
         )
         return id
+    }
+
+    fun setEmailVerified(userId: UUID) {
+        dsl.execute(
+            "UPDATE users SET email_verified = TRUE WHERE id = ?::uuid",
+            userId.toString()
+        )
+    }
+
+    fun updatePasswordHash(userId: UUID, passwordHash: String) {
+        dsl.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?::uuid",
+            passwordHash, userId.toString()
+        )
     }
 
     fun findAllIds(): List<UUID> {
@@ -42,13 +58,14 @@ class UserRepository(private val dsl: DSLContext) {
 
     fun findById(id: UUID): UserRecord? {
         return dsl.fetchOne(
-            "SELECT id, username, password_hash FROM users WHERE id = ?::uuid",
+            "SELECT id, email, password_hash, email_verified FROM users WHERE id = ?::uuid",
             id.toString()
         )?.let { r ->
             UserRecord(
                 id = r.get("id", UUID::class.java),
-                username = r.get("username", String::class.java),
-                passwordHash = r.get("password_hash", String::class.java)
+                email = r.get("email", String::class.java),
+                passwordHash = r.get("password_hash", String::class.java),
+                emailVerified = r.get("email_verified", Boolean::class.java)
             )
         }
     }

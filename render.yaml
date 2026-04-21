@@ -29,4 +29,18 @@ services:
       - key: JWT_SECRET
         sync: false        # min 32 chars; generate with: openssl rand -base64 48
       - key: REGISTRATION_ENABLED
-        value: "false"     # set to "true" to allow public sign-up
+        value: "true"      # set to "false" to disable public sign-up
+      - key: SPRING_MAIL_HOST
+        sync: false        # e.g. smtp.gmail.com
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: SPRING_MAIL_USERNAME
+        sync: false        # e.g. your Gmail address
+      - key: SPRING_MAIL_PASSWORD
+        sync: false        # Gmail App Password
+      - key: MAIL_FROM_ADDRESS
+        sync: false        # sender address shown in emails
+      - key: MAIL_FROM_NAME
+        value: Alloca
+      - key: FRONTEND_URL
+        sync: false        # e.g. https://your-app.vercel.app

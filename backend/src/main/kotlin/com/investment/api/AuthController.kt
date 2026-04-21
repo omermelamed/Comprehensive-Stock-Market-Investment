@@ -1,7 +1,6 @@
 package com.investment.api
 
-import com.investment.api.dto.AuthRequest
-import com.investment.api.dto.AuthResponse
+import com.investment.api.dto.*
 import com.investment.application.JwtService
 import com.investment.application.RequestContext
 import com.investment.application.UserService
@@ -9,11 +8,7 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/auth")
@@ -25,13 +20,9 @@ class AuthController(
 ) {
 
     @PostMapping("/register")
-    fun register(
-        @RequestBody request: AuthRequest,
-        response: HttpServletResponse
-    ): ResponseEntity<AuthResponse> {
-        val authResponse = userService.register(request.username, request.password)
-        setAuthCookie(response, authResponse)
-        return ResponseEntity.status(201).body(authResponse)
+    fun register(@RequestBody request: AuthRequest): ResponseEntity<MessageResponse> {
+        val message = userService.register(request.email, request.password)
+        return ResponseEntity.status(201).body(MessageResponse(message))
     }
 
     @PostMapping("/login")
@@ -39,9 +30,33 @@ class AuthController(
         @RequestBody request: AuthRequest,
         response: HttpServletResponse
     ): ResponseEntity<AuthResponse> {
-        val authResponse = userService.login(request.username, request.password)
+        val authResponse = userService.login(request.email, request.password)
         setAuthCookie(response, authResponse)
         return ResponseEntity.ok(authResponse)
+    }
+
+    @PostMapping("/verify-email")
+    fun verifyEmail(@RequestBody request: VerifyEmailRequest): ResponseEntity<MessageResponse> {
+        userService.verifyEmail(request.token)
+        return ResponseEntity.ok(MessageResponse("Email verified"))
+    }
+
+    @PostMapping("/resend-verification")
+    fun resendVerification(@RequestBody request: ResendVerificationRequest): ResponseEntity<MessageResponse> {
+        userService.resendVerification(request.email)
+        return ResponseEntity.ok(MessageResponse("If the account exists, a verification email has been sent"))
+    }
+
+    @PostMapping("/forgot-password")
+    fun forgotPassword(@RequestBody request: ForgotPasswordRequest): ResponseEntity<MessageResponse> {
+        userService.forgotPassword(request.email)
+        return ResponseEntity.ok(MessageResponse("If an account exists for that email, we sent a reset link"))
+    }
+
+    @PostMapping("/reset-password")
+    fun resetPassword(@RequestBody request: ResetPasswordRequest): ResponseEntity<MessageResponse> {
+        userService.resetPassword(request.token, request.newPassword)
+        return ResponseEntity.ok(MessageResponse("Password updated"))
     }
 
     @PostMapping("/logout")
@@ -53,7 +68,6 @@ class AuthController(
     @GetMapping("/me")
     fun me(): ResponseEntity<AuthResponse> {
         val userId = RequestContext.get()
-        // Valid JWT but user no longer exists — treat as unauthorized, not 404
         val user = userService.findById(userId)
             ?: return ResponseEntity.status(401).build()
         return ResponseEntity.ok(user)

@@ -1,7 +1,14 @@
 {
   "App.tsx": [
     "api/profile.ts",
+    "components/shared/ProtectedRoute.tsx",
     "contexts/currency-context.tsx",
+    "features/auth/AuthContext.tsx",
+    "features/auth/ForgotPasswordPage.tsx",
+    "features/auth/LoginPage.tsx",
+    "features/auth/RegisterPage.tsx",
+    "features/auth/ResetPasswordPage.tsx",
+    "features/auth/VerifyEmailPage.tsx",
     "layouts/app-layout.tsx",
     "pages/AlertsPage.tsx",
     "pages/AllocationPage.tsx",
@@ -29,6 +36,9 @@
     "types/index.ts"
   ],
   "api/analytics.ts": [
+    "api/client.ts"
+  ],
+  "api/auth.ts": [
     "api/client.ts"
   ],
   "api/briefing.ts": [
@@ -191,6 +201,9 @@
     "components/shared/selectable-tile.tsx",
     "data/onboarding.ts"
   ],
+  "components/shared/ProtectedRoute.tsx": [
+    "features/auth/AuthContext.tsx"
+  ],
   "components/shared/empty-state.tsx": [
     "lib/utils.ts"
   ],
@@ -225,6 +238,29 @@
   "features/alerts/useAlerts.ts": [
     "api/alerts.ts",
     "types/index.ts"
+  ],
+  "features/auth/AuthContext.tsx": [
+    "api/auth.ts"
+  ],
+  "features/auth/ForgotPasswordPage.tsx": [
+    "api/auth.ts",
+    "components/shared/AllocaLogo.tsx"
+  ],
+  "features/auth/LoginPage.tsx": [
+    "api/auth.ts",
+    "components/shared/AllocaLogo.tsx"
+  ],
+  "features/auth/RegisterPage.tsx": [
+    "api/auth.ts",
+    "components/shared/AllocaLogo.tsx"
+  ],
+  "features/auth/ResetPasswordPage.tsx": [
+    "api/auth.ts",
+    "components/shared/AllocaLogo.tsx"
+  ],
+  "features/auth/VerifyEmailPage.tsx": [
+    "api/auth.ts",
+    "components/shared/AllocaLogo.tsx"
   ],
   "features/briefing/BriefingGrid.tsx": [
     "api/briefing.ts",
@@ -448,6 +484,7 @@
   "layouts/app-layout.tsx": [
     "components/shared/AllocaLogo.tsx",
     "features/alerts/useAlertBadge.ts",
+    "features/auth/AuthContext.tsx",
     "features/chat/ChatPanel.tsx",
     "features/chat/useChatPanel.ts",
     "hooks/useTheme.ts",

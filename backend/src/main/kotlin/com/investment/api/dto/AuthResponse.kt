@@ -4,5 +4,5 @@ import java.util.UUID
 
 data class AuthResponse(
     val userId: UUID,
-    val username: String
+    val email: String
 )
