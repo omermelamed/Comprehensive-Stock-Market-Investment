@@ -40,7 +40,7 @@ class AiSummaryService(
     fun generateSummaries(request: MonthlyFlowSummariesRequest): List<PositionSummaryResponse> {
         val userId = RequestContext.get()
         val holdings = holdingsRepository.findAll(userId)
-        val allocations = allocationRepository.findAll()
+        val allocations = allocationRepository.findAll(userId)
         val symbols = (holdings.map { it.symbol } + allocations.map { it.symbol })
             .map { it.uppercase() }.distinct()
 

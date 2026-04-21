@@ -57,7 +57,7 @@ class PortfolioSummaryService(
         if (holdings.isEmpty()) return emptyList()
 
         val currency = userProfileService.getProfile()?.preferredCurrency ?: DEFAULT_CURRENCY
-        val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
+        val allocationsBySymbol = allocationRepository.findAll(userId).associateBy { it.symbol.uppercase() }
 
         val priceData = convertedPriceData(holdings.map { it.symbol }, currency)
 
@@ -91,7 +91,7 @@ class PortfolioSummaryService(
             return PortfolioCalculator.computePortfolioSummary(emptyList(), currency)
         }
 
-        val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
+        val allocationsBySymbol = allocationRepository.findAll(userId).associateBy { it.symbol.uppercase() }
         val priceData = convertedPriceData(holdings.map { it.symbol }, currency)
 
         val totalPortfolioValue = holdings.sumOf { h ->
