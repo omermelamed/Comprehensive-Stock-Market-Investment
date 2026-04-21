@@ -86,7 +86,9 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getFeesSummary().then(setFeesSummary).catch(() => {})
+    getFeesSummary()
+      .then(setFeesSummary)
+      .catch(() => setFeesSummary({ totalFees: 0, monthlyFees: [], symbolFees: [] }))
   }, [])
 
   useEffect(() => {
@@ -182,8 +184,7 @@ export default function AnalyticsPage() {
             />
             <MetricCard
               label="Total Fees Paid"
-              value={feesSummary ? fmtCurrency(feesSummary.totalFees, data.currency) : '—'}
-              positive={feesSummary ? feesSummary.totalFees === 0 : null}
+              value={feesSummary != null ? fmtCurrency(feesSummary.totalFees, data.currency) : '—'}
             />
           </motion.div>
 
