@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -44,6 +45,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(RateLimitException::class)
     fun handleRateLimit(ex: RateLimitException): ResponseEntity<Map<String, String?>> {
         return ResponseEntity.status(429).body(mapOf("error" to ex.message))
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResource(ex: NoResourceFoundException): ResponseEntity<Map<String, String?>> {
+        return ResponseEntity.status(404).body(mapOf("error" to "Not found"))
     }
 
     @ExceptionHandler(Exception::class)
