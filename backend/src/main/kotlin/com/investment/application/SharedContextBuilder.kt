@@ -82,7 +82,7 @@ class SharedContextBuilder(
             }
 
             appendLine()
-            val allocations = allocationRepository.findAll()
+            val allocations = allocationRepository.findAll(userId)
             if (allocations.isNotEmpty()) {
                 appendLine("Target allocations:")
                 allocations.forEach { a ->

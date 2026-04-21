@@ -34,7 +34,7 @@ class HoldingsHistoryService(
         val today = LocalDate.now(clock)
         val portfolioCurrency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 
-        val labelMap = allocationRepository.findAll()
+        val labelMap = allocationRepository.findAll(userId)
             .associate { it.symbol.uppercase() to it.label }
 
         // Single DB call — group by symbol

@@ -36,7 +36,7 @@ class MonthlyInvestmentService(
         require(request.budget > BigDecimal.ZERO) { "Budget must be greater than zero" }
 
         val holdings = holdingsRepository.findAll(userId)
-        val allAllocations = allocationRepository.findAll()
+        val allAllocations = allocationRepository.findAll(userId)
         val allocations = allAllocations.filter { !it.isCategory }
         val currency = userProfileService.getProfile()?.preferredCurrency ?: "USD"
 

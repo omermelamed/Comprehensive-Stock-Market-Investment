@@ -74,7 +74,7 @@ class RiskService(
         }
 
         val dashboardBySymbol = holdings.associateBy { it.symbol.uppercase() }
-        val allocationDrift = allocationRepository.findAll().map { alloc ->
+        val allocationDrift = allocationRepository.findAll(userId).map { alloc ->
             val upper = alloc.symbol.uppercase()
             val row = dashboardBySymbol[upper]
             val targetPct = alloc.targetPercentage.setScale(2, scale2)
@@ -231,7 +231,7 @@ class RiskService(
             )
         }
 
-        for (alloc in allocationRepository.findAll()) {
+        for (alloc in allocationRepository.findAll(userId)) {
             val row = dashboardBySymbol[alloc.symbol.uppercase()]
             val absDrift = when {
                 row != null && row.targetPercent != null -> row.drift.abs()

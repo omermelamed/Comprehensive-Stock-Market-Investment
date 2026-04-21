@@ -24,22 +24,25 @@ class AllocationService(
 ) {
 
     fun getAllocations(): List<TargetAllocationResponse> {
-        return allocationRepository.findAll()
+        val userId = RequestContext.get()
+        return allocationRepository.findAll(userId)
     }
 
     @Transactional
     fun addAllocation(request: TargetAllocationRequest): TargetAllocationResponse {
-        val existing = allocationRepository.findAll().map { it.toRequest() } + request
+        val userId = RequestContext.get()
+        val existing = allocationRepository.findAll(userId).map { it.toRequest() } + request
         val errors = AllocationValidator.validate(existing)
         if (errors.isNotEmpty()) {
             throw IllegalArgumentException(errors.joinToString("; ") { "${it.field}: ${it.message}" })
         }
-        return allocationRepository.insert(request)
+        return allocationRepository.insert(userId, request)
     }
 
     @Transactional
     fun updateAllocation(id: UUID, request: TargetAllocationRequest): TargetAllocationResponse {
-        val existing = allocationRepository.findAll()
+        val userId = RequestContext.get()
+        val existing = allocationRepository.findAll(userId)
             .filter { it.id != id }
             .map { it.toRequest() } + request
 
@@ -47,21 +50,23 @@ class AllocationService(
         if (errors.isNotEmpty()) {
             throw IllegalArgumentException(errors.joinToString("; ") { "${it.field}: ${it.message}" })
         }
-        return allocationRepository.update(id, request)
+        return allocationRepository.update(userId, id, request)
     }
 
     @Transactional
     fun deleteAllocation(id: UUID) {
-        allocationRepository.delete(id)
+        val userId = RequestContext.get()
+        allocationRepository.delete(userId, id)
     }
 
     @Transactional
     fun replaceAllAllocations(requests: List<TargetAllocationRequest>): List<TargetAllocationResponse> {
+        val userId = RequestContext.get()
         val errors = AllocationValidator.validate(requests)
         if (errors.isNotEmpty()) {
             throw IllegalArgumentException(errors.joinToString("; ") { "${it.field}: ${it.message}" })
         }
-        allocationRepository.replaceAll(requests)
-        return allocationRepository.findAll()
+        allocationRepository.replaceAll(userId, requests)
+        return allocationRepository.findAll(userId)
     }
 }

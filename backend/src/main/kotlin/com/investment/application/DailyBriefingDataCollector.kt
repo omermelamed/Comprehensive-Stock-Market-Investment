@@ -68,7 +68,7 @@ class DailyBriefingDataCollector(
         val currency = profile?.preferredCurrency ?: "USD"
 
         val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() == "LONG" }
-        val allocationsBySym = allocationRepository.findAll()
+        val allocationsBySym = allocationRepository.findAll(userId)
             .associateBy { it.symbol.uppercase() }
 
         // Portfolio value and per-holding day changes

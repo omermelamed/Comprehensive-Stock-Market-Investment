@@ -102,7 +102,7 @@ class SnapshotService(
             return
         }
 
-        val allocationsBySymbol = allocationRepository.findAll().associateBy { it.symbol.uppercase() }
+        val allocationsBySymbol = allocationRepository.findAll(userId).associateBy { it.symbol.uppercase() }
 
         val resolvedPrices = holdings.associate { h ->
             h.symbol to (pricesForDate[h.symbol] ?: fallbackPrices[h.symbol] ?: BigDecimal.ZERO)

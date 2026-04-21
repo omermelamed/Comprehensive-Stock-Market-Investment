@@ -85,7 +85,7 @@ class RecommendationService(
         val totalPortfolioValue = RecommendationGapCalculator.computePortfolioTotal(holdings, prices)
         val gaps = RecommendationGapCalculator.computeUnderweightGaps(
             holdings = holdings,
-            allocations = allocationRepository.findAll(),
+            allocations = allocationRepository.findAll(userId),
             prices = prices,
             totalPortfolioValue = totalPortfolioValue,
             limit = 5

@@ -15,8 +15,11 @@ class AllocationRepository(
     private val dsl: DSLContext
 ) {
 
-    fun findAll(): List<TargetAllocationResponse> {
-        val allRows = dsl.fetch("SELECT * FROM target_allocations ORDER BY display_order, created_at")
+    fun findAll(userId: UUID): List<TargetAllocationResponse> {
+        val allRows = dsl.fetch(
+            "SELECT * FROM target_allocations WHERE user_id = ?::uuid ORDER BY display_order, created_at",
+            userId.toString()
+        )
         val parentIds = allRows
             .mapNotNull { it.get("parent_id", String::class.java) }
             .map { it.uppercase() }
@@ -28,13 +31,13 @@ class AllocationRepository(
         return allRows.map { it.toResponse(idsWithChildren) }
     }
 
-    fun insert(request: TargetAllocationRequest): TargetAllocationResponse {
+    fun insert(userId: UUID, request: TargetAllocationRequest): TargetAllocationResponse {
         val id = UUID.randomUUID()
         val record = dsl.fetchOne(
             """
-            INSERT INTO target_allocations (id, symbol, asset_type, target_percentage, label, display_order, parent_id, sector, created_at, updated_at)
-            VALUES (?::uuid, ?, ?::asset_type_enum, ?, ?, ?, ?::uuid, ?, NOW(), NOW())
-            ON CONFLICT (UPPER(symbol)) DO UPDATE SET
+            INSERT INTO target_allocations (id, user_id, symbol, asset_type, target_percentage, label, display_order, parent_id, sector, created_at, updated_at)
+            VALUES (?::uuid, ?::uuid, ?, ?::asset_type_enum, ?, ?, ?, ?::uuid, ?, NOW(), NOW())
+            ON CONFLICT (user_id, UPPER(symbol)) DO UPDATE SET
                 asset_type = EXCLUDED.asset_type,
                 target_percentage = EXCLUDED.target_percentage,
                 label = EXCLUDED.label,
@@ -45,6 +48,7 @@ class AllocationRepository(
             RETURNING *
             """.trimIndent(),
             id.toString(),
+            userId.toString(),
             request.symbol.uppercase(),
             request.assetType.uppercase(),
             request.targetPercentage,
@@ -57,7 +61,7 @@ class AllocationRepository(
         return record.toResponse(emptySet())
     }
 
-    fun update(id: UUID, request: TargetAllocationRequest): TargetAllocationResponse {
+    fun update(userId: UUID, id: UUID, request: TargetAllocationRequest): TargetAllocationResponse {
         val record = dsl.fetchOne(
             """
             UPDATE target_allocations SET
@@ -68,7 +72,7 @@ class AllocationRepository(
                 display_order = ?,
                 parent_id = ?::uuid,
                 sector = ?
-            WHERE id = ?::uuid
+            WHERE id = ?::uuid AND user_id = ?::uuid
             RETURNING *
             """.trimIndent(),
             request.symbol.uppercase(),
@@ -78,16 +82,18 @@ class AllocationRepository(
             request.displayOrder,
             request.parentId,
             request.sector,
-            id.toString()
+            id.toString(),
+            userId.toString()
         ) ?: throw NoSuchElementException("No allocation found with id $id")
 
         return record.toResponse(emptySet())
     }
 
-    fun delete(id: UUID) {
+    fun delete(userId: UUID, id: UUID) {
         val deleted = dsl.execute(
-            "DELETE FROM target_allocations WHERE id = ?::uuid",
-            id.toString()
+            "DELETE FROM target_allocations WHERE id = ?::uuid AND user_id = ?::uuid",
+            id.toString(),
+            userId.toString()
         )
         if (deleted == 0) {
             throw NoSuchElementException("No allocation found with id $id")
@@ -95,20 +101,20 @@ class AllocationRepository(
     }
 
     @Transactional
-    fun replaceAll(allocations: List<TargetAllocationRequest>) {
-        dsl.execute("DELETE FROM target_allocations")
+    fun replaceAll(userId: UUID, allocations: List<TargetAllocationRequest>) {
+        dsl.execute("DELETE FROM target_allocations WHERE user_id = ?::uuid", userId.toString())
         val parents = allocations.filter { it.parentId == null }
-        parents.forEach { insert(it) }
+        parents.forEach { insert(userId, it) }
 
         val parentSymbolToId = dsl
-            .fetch("SELECT id, symbol FROM target_allocations")
+            .fetch("SELECT id, symbol FROM target_allocations WHERE user_id = ?::uuid", userId.toString())
             .associate { it.get("symbol", String::class.java).uppercase() to it.get("id", String::class.java) }
 
         val children = allocations.filter { it.parentId != null }
         children.forEach { child ->
             val resolvedParentId = parentSymbolToId[child.parentId!!.uppercase()]
                 ?: throw IllegalArgumentException("Parent symbol '${child.parentId}' not found for child '${child.symbol}'")
-            insert(child.copy(parentId = resolvedParentId))
+            insert(userId, child.copy(parentId = resolvedParentId))
         }
     }
 

@@ -55,7 +55,7 @@ class SellService(
         val sharesHeld = holding?.netQuantity ?: BigDecimal.ZERO
         val avgCost = holding?.avgBuyPrice ?: BigDecimal.ZERO
 
-        val allocation = allocationRepository.findAll().firstOrNull { it.symbol.equals(upperSymbol, ignoreCase = true) }
+        val allocation = allocationRepository.findAll(userId).firstOrNull { it.symbol.equals(upperSymbol, ignoreCase = true) }
 
         val quote = try {
             marketDataService.getQuote(upperSymbol)
