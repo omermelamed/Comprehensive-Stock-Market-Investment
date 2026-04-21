@@ -294,11 +294,21 @@
     "api/briefing.ts"
   ],
   "features/chat/ChatPanel.tsx": [
+    "features/chat/chatActions.ts",
     "features/chat/useChatPanel.ts",
     "lib/utils.ts"
   ],
+  "features/chat/chatActions.ts": [
+    "api/allocations.ts",
+    "api/analytics.ts",
+    "api/briefing.ts",
+    "api/holdings.ts",
+    "api/portfolio.ts",
+    "api/risk.ts"
+  ],
   "features/chat/useChatPanel.ts": [
-    "api/chat.ts"
+    "api/chat.ts",
+    "features/chat/chatActions.ts"
   ],
   "features/dashboard/HoldingsHistoryChart.tsx": [
     "api/portfolio.ts",
