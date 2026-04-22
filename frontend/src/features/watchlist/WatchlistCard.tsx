@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, PlusCircle } from 'lucide-react'
 import { Sparkline } from '@/components/charts'
-import { cn } from '@/lib/utils'
 import type { WatchlistItem } from '@/types'
 import { useSparkline } from '@/hooks/useSparkline'
 

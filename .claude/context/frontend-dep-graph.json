@@ -487,7 +487,6 @@
   "features/watchlist/WatchlistCard.tsx": [
     "components/charts/index.ts",
     "hooks/useSparkline.ts",
-    "lib/utils.ts",
     "types/index.ts"
   ],
   "hooks/useSparkline.ts": [
