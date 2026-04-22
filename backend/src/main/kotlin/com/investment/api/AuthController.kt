@@ -31,8 +31,9 @@ class AuthController(
         response: HttpServletResponse
     ): ResponseEntity<AuthResponse> {
         val authResponse = userService.login(request.email, request.password)
-        setAuthCookie(response, authResponse)
-        return ResponseEntity.ok(authResponse)
+        val token = jwtService.generateToken(authResponse.userId)
+        setAuthCookie(response, token)
+        return ResponseEntity.ok(authResponse.copy(token = token))
     }
 
     @PostMapping("/verify-email")
@@ -73,8 +74,7 @@ class AuthController(
         return ResponseEntity.ok(user)
     }
 
-    private fun setAuthCookie(response: HttpServletResponse, authResponse: AuthResponse) {
-        val token = jwtService.generateToken(authResponse.userId)
+    private fun setAuthCookie(response: HttpServletResponse, token: String) {
         val cookie = Cookie("auth_token", token)
         cookie.isHttpOnly = true
         cookie.secure = cookieSecure

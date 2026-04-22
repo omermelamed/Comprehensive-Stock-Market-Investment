@@ -40,9 +40,10 @@ class JwtAuthFilter(
             return
         }
 
-        val token = request.cookies
-            ?.firstOrNull { it.name == "auth_token" }
-            ?.value
+        val token = request.getHeader("Authorization")
+            ?.removePrefix("Bearer ")
+            ?.takeIf { it.isNotBlank() }
+            ?: request.cookies?.firstOrNull { it.name == "auth_token" }?.value
 
         val userId = token?.let { jwtService.validateToken(it) }
 

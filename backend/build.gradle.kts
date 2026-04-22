@@ -32,7 +32,7 @@ dependencies {
     // Database — jOOQ + Flyway (no JPA/Hibernate)
     implementation("org.springframework.boot:spring-boot-starter-jooq")
     implementation("org.flywaydb:flyway-core")
-    implementation("org.flywaydb:flyway-database-postgresql")  // required for Flyway 10 + PostgreSQL 14/15/16
+    implementation("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
     // HTTP Client (for external market data APIs)

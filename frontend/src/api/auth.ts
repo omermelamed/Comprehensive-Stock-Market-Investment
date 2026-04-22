@@ -9,13 +9,19 @@ export interface MessageResponse {
   message: string
 }
 
-export const login = (email: string, password: string) =>
-  client.post<AuthUser>('/api/auth/login', { email, password })
+export const login = async (email: string, password: string) => {
+  const res = await client.post<AuthUser & { token?: string }>('/api/auth/login', { email, password })
+  if (res.data.token) localStorage.setItem('auth_token', res.data.token)
+  return res
+}
 
 export const register = (email: string, password: string) =>
   client.post<MessageResponse>('/api/auth/register', { email, password })
 
-export const logout = () => client.post('/api/auth/logout')
+export const logout = async () => {
+  localStorage.removeItem('auth_token')
+  return client.post('/api/auth/logout')
+}
 
 export const getMe = () => client.get<AuthUser>('/api/auth/me')
 
