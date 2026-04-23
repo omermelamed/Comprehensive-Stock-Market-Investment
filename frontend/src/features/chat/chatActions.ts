@@ -16,7 +16,7 @@ export interface ChatAction {
   execute: () => Promise<string>
 }
 
-function fmtMoney(n: number, currency = 'ILS'): string {
+function fmtMoney(n: number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
 }
 
@@ -26,6 +26,15 @@ function fmtPct(n: number): string {
 
 function severityIcon(s: RiskWarning['severity']): string {
   return s === 'ERROR' ? '🔴' : s === 'WARNING' ? '🟡' : '🔵'
+}
+
+let cachedCurrency: string | null = null
+
+async function getUserCurrency(): Promise<string> {
+  if (cachedCurrency) return cachedCurrency
+  const s = await getPortfolioSummary()
+  cachedCurrency = s.currency
+  return cachedCurrency
 }
 
 async function executePortfolioSummary(): Promise<string> {
@@ -45,7 +54,7 @@ async function executePortfolioSummary(): Promise<string> {
 }
 
 async function executeTopHoldings(): Promise<string> {
-  const holdings = await getPortfolioHoldings()
+  const [holdings, currency] = await Promise.all([getPortfolioHoldings(), getUserCurrency()])
   if (!holdings.length) return 'No holdings found. Add some transactions first!'
 
   const sorted = [...holdings].sort((a, b) => b.currentValue - a.currentValue)
@@ -57,7 +66,7 @@ async function executeTopHoldings(): Promise<string> {
     `| # | Symbol | Value | Weight | P&L |`,
     `|---|--------|-------|--------|-----|`,
     ...top.map((h, i) =>
-      `| ${i + 1} | ${h.label ?? h.symbol} | ${fmtMoney(h.currentValue)} | ${h.currentPercent.toFixed(1)}% | ${fmtPct(h.pnlPercent)} |`,
+      `| ${i + 1} | ${h.label ?? h.symbol} | ${fmtMoney(h.currentValue, currency)} | ${h.currentPercent.toFixed(1)}% | ${fmtPct(h.pnlPercent)} |`,
     ),
   ]
   return lines.join('\n')
@@ -177,28 +186,28 @@ async function executePerformance(): Promise<string> {
 }
 
 async function executeFeesSummary(): Promise<string> {
-  const fees = await getFeesSummary()
+  const [fees, currency] = await Promise.all([getFeesSummary(), getUserCurrency()])
 
   if (fees.totalFees === 0) return '**No fees recorded.** Your transactions have no associated fees.'
 
   const lines = [
     `**Fees Summary**`,
     ``,
-    `Total fees paid: **${fmtMoney(fees.totalFees)}**`,
+    `Total fees paid: **${fmtMoney(fees.totalFees, currency)}**`,
     ``,
   ]
 
   if (fees.symbolFees.length) {
     const topFees = fees.symbolFees.sort((a, b) => b.fees - a.fees).slice(0, 5)
     lines.push(`**By Symbol** (top ${topFees.length})`)
-    topFees.forEach(f => lines.push(`- ${f.symbol}: ${fmtMoney(f.fees)}`))
+    topFees.forEach(f => lines.push(`- ${f.symbol}: ${fmtMoney(f.fees, currency)}`))
     lines.push('')
   }
 
   if (fees.monthlyFees.length) {
     const recent = fees.monthlyFees.slice(-3)
     lines.push(`**Recent Months**`)
-    recent.forEach(f => lines.push(`- ${f.month}: ${fmtMoney(f.fees)}`))
+    recent.forEach(f => lines.push(`- ${f.month}: ${fmtMoney(f.fees, currency)}`))
   }
 
   return lines.join('\n')
@@ -228,7 +237,7 @@ async function executeAllocationOverview(): Promise<string> {
 }
 
 async function executeBestAndWorst(): Promise<string> {
-  const holdings = await getPortfolioHoldings()
+  const [holdings, currency] = await Promise.all([getPortfolioHoldings(), getUserCurrency()])
   if (holdings.length < 2) return 'Not enough holdings for a comparison.'
 
   const byPnl = [...holdings].sort((a, b) => b.pnlPercent - a.pnlPercent)
@@ -237,10 +246,10 @@ async function executeBestAndWorst(): Promise<string> {
 
   const lines = [
     `**Best Performers**`,
-    ...best.map((h, i) => `${i + 1}. **${h.label ?? h.symbol}** — ${fmtPct(h.pnlPercent)} (${fmtMoney(h.pnlAbsolute)})`),
+    ...best.map((h, i) => `${i + 1}. **${h.label ?? h.symbol}** — ${fmtPct(h.pnlPercent)} (${fmtMoney(h.pnlAbsolute, currency)})`),
     ``,
     `**Worst Performers**`,
-    ...worst.map((h, i) => `${i + 1}. **${h.label ?? h.symbol}** — ${fmtPct(h.pnlPercent)} (${fmtMoney(h.pnlAbsolute)})`),
+    ...worst.map((h, i) => `${i + 1}. **${h.label ?? h.symbol}** — ${fmtPct(h.pnlPercent)} (${fmtMoney(h.pnlAbsolute, currency)})`),
   ]
   return lines.join('\n')
 }
