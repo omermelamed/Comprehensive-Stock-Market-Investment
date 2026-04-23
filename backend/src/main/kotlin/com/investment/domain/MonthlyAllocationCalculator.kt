@@ -9,6 +9,7 @@ import java.math.RoundingMode
 
 object MonthlyAllocationCalculator {
 
+    private val LONG_TRACKS = setOf("LONG", "LONG_EQUITY")
     private val HUNDRED = BigDecimal("100")
     private val ZERO = BigDecimal.ZERO
     private val MONEY_SCALE = 2
@@ -21,7 +22,7 @@ object MonthlyAllocationCalculator {
         prices: Map<String, BigDecimal>,
         budget: BigDecimal
     ): MonthlyFlowPreviewResponse {
-        val longHoldings = holdings.filter { it.track.uppercase() == "LONG" }
+        val longHoldings = holdings.filter { it.track.uppercase() in LONG_TRACKS }
         val holdingsBySymbol = longHoldings.associateBy { it.symbol.uppercase() }
 
         val portfolioTotal = longHoldings.sumOf { h ->

@@ -41,7 +41,8 @@ class SharedContextBuilder(
         val monthlyBudget = profile?.monthlyInvestmentMax ?: BigDecimal.ZERO
         val tracksEnabled = profile?.tracksEnabled ?: emptyList()
 
-        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() == "LONG" }
+        val longTracks = setOf("LONG", "LONG_EQUITY")
+        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() in longTracks }
 
         val prices = holdings.associate { h ->
             h.symbol.uppercase() to try {

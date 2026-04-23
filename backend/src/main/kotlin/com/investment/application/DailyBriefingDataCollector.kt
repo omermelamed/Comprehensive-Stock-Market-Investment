@@ -34,6 +34,8 @@ class DailyBriefingDataCollector(
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
+        private val LONG_TRACKS = setOf("LONG", "LONG_EQUITY")
+
         private val INDEX_SYMBOLS = listOf(
             "^GSPC" to "S&P 500",
             "^IXIC" to "NASDAQ",
@@ -67,7 +69,7 @@ class DailyBriefingDataCollector(
         val profile = userProfileRepository.findByUserId(userId)
         val currency = profile?.preferredCurrency ?: "USD"
 
-        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() == "LONG" }
+        val holdings = holdingsRepository.findAll(userId).filter { it.track.uppercase() in LONG_TRACKS }
         val allocationsBySym = allocationRepository.findAll(userId)
             .associateBy { it.symbol.uppercase() }
 

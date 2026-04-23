@@ -12,6 +12,7 @@ import java.math.RoundingMode
  */
 object RecommendationGapCalculator {
 
+    private val LONG_TRACKS = setOf("LONG", "LONG_EQUITY")
     private val HUNDRED = BigDecimal("100")
     private val SCALE = 2
     private val ROUNDING = RoundingMode.HALF_UP
@@ -36,7 +37,7 @@ object RecommendationGapCalculator {
     ): List<GapEntry> {
         return allocations.mapNotNull { alloc ->
             val upperSymbol = alloc.symbol.uppercase()
-            val holding = holdings.firstOrNull { it.symbol.uppercase() == upperSymbol && it.track.uppercase() == "LONG" }
+            val holding = holdings.firstOrNull { it.symbol.uppercase() == upperSymbol && it.track.uppercase() in LONG_TRACKS }
             val price = prices[upperSymbol] ?: BigDecimal.ZERO
             val currentValue = if (holding != null) price * holding.netQuantity else BigDecimal.ZERO
             val currentPercent = if (totalPortfolioValue.compareTo(BigDecimal.ZERO) != 0) {
@@ -54,15 +55,12 @@ object RecommendationGapCalculator {
         }.sortedByDescending { it.gapPercent }.take(limit)
     }
 
-    /**
-     * Computes total portfolio value from LONG track holdings only.
-     */
     fun computePortfolioTotal(
         holdings: List<HoldingResponse>,
         prices: Map<String, BigDecimal>
     ): BigDecimal {
         return holdings
-            .filter { it.track.uppercase() == "LONG" }
+            .filter { it.track.uppercase() in LONG_TRACKS }
             .sumOf { h ->
                 val price = prices[h.symbol.uppercase()] ?: BigDecimal.ZERO
                 price * h.netQuantity
