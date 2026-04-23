@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   getAlerts,
   createAlert as apiCreateAlert,
+  updateAlert as apiUpdateAlert,
   deleteAlert as apiDeleteAlert,
   dismissAlert as apiDismissAlert,
   reEnableAlert as apiReEnableAlert,
@@ -38,6 +39,17 @@ export function useAlerts() {
       data.note
     )
     setAlerts(prev => [created, ...prev])
+  }
+
+  async function updateAlert(id: string, data: CreateAlertData) {
+    const updated = await apiUpdateAlert(
+      id,
+      data.symbol,
+      data.condition,
+      data.thresholdPrice,
+      data.note
+    )
+    setAlerts(prev => prev.map(a => (a.id === id ? updated : a)))
   }
 
   async function deleteAlert(id: string) {
@@ -98,6 +110,7 @@ export function useAlerts() {
     unreadCount,
     isLoading,
     createAlert,
+    updateAlert,
     deleteAlert,
     dismissAlert,
     dismissAll,

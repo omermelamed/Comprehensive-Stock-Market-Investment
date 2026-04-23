@@ -121,4 +121,26 @@ test.describe('Alerts — create and delete alerts via the form', () => {
     const symbolValue = await symbolInput.inputValue()
     expect(symbolValue).toBe('')
   })
+
+  test('Edit active alert — open form, change threshold, save', async ({ page }) => {
+    await page.goto('/alerts')
+    await page.waitForLoadState('networkidle')
+
+    const msftRow = page.getByRole('row').filter({ hasText: /^MSFT/ })
+    await expect(msftRow).toBeVisible({ timeout: 10_000 })
+
+    await msftRow.getByTitle('Edit alert').click()
+
+    await expect(page.getByText('Editing alert', { exact: false })).toBeVisible()
+    const priceInput = page.locator('input[placeholder="100.00"]')
+    await priceInput.fill('399')
+
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    await page.waitForTimeout(2_000)
+
+    await expect(
+      page.getByRole('row').filter({ hasText: 'MSFT' }).getByText('$399.00')
+    ).toBeVisible({ timeout: 5_000 })
+  })
 })

@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Alert } from '@/types'
 import type { CreateAlertData } from './useAlerts'
 
 interface CreateAlertFormProps {
   defaultSymbol?: string
+  /** When set, the form updates this active alert (submit → PUT). */
+  editAlert?: Alert | null
+  onCancelEdit?: () => void
   onSubmit: (data: CreateAlertData) => Promise<void>
 }
 
-export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProps) {
+export function CreateAlertForm({
+  defaultSymbol,
+  editAlert = null,
+  onCancelEdit,
+  onSubmit,
+}: CreateAlertFormProps) {
   const [symbol, setSymbol] = useState(defaultSymbol ?? '')
   const [condition, setCondition] = useState<'ABOVE' | 'BELOW'>('BELOW')
   const [thresholdPrice, setThresholdPrice] = useState('')
@@ -15,13 +24,23 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
   const [error, setError] = useState<string | null>(null)
   const priceRef = useRef<HTMLInputElement>(null)
 
-  // When defaultSymbol is provided, pre-fill and focus price
   useEffect(() => {
-    if (defaultSymbol) {
-      setSymbol(defaultSymbol)
-      priceRef.current?.focus()
+    if (editAlert) {
+      setSymbol(editAlert.symbol)
+      setCondition(editAlert.condition)
+      setThresholdPrice(String(editAlert.thresholdPrice))
+      setNote(editAlert.note ?? '')
+      setError(null)
+    } else {
+      setSymbol(defaultSymbol ?? '')
+      setCondition('BELOW')
+      setThresholdPrice('')
+      setNote('')
+      if (defaultSymbol) {
+        requestAnimationFrame(() => priceRef.current?.focus())
+      }
     }
-  }, [defaultSymbol])
+  }, [editAlert, defaultSymbol])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,13 +63,20 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
         thresholdPrice: price,
         note: note.trim() || undefined,
       })
-      // Clear form on success
-      setSymbol(defaultSymbol ?? '')
-      setCondition('BELOW')
-      setThresholdPrice('')
-      setNote('')
+      if (editAlert) {
+        onCancelEdit?.()
+      } else {
+        setSymbol(defaultSymbol ?? '')
+        setCondition('BELOW')
+        setThresholdPrice('')
+        setNote('')
+      }
     } catch {
-      setError('Failed to create alert. Please try again.')
+      setError(
+        editAlert
+          ? 'Failed to update alert. Please try again.'
+          : 'Failed to create alert. Please try again.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -58,6 +84,11 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+      {editAlert && (
+        <p className="w-full text-xs text-muted-foreground">
+          Editing alert — save to apply, or cancel to return to a new alert.
+        </p>
+      )}
       {/* Symbol */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-muted-foreground">Symbol</label>
@@ -129,13 +160,31 @@ export function CreateAlertForm({ defaultSymbol, onSubmit }: CreateAlertFormProp
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isSubmitting ? 'Setting...' : 'Set Alert'}
-      </button>
+      <div className="flex items-end gap-2">
+        {editAlert && onCancelEdit && (
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={onCancelEdit}
+            className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting
+            ? editAlert
+              ? 'Saving...'
+              : 'Setting...'
+            : editAlert
+              ? 'Save changes'
+              : 'Set Alert'}
+        </button>
+      </div>
 
       {error && (
         <p className="w-full text-xs text-destructive">{error}</p>

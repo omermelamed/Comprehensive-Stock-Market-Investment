@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Bell, Trash2, RefreshCw, CheckCheck } from 'lucide-react'
-import { useAlerts } from '@/features/alerts/useAlerts'
+import { Bell, Trash2, RefreshCw, CheckCheck, Pencil } from 'lucide-react'
+import { useAlerts, type CreateAlertData } from '@/features/alerts/useAlerts'
 import { CreateAlertForm } from '@/features/alerts/CreateAlertForm'
 import type { Alert } from '@/types'
 
@@ -43,10 +44,11 @@ function formatDate(iso: string) {
 
 interface ActiveAlertsTableProps {
   alerts: Alert[]
+  onEdit: (alert: Alert) => void
   onDelete: (id: string) => void
 }
 
-function ActiveAlertsTable({ alerts, onDelete }: ActiveAlertsTableProps) {
+function ActiveAlertsTable({ alerts, onEdit, onDelete }: ActiveAlertsTableProps) {
   if (alerts.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -85,13 +87,24 @@ function ActiveAlertsTable({ alerts, onDelete }: ActiveAlertsTableProps) {
                 {formatDate(a.createdAt)}
               </td>
               <td className="px-4 py-3 text-right">
-                <button
-                  onClick={() => onDelete(a.id)}
-                  className="p-1 text-muted-foreground transition-colors hover:text-destructive"
-                  title="Delete alert"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center justify-end gap-0.5">
+                  <button
+                    onClick={() => onEdit(a)}
+                    className="p-1 text-muted-foreground transition-colors hover:text-foreground"
+                    title="Edit alert"
+                    type="button"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onDelete(a.id)}
+                    className="p-1 text-muted-foreground transition-colors hover:text-destructive"
+                    title="Delete alert"
+                    type="button"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -184,6 +197,7 @@ function TriggeredAlertsTable({ alerts, onDismiss, onReEnable }: TriggeredAlerts
 export default function AlertsPage() {
   const [searchParams] = useSearchParams()
   const defaultSymbol = searchParams.get('symbol') ?? undefined
+  const [editingAlert, setEditingAlert] = useState<Alert | null>(null)
 
   const {
     active,
@@ -191,11 +205,20 @@ export default function AlertsPage() {
     unreadCount,
     isLoading,
     createAlert,
+    updateAlert,
     deleteAlert,
     dismissAlert,
     dismissAll,
     reEnableAlert,
   } = useAlerts()
+
+  async function handleAlertFormSubmit(data: CreateAlertData) {
+    if (editingAlert) {
+      await updateAlert(editingAlert.id, data)
+    } else {
+      await createAlert(data)
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -237,11 +260,24 @@ export default function AlertsPage() {
                   </span>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <ActiveAlertsTable alerts={active} onDelete={deleteAlert} />
+                  <ActiveAlertsTable
+                    alerts={active}
+                    onEdit={a => {
+                      setEditingAlert(a)
+                    }}
+                    onDelete={deleteAlert}
+                  />
 
                   <div className="mt-5 border-t border-border pt-5">
-                    <p className="mb-3 text-sm font-medium text-foreground">Create new alert</p>
-                    <CreateAlertForm defaultSymbol={defaultSymbol} onSubmit={createAlert} />
+                    <p className="mb-3 text-sm font-medium text-foreground">
+                      {editingAlert ? 'Edit alert' : 'Create new alert'}
+                    </p>
+                    <CreateAlertForm
+                      defaultSymbol={editingAlert ? undefined : defaultSymbol}
+                      editAlert={editingAlert}
+                      onCancelEdit={() => setEditingAlert(null)}
+                      onSubmit={handleAlertFormSubmit}
+                    />
                   </div>
                 </div>
               </section>

@@ -247,11 +247,24 @@ class YahooFinanceAdapter(
 
     companion object {
         fun parseDayChangePercent(meta: Map<*, *>): BigDecimal? {
-            val raw = meta["regularMarketChangePercent"] ?: return null
-            return when (raw) {
-                is Number -> BigDecimal(raw.toString()).setScale(4, RoundingMode.HALF_UP)
-                else -> null
+            val explicit = meta["regularMarketChangePercent"]
+            if (explicit is Number) {
+                return BigDecimal(explicit.toString()).setScale(4, RoundingMode.HALF_UP)
             }
+
+            val currentPrice = (meta["regularMarketPrice"] as? Number)?.let { BigDecimal(it.toString()) }
+            val previousClose = (meta["chartPreviousClose"] as? Number)?.let { BigDecimal(it.toString()) }
+                ?: (meta["regularMarketPreviousClose"] as? Number)?.let { BigDecimal(it.toString()) }
+                ?: (meta["previousClose"] as? Number)?.let { BigDecimal(it.toString()) }
+
+            if (currentPrice != null && previousClose != null && previousClose.compareTo(BigDecimal.ZERO) != 0) {
+                return currentPrice.subtract(previousClose)
+                    .divide(previousClose, 6, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal("100"))
+                    .setScale(4, RoundingMode.HALF_UP)
+            }
+
+            return null
         }
 
         fun parseSectorInfo(assetProfile: Map<*, *>): String? {

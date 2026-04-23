@@ -231,7 +231,8 @@
     "lib/utils.ts"
   ],
   "features/alerts/CreateAlertForm.tsx": [
-    "features/alerts/useAlerts.ts"
+    "features/alerts/useAlerts.ts",
+    "types/index.ts"
   ],
   "features/alerts/useAlertBadge.ts": [
     "api/alerts.ts"

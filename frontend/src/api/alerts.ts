@@ -14,6 +14,22 @@ export const createAlert = (
     .post<Alert>('/api/alerts', { symbol, condition, thresholdPrice, note })
     .then(r => r.data)
 
+export const updateAlert = (
+  id: string,
+  symbol: string,
+  condition: string,
+  thresholdPrice: number,
+  note?: string
+) =>
+  client
+    .put<Alert>(`/api/alerts/${id}`, {
+      symbol,
+      condition,
+      thresholdPrice,
+      note,
+    })
+    .then(r => r.data)
+
 export const deleteAlert = (id: string) =>
   client.delete(`/api/alerts/${id}`)
 

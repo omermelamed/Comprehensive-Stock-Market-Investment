@@ -29,13 +29,14 @@ class MarketDataService(
     private val cache = ConcurrentHashMap<String, CachedQuote>()
 
     companion object {
-        private const val CACHE_TTL_SECONDS = 60L
+        private const val CACHE_TTL_SECONDS = 300L
+        private const val STALE_CACHE_MAX_SECONDS = 86_400L
     }
 
     fun getQuote(symbol: String): PriceQuote {
         val upperSymbol = symbol.uppercase()
         val resolvedSymbol = symbolResolverService.resolve(upperSymbol)
-        val cacheKey = upperSymbol // cache by user-facing symbol
+        val cacheKey = upperSymbol
         val now = clock.instant()
 
         val cached = cache[cacheKey]
@@ -57,6 +58,11 @@ class MarketDataService(
                 log.debug("Quote for {} (resolved: {}) fetched from {}", upperSymbol, resolvedSymbol, provider.sourceName)
                 return quote
             }
+        }
+
+        if (cached != null && now.isBefore(cached.cachedAt.plusSeconds(STALE_CACHE_MAX_SECONDS))) {
+            log.warn("All providers failed for {}; returning stale cached quote from {}", upperSymbol, cached.cachedAt)
+            return cached.quote
         }
 
         throw MarketDataUnavailableException(upperSymbol)

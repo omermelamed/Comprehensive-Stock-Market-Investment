@@ -109,6 +109,13 @@ export async function createAlert(data: Record<string, unknown>) {
   return api.post<Record<string, unknown>>('/api/alerts', data)
 }
 
+export async function updateAlert(
+  id: string,
+  data: Record<string, unknown>
+) {
+  return api.put<Record<string, unknown>>(`/api/alerts/${id}`, data)
+}
+
 export async function getAlerts() {
   return api.get<unknown[]>('/api/alerts')
 }

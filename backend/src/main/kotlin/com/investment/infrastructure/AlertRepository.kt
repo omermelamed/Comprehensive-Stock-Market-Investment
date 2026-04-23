@@ -98,6 +98,36 @@ class AlertRepository(
         if (updated == 0) throw NoSuchElementException("No alert found with id $id")
     }
 
+    fun updateActive(
+        userId: UUID,
+        id: UUID,
+        symbol: String,
+        condition: String,
+        thresholdPrice: BigDecimal,
+        note: String?
+    ): AlertResponse {
+        val record = dsl.fetchOne(
+            """
+            UPDATE alerts
+            SET symbol = ?,
+                condition = ?::alert_condition_enum,
+                threshold_price = ?,
+                note = ?,
+                updated_at = NOW()
+            WHERE id = ?::uuid AND user_id = ?::uuid AND is_active = TRUE
+            RETURNING *
+            """.trimIndent(),
+            symbol.uppercase(),
+            condition.uppercase(),
+            thresholdPrice,
+            note,
+            id.toString(),
+            userId.toString()
+        ) ?: throw NoSuchElementException("No active alert found with id $id")
+
+        return record.toResponse()
+    }
+
     fun countUnread(userId: UUID): Int {
         return dsl.fetchOne(
             """

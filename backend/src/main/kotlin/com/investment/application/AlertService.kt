@@ -44,6 +44,29 @@ class AlertService(
         )
     }
 
+    fun updateAlert(id: UUID, request: CreateAlertRequest): AlertResponse {
+        val userId = RequestContext.get()
+        require(request.symbol.isNotBlank()) { "Symbol must not be blank" }
+        val condition = request.condition.trim().uppercase()
+        require(condition == "ABOVE" || condition == "BELOW") {
+            "Condition must be ABOVE or BELOW"
+        }
+        require(request.thresholdPrice > BigDecimal.ZERO) {
+            "Threshold price must be positive"
+        }
+
+        marketDataService.getQuote(request.symbol)
+
+        return alertRepository.updateActive(
+            userId = userId,
+            id = id,
+            symbol = request.symbol,
+            condition = condition,
+            thresholdPrice = request.thresholdPrice,
+            note = request.note
+        )
+    }
+
     fun deleteAlert(id: UUID) {
         val userId = RequestContext.get()
         alertRepository.delete(userId, id)
